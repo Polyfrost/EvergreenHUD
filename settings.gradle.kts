@@ -1,20 +1,11 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        mavenCentral()
         maven("https://repo.polyfrost.cc/releases")
-        maven("https://maven.architectury.dev/")
     }
     plugins {
-        val egtVersion = "0.1.10"
-        id("gg.essential.multi-version.root") version egtVersion
-    }
-    resolutionStrategy {
-        eachPlugin {
-            if (requested.id.id == "io.github.juuxel.loom-quiltflower-mini") {
-                useModule("com.github.wyvest:loom-quiltflower-mini:${requested.version}")
-            }
-        }
+        val egtVersion = "0.1.28"
+        id("cc.polyfrost.multi-version.root") version egtVersion
     }
 }
 
@@ -24,7 +15,8 @@ rootProject.name = mod_name
 rootProject.buildFileName = "root.gradle.kts"
 
 listOf(
-    "1.8.9-forge"
+    "1.8.9-forge",
+    "1.12.2-forge"
 ).forEach { version ->
     include(":$version")
     project(":$version").apply {

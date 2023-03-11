@@ -1,15 +1,14 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import gg.essential.gradle.util.noServerRunConfigs
+import cc.polyfrost.gradle.util.noServerRunConfigs
 
 plugins {
     kotlin("jvm")
-    id("gg.essential.multi-version")
-    id("gg.essential.defaults.repo")
-    id("gg.essential.defaults.java")
-    id("gg.essential.defaults.loom")
+    id("cc.polyfrost.multi-version")
+    id("cc.polyfrost.defaults.repo")
+    id("cc.polyfrost.defaults.java")
+    id("cc.polyfrost.defaults.loom")
     id("com.github.johnrengelman.shadow")
     id("net.kyori.blossom") version "1.3.0"
-    id("io.github.juuxel.loom-quiltflower-mini")
     id("signing")
     java
 }
@@ -40,9 +39,6 @@ loom {
             arg("--tweakClass", "cc.polyfrost.oneconfig.loader.stage0.LaunchWrapperTweaker")
             property("mixin.debug.export", "true")
         }
-        runConfigs.named("client") {
-            vmArgs.remove("-XstartOnFirstThread")
-        }
     }
     if (project.platform.isForge) {
         forge {
@@ -68,7 +64,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("cc.polyfrost:oneconfig-1.8.9-forge:0.2.0-alpha+")
+    compileOnly("cc.polyfrost:oneconfig-$platform:0.2.0-alpha+")
     compileOnly("org.spongepowered:mixin:0.7.11-SNAPSHOT")
     shade("cc.polyfrost:oneconfig-wrapper-launchwrapper:1.0.0-beta+")
 }

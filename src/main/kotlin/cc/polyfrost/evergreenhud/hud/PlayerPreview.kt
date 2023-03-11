@@ -15,7 +15,7 @@ import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.entity.EntityLivingBase
 
 
-class PlayerPreview: Config(Mod("Player Preview", ModType.HUD), "evergreenhud/playerpreview.json", false) {
+class PlayerPreview: Config(Mod("Player Preview", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/playerpreview.json", false) {
     @HUD(
         name = "Self Preview"
     )
@@ -70,6 +70,9 @@ class PlayerPreview: Config(Mod("Player Preview", ModType.HUD), "evergreenhud/pl
 
     @Exclude
     companion object {
+        var cancelNametags = false
+        private set
+
         private fun renderLiving(ent: EntityLivingBase, matrices: UMatrixStack?, x: Float, y: Float, scale: Float, rotation: Int) {
             GlStateManager.enableColorMaterial()
             GlStateManager.pushMatrix()
@@ -93,7 +96,9 @@ class PlayerPreview: Config(Mod("Player Preview", ModType.HUD), "evergreenhud/pl
             val rendermanager = mc.renderManager
             rendermanager.setPlayerViewY(180.0f)
             rendermanager.isRenderShadow = false
-            rendermanager.renderEntityWithPosYaw(ent, 0.0, 0.0, 0.0, 0.0f, 1.0f)
+            cancelNametags = true
+            rendermanager.doRenderEntity(ent, 0.0, 0.0, 0.0, 0.0f, 1.0f, false)
+            cancelNametags = false
             rendermanager.isRenderShadow = true
             ent.renderYawOffset = f
             ent.rotationYaw = f1

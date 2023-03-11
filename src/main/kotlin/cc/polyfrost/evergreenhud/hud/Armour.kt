@@ -9,18 +9,25 @@ import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.universal.UGraphics
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
-import cc.polyfrost.oneconfig.renderer.RenderManager
+import cc.polyfrost.oneconfig.libs.universal.UMinecraft
+import cc.polyfrost.oneconfig.platform.Platform
+import cc.polyfrost.oneconfig.renderer.TextRenderer
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.init.Items
 import net.minecraft.item.ItemStack
 
-class Armour: Config(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", false) {
+//#if MC>=10900
+//$$ import net.minecraft.inventory.EntityEquipmentSlot
+//#endif
+
+class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/armour.json", false) {
     @HUD(name = "Main")
     var hud = ArmourHud()
 
     init {
         initialize()
+        addDependency("showOffhand", "Minecraft Version 1.9 or later") { Platform.getInstance().minecraftVersion >= 10900 }
     }
 
     class ArmourHud : BasicHud(true, 1920f - 5, 1080f - 5) {
@@ -30,6 +37,9 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", 
         @Transient val diamondLeggings = ItemStack(Items.diamond_leggings)
         @Transient val diamondBoots = ItemStack(Items.diamond_boots)
         @Transient val diamondSword = ItemStack(Items.diamond_sword)
+        //#if MC>=10900
+        //$$ @Transient val shield = ItemStack(Items.SHIELD)
+        //#endif
 
         @Info(text = "i know this is terrible please beg xander to help me", type = InfoType.INFO)
         var balls = null
@@ -55,9 +65,14 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", 
         var showBoots = true
 
         @Switch(
-            name = "Show Hand Item"
+            name = "Show Main Hand Item"
         )
         var showMainHand = true
+
+        @Switch(
+                name = "Show Offhand Item"
+        )
+        var showOffhand = true
 
         @Slider(
             name = "Item Padding",
@@ -108,19 +123,31 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", 
                 if (showLeggings) add(diamondLeggings)
                 if (showBoots) add(diamondBoots)
                 if (showMainHand) add(diamondSword)
+                //#if MC>=10900
+                //$$ if (showOffhand) add(shield)
+                //#endif
 
                 if (displayType) reverse()
                 return@run this
             }
         } else {
-            val inventory = mc.thePlayer!!.inventory
-
             arrayListOf<ItemStack>().run {
+                //#if MC<10900
+                val inventory = UMinecraft.getPlayer()!!.inventory
                 if (showHelmet) inventory.armorInventory[3]?.let { add(it) }
                 if (showChestplate) inventory.armorInventory[2]?.let { add(it) }
                 if (showLeggings) inventory.armorInventory[1]?.let { add(it) }
                 if (showBoots) inventory.armorInventory[0]?.let { add(it) }
-                if (showMainHand) mc.thePlayer.heldItem?.let { add(it) }
+                @Suppress("UNNECESSARY_SAFE_CALL") // on 1.8 ItemStacks can be null
+                if (showMainHand) UMinecraft.getPlayer()!!.heldItem?.let { add(it) }
+                //#else
+                //$$ if (showHelmet) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.HEAD).let { if (!it.isEmpty) add(it) }
+                //$$ if (showChestplate) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.CHEST).let { if (!it.isEmpty) add(it) }
+                //$$ if (showLeggings) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.LEGS).let { if (!it.isEmpty) add(it) }
+                //$$ if (showBoots) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.FEET).let { if (!it.isEmpty) add(it) }
+                //$$ if (showMainHand) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.MAINHAND).let { if (!it.isEmpty) add(it) }
+                //$$ if (showOffhand) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.OFFHAND).let { if (!it.isEmpty) add(it) }
+                //#endif
 
                 if (displayType) reverse()
                 return@run this
@@ -177,7 +204,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", 
 
                 UGraphics.GL.pushMatrix()
                 UGraphics.GL.translate(textX.toDouble(), itemY.toDouble(), 0.0)
-                RenderManager.drawScaledString(text, 0f, 0f, textColor.rgb, RenderManager.TextType.toType(textType), scale)
+                TextRenderer.drawScaledString(text, 0f, 0f, textColor.rgb, TextRenderer.TextType.toType(textType), scale)
                 UGraphics.GL.popMatrix()
             }
         }

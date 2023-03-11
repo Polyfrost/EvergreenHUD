@@ -10,7 +10,7 @@ import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
 
-class Pitch: Config(Mod("Pitch", ModType.HUD), "evergreenhud/pitch.json", false) {
+class Pitch: Config(Mod("Pitch", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/pitch.json", false) {
     @HUD(name = "Main")
     var hud = PitchHud()
 

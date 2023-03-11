@@ -10,7 +10,7 @@ import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.utils.dsl.mc
 
-class ServerIP: Config(Mod("Server IP", ModType.HUD), "evergreenhud/serverip.json", false) {
+class ServerIP: Config(Mod("Server IP", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/serverip.json", false) {
     @HUD(name = "Main")
     var hud = ServerIPHud()
 
@@ -18,6 +18,7 @@ class ServerIP: Config(Mod("Server IP", ModType.HUD), "evergreenhud/serverip.jso
         initialize()
     }
 
+    @Suppress("SENSELESS_COMPARISON", "UNNECESSARY_SAFE_CALL")
     class ServerIPHud: SingleTextHud("Server", true, 180, 30) {
 
         @Switch(

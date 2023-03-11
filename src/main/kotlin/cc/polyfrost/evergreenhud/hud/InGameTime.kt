@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class InGameTime : Config(Mod("In Game Time", ModType.HUD), "evergreenhud/ingametime.json", false) {
+class InGameTime : Config(Mod("In Game Time", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/ingametime.json", false) {
     @HUD(name = "Main")
     var hud = InGameTimeHud()
 

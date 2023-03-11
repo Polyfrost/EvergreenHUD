@@ -8,7 +8,7 @@ import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.util.BlockPos
 
-class Biome: Config(Mod("Biome", ModType.HUD), "evergreenhud/biome.json", false) {
+class Biome: Config(Mod("Biome", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/biome.json", false) {
     @HUD(name = "Main")
     var hud = BiomeHud()
 

@@ -1,5 +1,6 @@
 package cc.polyfrost.evergreenhud.hud
 
+import cc.polyfrost.evergreenhud.utils.Facing
 import cc.polyfrost.evergreenhud.utils.decimalFormat
 import cc.polyfrost.oneconfig.config.Config
 import cc.polyfrost.oneconfig.config.annotations.HUD
@@ -9,9 +10,8 @@ import cc.polyfrost.oneconfig.config.data.Mod
 import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
-import net.minecraft.util.MathHelper
 
-class Yaw : Config(Mod("Yaw", ModType.HUD), "evergreenhud/yaw.json", false) {
+class Yaw : Config(Mod("Yaw", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/yaw.json", false) {
     @HUD(name = "Main")
     var hud = YawHud()
 
@@ -28,7 +28,7 @@ class Yaw : Config(Mod("Yaw", ModType.HUD), "evergreenhud/yaw.json", false) {
         var trailingZeros = true
 
         override fun getText(example: Boolean): String {
-            return decimalFormat(accuracy, trailingZeros).format(mc.thePlayer?.rotationYaw?.let(MathHelper::wrapAngleTo180_float) ?: 0f)
+            return decimalFormat(accuracy, trailingZeros).format(mc.thePlayer?.rotationYaw?.let { Facing.wrapDegrees(it) } ?: 0f)
         }
     }
 }

@@ -1,7 +1,5 @@
 package cc.polyfrost.evergreenhud.utils
 
-import net.minecraft.util.MathHelper
-
 enum class Facing(val full: String, val abbreviated: String) {
     NORTH("North", "N"),
     NORTH_EAST("North East", "NE"),
@@ -14,7 +12,7 @@ enum class Facing(val full: String, val abbreviated: String) {
 
     companion object {
         fun parse(yaw: Float): Facing {
-            val rotationYaw = MathHelper.wrapAngleTo180_float(yaw)
+            val rotationYaw = wrapDegrees(yaw)
 
             return when {
                 rotationYaw >= 165f || rotationYaw <= -165 -> NORTH
@@ -31,7 +29,7 @@ enum class Facing(val full: String, val abbreviated: String) {
         }
 
         fun parseExact(yaw: Float): Facing {
-            val rotationYaw = MathHelper.wrapAngleTo180_float(yaw)
+            val rotationYaw = wrapDegrees(yaw)
 
             return when {
                 rotationYaw == -180f -> NORTH
@@ -45,6 +43,18 @@ enum class Facing(val full: String, val abbreviated: String) {
 
                 else -> NORTH
             }
+        }
+
+        fun wrapDegrees(value: Float): Float {
+            var new = value
+            new %= 360.0f
+            if (new >= 180.0f) {
+                new -= 360.0f
+            }
+            if (new < -180.0f) {
+                new += 360.0f
+            }
+            return new
         }
     }
 }

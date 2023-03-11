@@ -68,13 +68,13 @@ object ServerPinger {
                 private var queried = false
                 private var received = false
 
-                override fun onDisconnect(reason: IChatComponent?) {
+                override fun onDisconnect(reason: IChatComponent) {
                     if (!queried) {
-                        error("Failed to query server: ${reason?.unformattedText ?: "null"}")
+                        error("Failed to query server: ${reason.unformattedText ?: "null"}")
                     }
                 }
 
-                override fun handleServerInfo(packetIn: S00PacketServerInfo?) {
+                override fun handleServerInfo(packetIn: S00PacketServerInfo) {
                     if (received) {
                         networkmanager.closeChannel(ChatComponentText("Received unrequested status"))
                         return
@@ -85,14 +85,16 @@ object ServerPinger {
                     queried = true
                 }
 
-                override fun handlePong(packetIn: S01PacketPong?) {
+                override fun handlePong(packetIn: S01PacketPong) {
                     ping = (Minecraft.getSystemTime() - startTime).toInt()
                 }
             }
 
             networkmanager.sendPacket(
                 C00Handshake(
-                    47,
+                        //#if MC<11200
+                        47,
+                        //#endif
                     serverAddress.ip,
                     serverAddress.port,
                     EnumConnectionState.STATUS

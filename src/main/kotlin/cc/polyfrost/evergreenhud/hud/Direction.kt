@@ -9,7 +9,7 @@ import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
 
-class Direction: Config(Mod("Direction", ModType.HUD), "evergreenhud/direction.json", false) {
+class Direction: Config(Mod("Direction", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/direction.json", false) {
     @HUD(name = "Main")
     var hud = DirectionHud()
 

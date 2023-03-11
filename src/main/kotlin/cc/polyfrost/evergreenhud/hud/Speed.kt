@@ -12,7 +12,7 @@ import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import kotlin.math.sqrt
 
-class Speed: Config(Mod("Speed", ModType.HUD), "evergreenhud/speed.json", false) {
+class Speed: Config(Mod("Speed", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/speed.json", false) {
     @HUD(name = "Main")
     var hud = SpeedHud()
 
