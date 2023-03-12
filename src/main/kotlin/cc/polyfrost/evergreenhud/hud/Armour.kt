@@ -168,7 +168,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                     text to mc.fontRendererObj.getStringWidth(text)
                 }
             }
-            actualWidth = (texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0) + 2F + 16
+            actualWidth = (texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0) + 2F + 11
             actualHeight = items.size * offset - padding * 2
 
             val itemX = when (alignment) {
