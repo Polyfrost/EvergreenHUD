@@ -21,7 +21,7 @@ class CCounter: Config(Mod("C Counter", ModType.HUD, "/assets/evergreenhud/everg
         @Switch(
                 name = "Simplified"
         )
-        var simplified = false
+        var simplified = true
 
         override fun getText(example: Boolean): String {
             if (mc.thePlayer == null) return "Unknown"
