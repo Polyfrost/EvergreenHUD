@@ -14,6 +14,7 @@ class EvergreenHUD {
         Armour()
         Biome()
         BlockAbove()
+        CCounter()
         Combo()
         Coordinates()
         CPS()
