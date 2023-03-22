@@ -6,7 +6,6 @@ import cc.polyfrost.oneconfig.config.data.Mod
 import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
-import net.minecraft.util.BlockPos
 
 class Biome: Config(Mod("Biome", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/biome.json", false) {
     @HUD(name = "Main")
@@ -19,11 +18,8 @@ class Biome: Config(Mod("Biome", ModType.HUD, "/assets/evergreenhud/evergreenhud
     class BiomeHud: SingleTextHud("Biome", true, 400, 50) {
         override fun getText(example: Boolean): String {
             val player = mc.thePlayer ?: return "Unknown"
-
-            val playerPos = BlockPos(player.posX, player.posY, player.posZ)
-            val playerChunk = mc.theWorld.getChunkFromBlockCoords(playerPos)
-
-            return playerChunk.getBiome(playerPos, mc.theWorld.worldChunkManager).biomeName
+            
+            return mc.theWorld.getBiomeGenFromCoords(player.getPosition()).biomeName
         }
 
     }
