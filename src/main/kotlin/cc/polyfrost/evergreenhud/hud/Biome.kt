@@ -19,7 +19,7 @@ class Biome: Config(Mod("Biome", ModType.HUD, "/assets/evergreenhud/evergreenhud
         override fun getText(example: Boolean): String {
             val player = mc.thePlayer ?: return "Unknown"
             
-            return mc.theWorld.getBiomeGenFromCoords(player.getPosition()).biomeName
+            return mc.theWorld.getBiomeGenForCoords(player.position).biomeName
         }
 
     }

@@ -1,5 +1,6 @@
 net.minecraft.util.math.BlockPos net.minecraft.util.BlockPos
 net.minecraft.world.World getBiomeProvider() getWorldChunkManager()
+net.minecraft.world.World getBiome() getBiomeGenForCoords()
 net.minecraft.network.play.server.SPacketEntityStatus net.minecraft.network.play.server.S19PacketEntityStatus
 net.minecraft.util.Vec3 x xCoord
 net.minecraft.util.Vec3 y yCoord
