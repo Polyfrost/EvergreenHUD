@@ -33,7 +33,7 @@ class Speed: Config(Mod("Speed", ModType.HUD, "/assets/evergreenhud/evergreenhud
 
         @Dropdown(
             name = "Speed Unit",
-            options = ["Meters per second", "Kilometers per hour", "Miles per hour"],
+            options = ["Meters per tick", "Meters per second", "Kilometers per hour", "Miles per hour"],
         )
         var speedUnit = 0
 
@@ -53,17 +53,19 @@ class Speed: Config(Mod("Speed", ModType.HUD, "/assets/evergreenhud/evergreenhud
         private fun convertSpeed(speed: Double): Double =
             when (speedUnit) {
                 0 -> speed
-                1 -> speed * 3.6
-                2 -> speed * 2.237
+                1 -> speed * 20
+                2 -> speed * 3.6 * 20
+                3 -> speed * 2.237 * 20
                 else -> throw IllegalStateException()
             }
 
         private val Int.name: String
             get() {
                 return when (this) {
-                    0 -> "m/s"
-                    1 -> "kph"
-                    2 -> "mph"
+                    0 -> "m/t"
+                    1 -> "m/s"
+                    2 -> "kph"
+                    3 -> "mph"
                     else -> throw IllegalStateException()
                 }
             }
