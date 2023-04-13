@@ -59,7 +59,6 @@ sourceSets {
 }
 
 repositories {
-    mavenCentral()
     maven("https://repo.polyfrost.cc/releases")
 }
 
@@ -67,6 +66,7 @@ dependencies {
     compileOnly("cc.polyfrost:oneconfig-$platform:0.2.0-alpha+")
     compileOnly("org.spongepowered:mixin:0.7.11-SNAPSHOT")
     shade("cc.polyfrost:oneconfig-wrapper-launchwrapper:1.0.0-beta+")
+    modRuntimeOnly("me.djtheredstoner:DevAuth-forge-legacy:1.1.2")
 }
 
 tasks.processResources {

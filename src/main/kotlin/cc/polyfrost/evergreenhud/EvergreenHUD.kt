@@ -22,6 +22,7 @@ class EvergreenHUD {
         Direction()
         FPS()
         InGameTime()
+        Map()
         Memory()
         Ping()
         Pitch()
