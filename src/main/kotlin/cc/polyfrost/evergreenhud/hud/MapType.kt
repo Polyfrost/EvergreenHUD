@@ -33,7 +33,7 @@ class MapType : Config(Mod("Map Type", ModType.HUD, "/assets/evergreenhud/evergr
         }
 
         override fun shouldShow(): Boolean {
-            return super.shouldShow() && (!hide || (HypixelUtils.INSTANCE.isHypixel && LocrawUtil.INSTANCE.isInGame && LocrawUtil.INSTANCE.locrawInfo?.mapName?.isNotBlank() == true && PinkuluAPIManager.getMapPool() == null))
+            return super.shouldShow() && (!hide || (HypixelUtils.INSTANCE.isHypixel && LocrawUtil.INSTANCE.isInGame && LocrawUtil.INSTANCE.locrawInfo?.mapName?.isNotBlank() == true && PinkuluAPIManager.getMapPool() != null))
         }
     }
 }

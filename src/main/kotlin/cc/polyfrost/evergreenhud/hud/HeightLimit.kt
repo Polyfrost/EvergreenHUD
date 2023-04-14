@@ -39,7 +39,7 @@ class HeightLimit : Config(Mod("Height Limit", ModType.HUD, "/assets/evergreenhu
         }
 
         override fun shouldShow(): Boolean {
-            return super.shouldShow() && (!hide || (HypixelUtils.INSTANCE.isHypixel && LocrawUtil.INSTANCE.isInGame && LocrawUtil.INSTANCE.locrawInfo?.mapName?.isNotBlank() == true && PinkuluAPIManager.getMapHeight() == null)) && mc.thePlayer != null && mc.theWorld != null
+            return super.shouldShow() && (!hide || (HypixelUtils.INSTANCE.isHypixel && LocrawUtil.INSTANCE.isInGame && LocrawUtil.INSTANCE.locrawInfo?.mapName?.isNotBlank() == true && PinkuluAPIManager.getMapHeight() != null)) && mc.thePlayer != null && mc.theWorld != null
         }
     }
 }
