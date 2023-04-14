@@ -15,7 +15,11 @@ object PinkuluAPIManager {
     fun initialize() {
         EventManager.INSTANCE.register(this)
         Multithreading.runAsync {
-            rawJson = NetworkUtils.getJsonElement("https://maps.pinkulu.com/trans-rights-are-human-rights.json").asJsonArray // so true bestie
+            try {
+                rawJson = NetworkUtils.getJsonElement("https://maps.pinkulu.com/trans-rights-are-human-rights.json").asJsonArray // so true bestie
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -47,10 +51,14 @@ object PinkuluAPIManager {
 
     private fun checkCached() {
         if (rawJson == null) return
-        val locraw = LocrawUtil.INSTANCE.locrawInfo
-        if (locraw == null || locraw.mapName.isNullOrBlank() || locraw.gameType == null) return
-        if (cachedMap == null || (cachedMap!!.get("name").asString != locraw.mapName && cachedMap!!.get("gameType").asString != locraw.gameType.serverName)) {
-            cachedMap = rawJson!!.firstOrNull { it.asJsonObject.get("name").asString == locraw.mapName && it.asJsonObject.get("gameType").asString == locraw.gameType.serverName }?.asJsonObject
+        try {
+            val locraw = LocrawUtil.INSTANCE.locrawInfo
+            if (locraw == null || locraw.mapName.isNullOrBlank() || locraw.gameType == null) return
+            if (cachedMap == null || (cachedMap!!.get("name").asString != locraw.mapName && cachedMap!!.get("gameType").asString != locraw.gameType.serverName)) {
+                cachedMap = rawJson!!.firstOrNull { it.asJsonObject.get("name").asString == locraw.mapName && it.asJsonObject.get("gameType").asString == locraw.gameType.serverName }?.asJsonObject
+            }
+        } catch (e: Exception) {
+            cachedMap = null
         }
     }
 }
