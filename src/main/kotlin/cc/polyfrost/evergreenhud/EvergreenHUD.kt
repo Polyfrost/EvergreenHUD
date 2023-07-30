@@ -34,6 +34,7 @@ class EvergreenHUD {
         Pitch()
         PlaceCount()
         PlayerPreview()
+        Playtime()
         Reach()
         RealLifeTime()
         Saturation()

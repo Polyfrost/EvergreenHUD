@@ -11,6 +11,7 @@
     "EntityPlayerMixin",
     "ForgeHooksMixin",
     "LevelheadAboveHeadRenderMixin",
+    "MainMixin",
     "RendererLivingEntityMixin"
   ]
 }
