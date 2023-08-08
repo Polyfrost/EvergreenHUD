@@ -22,6 +22,7 @@ class EvergreenHUD {
         CPS()
         Day()
         Direction()
+        ECounter()
         FPS()
         GameMode()
         GameType()
