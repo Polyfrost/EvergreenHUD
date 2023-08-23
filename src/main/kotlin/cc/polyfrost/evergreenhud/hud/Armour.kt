@@ -3,7 +3,6 @@ package cc.polyfrost.evergreenhud.hud
 import cc.polyfrost.oneconfig.config.Config
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.core.OneColor
-import cc.polyfrost.oneconfig.config.data.InfoType
 import cc.polyfrost.oneconfig.config.data.Mod
 import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.BasicHud
@@ -41,9 +40,6 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
         //$$ @Transient val shield = ItemStack(Items.SHIELD)
         //#endif
 
-        @Info(text = "i know this is terrible please beg xander to help me", type = InfoType.INFO)
-        var balls = null
-
         @Switch(
             name = "Show Helmet"
         )
@@ -70,7 +66,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
         var showMainHand = true
 
         @Switch(
-                name = "Show Offhand Item"
+            name = "Show Offhand Item"
         )
         var showOffhand = true
 
@@ -98,7 +94,6 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
             name = "Text Color"
         )
         var textColor = OneColor(255, 255, 255)
-
 
         @Dropdown(name = "Text Type", options = ["No Shadow", "Shadow", "Full Shadow"])
         var textType = 0
@@ -155,8 +150,8 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
         }
 
         private fun draw(matrices: UMatrixStack?, x: Float, y: Float, scale: Float, items: List<ItemStack>) {
-
-            val offset = 16f + padding
+            val iconSize = 16f
+            val offset = iconSize + padding
 
             val texts = items.map {
                 when (extraInfo) {
@@ -168,50 +163,62 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                     text to mc.fontRendererObj.getStringWidth(text)
                 }
             }
-            actualWidth = (texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0) + 2F + 11
-            actualHeight = items.size * offset - padding * 2
 
-            val itemX = when (alignment) {
-                0 -> x + 2f
-                1 -> x + actualWidth - 16f + 6f
-                else -> error("Unknown alignment: $alignment")
-            }
-            val textAnchor = when (alignment) {
-                0 -> 2f + 16f * scale
-                1 -> actualWidth - 16f - 2f
-                else -> error("Unknown alignment: $alignment")
-            }
+            actualWidth = (texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0) + iconSize
+            actualHeight = items.size * offset - padding
+
+            UGraphics.GL.pushMatrix()
+            UGraphics.GL.scale(scale, scale, 1f)
+            UGraphics.GL.translate(x / scale, y / scale, 0f)
             items.forEachIndexed { i: Int, stack: ItemStack ->
-                val itemY = y + offset * i * scale
-
-                UGraphics.GL.pushMatrix()
-                UGraphics.GL.translate((itemX - 4f).toDouble(), (itemY - 4f).toDouble(), 0.0)
-                UGraphics.GL.scale(scale, scale, 1f)
-                RenderHelper.enableGUIStandardItemLighting()
-                mc.renderItem.zLevel = 200f
-                mc.renderItem.renderItemAndEffectIntoGUI(stack, 0, 0)
-                mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, stack, 0, 0, "")
-                RenderHelper.disableStandardItemLighting()
-                UGraphics.GL.popMatrix()
-
+                val itemY = i * offset
                 val (text, textWidth) = texts[i]
 
-                val textX = when (alignment) {
-                    0 -> x + textAnchor
-                    1 -> x + textAnchor - textWidth
+                val itemX = when (alignment) {
+                    0 -> 0
+                    1 -> actualWidth - iconSize
                     else -> error("Unknown alignment: $alignment")
                 }
 
+                val textX = when (alignment) {
+                    0 -> 0
+                    1 -> actualWidth - textWidth
+                    else -> error("Unknown alignment: $alignment")
+                }
+
+                val textTranslation = when (alignment) {
+                    0 -> iconSize
+                    1 -> -iconSize
+                    else -> error("Unknown alignment: $alignment")
+                }
+
+                RenderHelper.enableGUIStandardItemLighting()
+                mc.renderItem.zLevel = 200f
+                mc.renderItem.renderItemAndEffectIntoGUI(stack, itemX.toInt(), itemY.toInt())
+                mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, stack, itemX.toInt(), itemY.toInt(), "")
+                RenderHelper.disableStandardItemLighting()
+
                 UGraphics.GL.pushMatrix()
-                UGraphics.GL.translate(textX.toDouble(), itemY.toDouble(), 0.0)
-                TextRenderer.drawScaledString(text, 0f, 0f, textColor.rgb, TextRenderer.TextType.toType(textType), scale)
+                UGraphics.GL.translate(textTranslation, 0f, 0f)
+                TextRenderer.drawScaledString(
+                    text,
+                    textX.toFloat(),
+                    itemY + mc.fontRendererObj.FONT_HEIGHT / 2f,
+                    textColor.rgb,
+                    TextRenderer.TextType.toType(textType),
+                    1f
+                )
                 UGraphics.GL.popMatrix()
             }
+            UGraphics.GL.popMatrix()
         }
 
-        override fun getWidth(scale: Float, example: Boolean): Float = actualWidth
+        override fun getWidth(scale: Float, example: Boolean): Float = actualWidth * scale
 
-        override fun getHeight(scale: Float, example: Boolean): Float = actualHeight
+        override fun getHeight(scale: Float, example: Boolean): Float = actualHeight * scale
 
+        override fun shouldShow(): Boolean {
+            return super.shouldShow() && getItems(false).isNotEmpty()
+        }
     }
 }
