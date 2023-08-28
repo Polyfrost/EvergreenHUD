@@ -16,7 +16,7 @@ class ECounter: Config(Mod("E Counter", ModType.HUD, "/assets/evergreenhud/everg
         initialize()
     }
 
-    class ECounterHUD: SingleTextHud("E", true, 400, 70) {
+    class ECounterHUD : SingleTextHud("E", true, 400, 90) {
 
         @Switch(
                 name = "Simplified"
@@ -25,8 +25,9 @@ class ECounter: Config(Mod("E Counter", ModType.HUD, "/assets/evergreenhud/everg
 
         override fun getText(example: Boolean): String {
             if (mc.thePlayer == null) return "Unknown"
-            return if (simplified) mc.renderGlobal.debugInfoEntities.split("/")[0].replace("E: ", "")
-                else mc.renderGlobal.debugInfoEntities.split(",")[0].replace("E: ", "")
+
+            val delimiter = if (simplified) '/' else ','
+            return mc.renderGlobal.debugInfoEntities.substringAfter("E: ").substringBefore(delimiter)
         }
     }
 
