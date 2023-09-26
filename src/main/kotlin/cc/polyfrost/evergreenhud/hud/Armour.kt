@@ -209,13 +209,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                 RenderHelper.enableGUIStandardItemLighting()
                 mc.renderItem.zLevel = 200f
                 mc.renderItem.renderItemAndEffectIntoGUI(stack, itemX.toInt() + translation.toInt(), itemY.toInt())
-                mc.renderItem.renderItemOverlayIntoGUI(
-                    mc.fontRendererObj,
-                    stack,
-                    itemX.toInt() + translation.toInt(),
-                    itemY.toInt(),
-                    ""
-                )
+                mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, stack, itemX.toInt() + translation.toInt(), itemY.toInt(), "")
                 RenderHelper.disableStandardItemLighting()
 
                 UGraphics.GL.pushMatrix()
