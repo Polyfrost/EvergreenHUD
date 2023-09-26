@@ -78,6 +78,13 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
         var padding = 5
 
         @DualOption(
+            name = "Type",
+            left = "Horizontal",
+            right = "Vertical"
+        )
+        var type = false
+
+        @DualOption(
             name = "Display Type",
             left = "Down", //lol
             right = "Up"
@@ -164,25 +171,30 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                 }
             }
 
-            actualWidth = (texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0) + iconSize
-            actualHeight = items.size * offset - padding
+            val width = (texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0) + iconSize
+
+            actualWidth = if (type) width else width * items.size + padding * (items.size - 1)
+
+            actualHeight = if (type) items.size * offset - padding else offset - padding
 
             UGraphics.GL.pushMatrix()
             UGraphics.GL.scale(scale, scale, 1f)
             UGraphics.GL.translate(x / scale, y / scale, 0f)
             items.forEachIndexed { i: Int, stack: ItemStack ->
-                val itemY = i * offset
+
+                val itemY = if (type) i * offset else 0
+
                 val (text, textWidth) = texts[i]
 
                 val itemX = when (alignment) {
                     0 -> 0
-                    1 -> actualWidth - iconSize
+                    1 -> width - iconSize
                     else -> error("Unknown alignment: $alignment")
                 }
 
                 val textX = when (alignment) {
                     0 -> 0
-                    1 -> actualWidth - textWidth
+                    1 -> width - textWidth
                     else -> error("Unknown alignment: $alignment")
                 }
 
@@ -192,18 +204,26 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                     else -> error("Unknown alignment: $alignment")
                 }
 
+                val translation = if (type) 0 else i * (offset + textWidth)
+
                 RenderHelper.enableGUIStandardItemLighting()
                 mc.renderItem.zLevel = 200f
-                mc.renderItem.renderItemAndEffectIntoGUI(stack, itemX.toInt(), itemY.toInt())
-                mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, stack, itemX.toInt(), itemY.toInt(), "")
+                mc.renderItem.renderItemAndEffectIntoGUI(stack, itemX.toInt() + translation.toInt(), itemY.toInt())
+                mc.renderItem.renderItemOverlayIntoGUI(
+                    mc.fontRendererObj,
+                    stack,
+                    itemX.toInt() + translation.toInt(),
+                    itemY.toInt(),
+                    ""
+                )
                 RenderHelper.disableStandardItemLighting()
 
                 UGraphics.GL.pushMatrix()
                 UGraphics.GL.translate(textTranslation, 0f, 0f)
                 TextRenderer.drawScaledString(
                     text,
-                    textX.toFloat(),
-                    itemY + mc.fontRendererObj.FONT_HEIGHT / 2f,
+                    textX.toFloat() + translation.toFloat(),
+                    itemY.toFloat() + mc.fontRendererObj.FONT_HEIGHT / 2f,
                     textColor.rgb,
                     TextRenderer.TextType.toType(textType),
                     1f
