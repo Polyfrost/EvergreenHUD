@@ -78,6 +78,13 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
         )
         var padding = 5
 
+        @Slider(
+            name = "Icon Padding",
+            min = 0F,
+            max = 10F
+        )
+        var iconPadding = 5
+
         @DualOption(
             name = "Type",
             left = "Horizontal",
@@ -173,15 +180,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                 }
             }
 
-            if (type) {
-                actualWidth = (texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0) + iconSize
-            } else {
-                actualWidth = (padding * (items.size - 1)).toFloat()
-
-                items.forEachIndexed { i: Int, stack: ItemStack ->
-                    actualWidth += texts[i].second + iconSize
-                }
-            }
+            actualWidth = if (type) (texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0) + iconSize else (padding * (items.size - 1)).toFloat()
 
             actualHeight = if (type) items.size * offset - padding else offset - padding
 
@@ -192,31 +191,36 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
             UGraphics.GL.translate(x / scale, y / scale, 0f)
             items.forEachIndexed { i: Int, stack: ItemStack ->
 
+                if (!type) actualWidth += texts[i].second + iconSize
+
+                if (texts[i].first != "") actualWidth += iconPadding
+
                 val itemY = if (type) i * offset else 0
 
                 val (text, textWidth) = texts[i]
 
-                val width = mc.fontRendererObj.getStringWidth(text).toFloat() + iconSize
-
                 val itemX = when (alignment) {
                     0 -> 0
-                    1 -> width - iconSize
+                    1 -> textWidth + iconPadding
                     else -> error("Unknown alignment: $alignment")
                 }
 
                 val textX = when (alignment) {
                     0 -> 0
-                    1 -> width - textWidth
+                    1 -> iconSize + iconPadding
                     else -> error("Unknown alignment: $alignment")
                 }
 
                 val textTranslation = when (alignment) {
-                    0 -> iconSize
-                    1 -> -iconSize
+                    0 -> iconSize + iconPadding
+                    1 -> -iconSize - iconPadding
                     else -> error("Unknown alignment: $alignment")
                 }
 
-                if (!type && i > 0) translation += offset + texts[i - 1].second
+                if (!type && i > 0) {
+                    translation += offset + texts[i - 1].second
+                    if (texts[i - 1].first != "") translation += iconPadding
+                }
 
                 RenderHelper.enableGUIStandardItemLighting()
                 mc.renderItem.zLevel = 200f
