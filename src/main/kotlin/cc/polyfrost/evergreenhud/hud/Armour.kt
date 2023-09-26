@@ -15,6 +15,7 @@ import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.init.Items
 import net.minecraft.item.ItemStack
+import net.minecraft.util.MathHelper
 
 //#if MC>=10900
 //$$ import net.minecraft.inventory.EntityEquipmentSlot
@@ -113,6 +114,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
 
         @Transient private var actualWidth = 5F
         @Transient private var actualHeight = 5F
+        @Transient private var translation = 0F
 
         override fun draw(matrices: UMatrixStack?, x: Float, y: Float, scale: Float, example: Boolean) {
             draw(matrices, x, y, scale, getItems(example))
@@ -163,7 +165,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
             val texts = items.map {
                 when (extraInfo) {
                     1 -> if (it.isItemStackDamageable) (it.maxDamage - it.itemDamage).toString() else ""
-                    2 -> if (it.isItemStackDamageable) "${(it.maxDamage - it.itemDamage) / it.maxDamage * 100}%" else ""
+                    2 -> if (it.isItemStackDamageable) "${MathHelper.ceiling_float_int((it.maxDamage - it.itemDamage).toFloat() / it.maxDamage.toFloat() * 100f)}%" else ""
                     3 -> it.displayName ?: ""
                     else -> ""
                 }.let { text ->
@@ -171,11 +173,19 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                 }
             }
 
-            val width = (texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0) + iconSize
+            if (type) {
+                actualWidth = (texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0) + iconSize
+            } else {
+                actualWidth = (padding * (items.size - 1)).toFloat()
 
-            actualWidth = if (type) width else width * items.size + padding * (items.size - 1)
+                items.forEachIndexed { i: Int, stack: ItemStack ->
+                    actualWidth += texts[i].second + iconSize
+                }
+            }
 
             actualHeight = if (type) items.size * offset - padding else offset - padding
+
+            translation = 0F
 
             UGraphics.GL.pushMatrix()
             UGraphics.GL.scale(scale, scale, 1f)
@@ -185,6 +195,8 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                 val itemY = if (type) i * offset else 0
 
                 val (text, textWidth) = texts[i]
+
+                val width = mc.fontRendererObj.getStringWidth(text).toFloat() + iconSize
 
                 val itemX = when (alignment) {
                     0 -> 0
@@ -204,7 +216,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                     else -> error("Unknown alignment: $alignment")
                 }
 
-                val translation = if (type) 0 else i * (offset + textWidth)
+                if (!type && i > 0) translation += offset + texts[i - 1].second
 
                 RenderHelper.enableGUIStandardItemLighting()
                 mc.renderItem.zLevel = 200f
@@ -216,7 +228,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                 UGraphics.GL.translate(textTranslation, 0f, 0f)
                 TextRenderer.drawScaledString(
                     text,
-                    textX.toFloat() + translation.toFloat(),
+                    textX.toFloat() + translation,
                     itemY.toFloat() + mc.fontRendererObj.FONT_HEIGHT / 2f,
                     textColor.rgb,
                     TextRenderer.TextType.toType(textType),
