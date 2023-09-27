@@ -193,7 +193,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
 
                 if (!type) actualWidth += texts[i].second + iconSize
 
-                if (texts[i].first != "") actualWidth += iconPadding
+                if (texts[i].first != "" && !type) actualWidth += iconPadding
 
                 val itemY = if (type) i * offset else 0
 
@@ -201,13 +201,13 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
 
                 val itemX = when (alignment) {
                     0 -> 0
-                    1 -> textWidth + iconPadding
+                    1 -> if (type) actualWidth - iconSize else textWidth + iconPadding
                     else -> error("Unknown alignment: $alignment")
                 }
 
                 val textX = when (alignment) {
                     0 -> 0
-                    1 -> iconSize + iconPadding
+                    1 -> if (type) actualWidth - textWidth else iconSize + iconPadding
                     else -> error("Unknown alignment: $alignment")
                 }
 
@@ -219,7 +219,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
 
                 if (!type && i > 0) {
                     translation += offset + texts[i - 1].second
-                    if (texts[i - 1].first != "") translation += iconPadding
+                    if (texts[i - 1 + alignment].first != "") translation += iconPadding
                 }
 
                 RenderHelper.enableGUIStandardItemLighting()
