@@ -15,7 +15,7 @@ import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.init.Items
 import net.minecraft.item.ItemStack
-import net.minecraft.util.MathHelper
+import kotlin.math.ceil
 
 //#if MC>=10900
 //$$ import net.minecraft.inventory.EntityEquipmentSlot
@@ -172,7 +172,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
             val texts = items.map {
                 when (extraInfo) {
                     1 -> if (it.isItemStackDamageable) (it.maxDamage - it.itemDamage).toString() else ""
-                    2 -> if (it.isItemStackDamageable) "${MathHelper.ceiling_float_int((it.maxDamage - it.itemDamage).toFloat() / it.maxDamage.toFloat() * 100f)}%" else ""
+                    2 -> if (it.isItemStackDamageable) "${ceil((it.maxDamage - it.itemDamage).toFloat() / it.maxDamage.toFloat() * 100f).toInt()}%" else ""
                     3 -> it.displayName ?: ""
                     else -> ""
                 }.let { text ->
@@ -226,7 +226,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                 UGraphics.GL.pushMatrix()
                 TextRenderer.drawScaledString(
                     text,
-                    textX.toFloat() + translation,
+                    textX + translation,
                     itemY.toFloat() + mc.fontRendererObj.FONT_HEIGHT / 2f,
                     textColor.rgb,
                     TextRenderer.TextType.toType(textType),
