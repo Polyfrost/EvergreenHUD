@@ -14,6 +14,7 @@ class EvergreenHUD {
     fun onFMLInitialization(event: FMLInitializationEvent) {
         PinkuluAPIManager.initialize()
         Armour()
+        BedwarsResource()
         Biome()
         BlockAbove()
         CCounter()
@@ -37,6 +38,7 @@ class EvergreenHUD {
         PlayerPreview()
         Playtime()
         Reach()
+        RealLifeDate()
         RealLifeTime()
         Saturation()
         ServerIP()

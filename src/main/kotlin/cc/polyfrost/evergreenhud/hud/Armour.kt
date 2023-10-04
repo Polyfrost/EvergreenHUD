@@ -15,6 +15,7 @@ import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.init.Items
 import net.minecraft.item.ItemStack
+import kotlin.math.ceil
 
 //#if MC>=10900
 //$$ import net.minecraft.inventory.EntityEquipmentSlot
@@ -77,6 +78,20 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
         )
         var padding = 5
 
+        @Slider(
+            name = "Icon Padding",
+            min = 0F,
+            max = 10F
+        )
+        var iconPadding = 5
+
+        @DualOption(
+            name = "Type",
+            left = "Horizontal",
+            right = "Vertical"
+        )
+        var type = false
+
         @DualOption(
             name = "Display Type",
             left = "Down", //lol
@@ -106,6 +121,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
 
         @Transient private var actualWidth = 5F
         @Transient private var actualHeight = 5F
+        @Transient private var translation = 0F
 
         override fun draw(matrices: UMatrixStack?, x: Float, y: Float, scale: Float, example: Boolean) {
             draw(matrices, x, y, scale, getItems(example))
@@ -156,7 +172,7 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
             val texts = items.map {
                 when (extraInfo) {
                     1 -> if (it.isItemStackDamageable) (it.maxDamage - it.itemDamage).toString() else ""
-                    2 -> if (it.isItemStackDamageable) "${(it.maxDamage - it.itemDamage) / it.maxDamage * 100}%" else ""
+                    2 -> if (it.isItemStackDamageable) "${ceil((it.maxDamage - it.itemDamage).toFloat() / it.maxDamage.toFloat() * 100f).toInt()}%" else ""
                     3 -> it.displayName ?: ""
                     else -> ""
                 }.let { text ->
@@ -164,46 +180,54 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergre
                 }
             }
 
-            actualWidth = (texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0) + iconSize
-            actualHeight = items.size * offset - padding
+            val longestWidth = texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0
+
+            actualWidth = if (type) longestWidth + iconSize else (padding * (items.size - 1)).toFloat()
+
+            actualHeight = if (type) items.size * offset - padding else offset - padding
+
+            translation = 0F
+
+            if (longestWidth > 0 && type) actualWidth += iconPadding
 
             UGraphics.GL.pushMatrix()
             UGraphics.GL.scale(scale, scale, 1f)
             UGraphics.GL.translate(x / scale, y / scale, 0f)
             items.forEachIndexed { i: Int, stack: ItemStack ->
-                val itemY = i * offset
+
                 val (text, textWidth) = texts[i]
 
+                if (!type) actualWidth += texts[i].second + iconSize + if (textWidth > 0) iconPadding else 0
+
+                val width = if (type) actualWidth else textWidth + iconSize + iconPadding
+
+                val itemY = if (type) i * offset else 0
+
                 val itemX = when (alignment) {
-                    0 -> 0
-                    1 -> actualWidth - iconSize
+                    0 -> width - iconSize - if (textWidth == 0 && !type) iconPadding else 0
+                    1 -> 0
                     else -> error("Unknown alignment: $alignment")
                 }
 
                 val textX = when (alignment) {
-                    0 -> 0
-                    1 -> actualWidth - textWidth
+                    0 -> width - iconSize - textWidth - iconPadding
+                    1 -> iconSize + iconPadding
                     else -> error("Unknown alignment: $alignment")
                 }
 
-                val textTranslation = when (alignment) {
-                    0 -> iconSize
-                    1 -> -iconSize
-                    else -> error("Unknown alignment: $alignment")
-                }
+                if (!type && i > 0) translation += offset + texts[i - 1].second + if (texts[i - 1].second > 0) iconPadding else 0
 
                 RenderHelper.enableGUIStandardItemLighting()
                 mc.renderItem.zLevel = 200f
-                mc.renderItem.renderItemAndEffectIntoGUI(stack, itemX.toInt(), itemY.toInt())
-                mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, stack, itemX.toInt(), itemY.toInt(), "")
+                mc.renderItem.renderItemAndEffectIntoGUI(stack, itemX.toInt() + translation.toInt(), itemY.toInt())
+                mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, stack, itemX.toInt() + translation.toInt(), itemY.toInt(), "")
                 RenderHelper.disableStandardItemLighting()
 
                 UGraphics.GL.pushMatrix()
-                UGraphics.GL.translate(textTranslation, 0f, 0f)
                 TextRenderer.drawScaledString(
                     text,
-                    textX.toFloat(),
-                    itemY + mc.fontRendererObj.FONT_HEIGHT / 2f,
+                    textX + translation,
+                    itemY.toFloat() + mc.fontRendererObj.FONT_HEIGHT / 2f,
                     textColor.rgb,
                     TextRenderer.TextType.toType(textType),
                     1f
