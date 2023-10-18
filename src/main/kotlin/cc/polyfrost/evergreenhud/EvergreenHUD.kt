@@ -29,6 +29,7 @@ class EvergreenHUD {
         GameType()
         HeightLimit()
         InGameTime()
+        Inventory()
         Map()
         MapType()
         Memory()
