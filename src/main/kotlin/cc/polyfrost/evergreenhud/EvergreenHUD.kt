@@ -1,6 +1,7 @@
 package cc.polyfrost.evergreenhud
 
 import cc.polyfrost.evergreenhud.hud.*
+import cc.polyfrost.evergreenhud.hud.customtexts.CustomTexts
 import cc.polyfrost.evergreenhud.utils.PinkuluAPIManager
 import net.minecraft.entity.Entity
 import net.minecraft.entity.player.EntityPlayer
@@ -21,6 +22,7 @@ class EvergreenHUD {
         Combo()
         Coordinates()
         CPS()
+        CustomTexts()
         Day()
         Direction()
         ECounter()
