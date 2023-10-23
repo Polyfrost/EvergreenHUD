@@ -1,6 +1,7 @@
 package cc.polyfrost.evergreenhud
 
 import cc.polyfrost.evergreenhud.hud.*
+import cc.polyfrost.evergreenhud.hud.customimages.CustomImages
 import cc.polyfrost.evergreenhud.hud.customtexts.CustomTexts
 import cc.polyfrost.evergreenhud.utils.PinkuluAPIManager
 import net.minecraft.entity.Entity
@@ -22,6 +23,7 @@ class EvergreenHUD {
         Combo()
         Coordinates()
         CPS()
+        CustomImages()
         CustomTexts()
         Day()
         Direction()
