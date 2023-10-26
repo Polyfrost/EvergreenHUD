@@ -1,8 +1,8 @@
 package cc.polyfrost.evergreenhud
 
 import cc.polyfrost.evergreenhud.hud.*
-import cc.polyfrost.evergreenhud.hud.customimages.CustomImages
-import cc.polyfrost.evergreenhud.hud.customtexts.CustomTexts
+import cc.polyfrost.evergreenhud.hud.CustomImages
+import cc.polyfrost.evergreenhud.hud.CustomTexts
 import cc.polyfrost.evergreenhud.utils.PinkuluAPIManager
 import net.minecraft.entity.Entity
 import net.minecraft.entity.player.EntityPlayer
