@@ -48,6 +48,7 @@ class EvergreenHUD {
         Saturation()
         ServerIP()
         Speed()
+        TPS()
         Yaw()
     }
 
