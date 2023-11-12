@@ -1,22 +1,29 @@
 package cc.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
+import cc.polyfrost.oneconfig.config.annotations.DualOption
+import cc.polyfrost.oneconfig.config.annotations.HUD
+import cc.polyfrost.oneconfig.config.annotations.Slider
+import cc.polyfrost.oneconfig.config.annotations.Switch
+import cc.polyfrost.oneconfig.config.data.Mod
+import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.events.EventManager
-import cc.polyfrost.oneconfig.events.event.*
-import cc.polyfrost.oneconfig.gui.animations.*
+import cc.polyfrost.oneconfig.events.event.ReceivePacketEvent
+import cc.polyfrost.oneconfig.events.event.ScreenOpenEvent
+import cc.polyfrost.oneconfig.gui.animations.Animation
+import cc.polyfrost.oneconfig.gui.animations.EaseInOutQuad
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
-import cc.polyfrost.oneconfig.libs.universal.*
+import cc.polyfrost.oneconfig.libs.universal.UGraphics
+import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.gui.Gui
 import net.minecraft.client.gui.inventory.GuiChest
-import net.minecraft.client.renderer.*
-import net.minecraft.client.renderer.entity.RenderItem
-import net.minecraft.inventory.*
+import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.client.renderer.RenderHelper
+import net.minecraft.inventory.ContainerChest
+import net.minecraft.inventory.IInventory
 import net.minecraft.item.ItemStack
-import net.minecraft.network.play.server.S01PacketJoinGame
 import net.minecraft.util.ResourceLocation
 
 class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/inventory.json", false) {
@@ -135,7 +142,7 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
 
          private fun drawItem(item: ItemStack?) {
              if (item == null) return
-             val itemRenderer: RenderItem = mc.renderItem
+             val itemRenderer = mc.renderItem
              itemRenderer.renderItemAndEffectIntoGUI(item, 0, 0)
              itemRenderer.renderItemOverlayIntoGUI(mc.fontRendererObj, item, 0, 0, null)
          }
@@ -203,7 +210,13 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
 
         @Subscribe
         fun onWorldLoad(e: ReceivePacketEvent) {
-            if (e.packet !is S01PacketJoinGame) return
+            if (e.packet !is
+                    //#if MC>=11202
+                    //$$ net.minecraft.network.play.server.SPacketJoinGame
+                    //#else
+                    net.minecraft.network.play.server.S01PacketJoinGame
+                    //#endif
+                ) return
             enderChest = null
         }
 

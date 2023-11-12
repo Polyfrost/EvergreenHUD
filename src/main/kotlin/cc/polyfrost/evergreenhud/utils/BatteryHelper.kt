@@ -1,10 +1,10 @@
 package cc.polyfrost.evergreenhud.utils
 
-import jdk.internal.org.jline.utils.OSUtils
+import org.apache.commons.lang3.SystemUtils
 
 object BatteryHelper {
     fun getBattery(): Battery {
-        if (!OSUtils.IS_WINDOWS) return UnknownBattery
+        if (SystemUtils.IS_OS_WINDOWS) return UnknownBattery
         return runCatching {
             Kernel32.getPowerStatus()
         }.getOrDefault(UnknownBattery)

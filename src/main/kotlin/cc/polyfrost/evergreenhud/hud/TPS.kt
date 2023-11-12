@@ -8,7 +8,6 @@ import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.ReceivePacketEvent
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
-import net.minecraft.network.play.server.S03PacketTimeUpdate
 
 class TPS : Config(Mod("TPS", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/tps.json", false) {
     @HUD(name = "Main")
@@ -32,7 +31,13 @@ class TPS : Config(Mod("TPS", ModType.HUD, "/assets/evergreenhud/evergreenhud.sv
         @Subscribe
         fun onTimeUpdate(event: ReceivePacketEvent) {
             if (!isEnabled) return
-            if (event.packet !is S03PacketTimeUpdate) return
+            if (event.packet !is
+                    //#if MC>=11202
+                    //$$ net.minecraft.network.play.server.SPacketTimeUpdate
+                    //#else
+                    net.minecraft.network.play.server.S03PacketTimeUpdate
+                    //#endif
+                ) return
 
             val now = System.currentTimeMillis()
             val timeTaken = now - lastUpdated

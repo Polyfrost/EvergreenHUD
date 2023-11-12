@@ -17,7 +17,6 @@ import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.init.Items
 import net.minecraft.inventory.*
 import net.minecraft.item.ItemStack
-import net.minecraft.network.play.server.S01PacketJoinGame
 
 class BedwarsResource : Config(Mod("Bedwars Resource", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/bedwarsresource.json", false) {
 
@@ -146,7 +145,13 @@ class BedwarsResource : Config(Mod("Bedwars Resource", ModType.HUD, "/assets/eve
 
         @Subscribe
         fun onWorldLoad(e: ReceivePacketEvent) {
-            if (e.packet !is S01PacketJoinGame) return
+            if (e.packet !is
+                    //#if MC>=11202
+                    //$$ net.minecraft.network.play.server.SPacketJoinGame
+                    //#else
+                    net.minecraft.network.play.server.S01PacketJoinGame
+                    //#endif
+                ) return
             enderChest = null
         }
 
@@ -168,12 +173,22 @@ class BedwarsResource : Config(Mod("Bedwars Resource", ModType.HUD, "/assets/eve
                     var amount = 0
                     for (item in mc.thePlayer.inventory.mainInventory) {
                         if (item != null && item.item == stack.item) {
+                            //#if MC>=11202
+                            //$$ amount += item.getCount()
+                            //#else
                             amount += item.stackSize
+                            //#endif
                         }
                     }
                     if (showEnderChest) for (slot in 0..26) {
                         if (enderChest?.getStackInSlot(slot)?.item != stack.item) continue
-                            amount += enderChest?.getStackInSlot(slot)?.stackSize ?: 0
+                            amount += enderChest?.getStackInSlot(slot)
+                                //#if MC>=11202
+                                //$$ ?.getCount()
+                                //#else
+                                ?.stackSize
+                                //#endif
+                                ?: 0
                     }
                     add(amount)
                 }

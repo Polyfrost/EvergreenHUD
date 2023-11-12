@@ -35,5 +35,14 @@ object Kernel32 {
         override val isCharging get() = ACLineStatus != 0.toByte()
         override val percentage get() = BatteryLifePercent.toInt().coerceIn(0, 100)
         override val lifetimeSeconds get() = BatteryLifeTime
+
+        override fun getFieldOrder(): List<String> = mutableListOf(
+            "ACLineStatus",
+            "BatteryFlag",
+            "BatteryLifePercent",
+            "SystemStatusFlag",
+            "BatteryLifeTime",
+            "BatteryFullLifeTime"
+        )
     }
 }
