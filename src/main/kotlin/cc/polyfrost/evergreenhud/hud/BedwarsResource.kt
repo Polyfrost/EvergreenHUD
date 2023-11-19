@@ -162,7 +162,7 @@ class BedwarsResource : Config(Mod("Bedwars Resource", ModType.HUD, "/assets/eve
                 it?.item == item.item
             }.sumOf {
                 //#if MC>=11202
-                //$$ amount += item.getCount()
+                //$$ item.getCount()
                 //#else
                 it.stackSize
                 //#endif
