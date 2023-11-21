@@ -1,0 +1,124 @@
+package org.polyfrost.evergreenhud.hud
+
+import org.polyfrost.evergreenhud.hud.hudlist.HudList
+import cc.polyfrost.oneconfig.config.Config
+import cc.polyfrost.oneconfig.config.annotations.Button
+import cc.polyfrost.oneconfig.config.annotations.CustomOption
+import cc.polyfrost.oneconfig.config.data.Mod
+import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.elements.OptionPage
+import cc.polyfrost.oneconfig.hud.BasicHud
+import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
+import cc.polyfrost.oneconfig.renderer.asset.Image
+import cc.polyfrost.oneconfig.utils.Notifications
+import cc.polyfrost.oneconfig.utils.dsl.nanoVGHelper
+import cc.polyfrost.oneconfig.utils.dsl.runAsync
+import java.io.File
+import java.io.IOException
+import java.lang.reflect.Field
+import javax.imageio.ImageIO
+import javax.swing.JFileChooser
+import javax.swing.UIManager
+import javax.swing.filechooser.FileNameExtensionFilter
+import kotlin.math.min
+
+private fun notify(message: String) = Notifications.INSTANCE.send("EvergreenHUD", message)
+
+class CustomImages : Config(Mod("Custom Images", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/customimages.json", false) {
+    @CustomOption
+    var huds = ImageHudList()
+
+    init {
+        initialize()
+    }
+
+    override fun getCustomOption(
+        field: Field, annotation: CustomOption, page: OptionPage, mod: Mod, migrate: Boolean
+    ) = huds.addOptionTo(this, page)
+
+    class ImageHudList : HudList<CustomImageHud>() {
+        override fun newHud() = CustomImageHud()
+        override fun getHudName(hud: CustomImageHud) = hud.loadedImage?.fileName ?: "No Image Loaded"
+    }
+
+    class CustomImageHud : BasicHud(true, 180f, 30f) {
+        @Button(name = "Image", text = "Browse")
+        val browseButton = Runnable { browse() }
+
+        private fun browse() = runAsync {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
+            val fileChooser = JFileChooser()
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName())
+            fileChooser.fileFilter = FileNameExtensionFilter("Image File", "png", "jpg")
+
+            notify("A file dialogue has opened. You may need to tab out to see it.")
+
+            val result = fileChooser.showOpenDialog(null)
+
+            if (result == JFileChooser.APPROVE_OPTION) {
+                imagePath = fileChooser.selectedFile.path
+                refreshed = false
+                notify("You have selected a new image.")
+            } else {
+                notify("You must select an image.")
+            }
+        }
+
+        @Button(name = "Refresh Image", text = "Refresh")
+        val refreshButton = Runnable { refresh() }
+
+        private fun refresh() {
+            try {
+                loadImage()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+            refreshed = true
+        }
+
+        var imagePath = ""
+
+        @Transient
+        var loadedImage: ScaledImage? = null
+
+        @Transient
+        private var refreshed = false
+
+        override fun draw(matrices: UMatrixStack, x: Float, y: Float, scale: Float, example: Boolean) {
+            if (!refreshed) refresh()
+
+            val image = loadedImage ?: return
+
+            nanoVGHelper.setupAndDraw(true) { vgLong ->
+                val scaledRadius = if (rounded) cornerRadius * scale else 0f
+                nanoVGHelper.drawRoundImage(vgLong, image, x, y, image.width * scale, image.height * scale, scaledRadius)
+            }
+        }
+
+        private fun loadImage() {
+            loadedImage = null
+
+            if (imagePath.isBlank()) return
+            val file = File(imagePath)
+            if (!file.exists()) return
+
+            val bufferedImage = ImageIO.read(file)
+            loadedImage = ScaledImage(imagePath, file.name, bufferedImage.width, bufferedImage.height)
+        }
+
+        override fun getWidth(scale: Float, example: Boolean) = (loadedImage?.width ?: 0f) * scale
+        override fun getHeight(scale: Float, example: Boolean) = (loadedImage?.height ?: 0f) * scale
+
+        class ScaledImage(
+            filePath: String,
+            val fileName: String,
+            imageWidth: Int,
+            imageHeight: Int
+        ) : Image(filePath) {
+            private val scale = 64f / min(imageWidth, imageHeight).toFloat()
+            val width = imageWidth.toFloat() * scale
+            val height = imageHeight.toFloat() * scale
+        }
+    }
+
+}

@@ -1,7 +1,7 @@
 {
   "compatibilityLevel": "JAVA_8",
   "minVersion": "0.7",
-  "package": "cc.polyfrost.evergreenhud.mixins",
+  "package": "org.polyfrost.evergreenhud.mixins",
   "refmap": "mixins.evergreenhud.refmap.json",
   "injectors": {
     "maxShiftBy": 5
