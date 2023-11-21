@@ -197,13 +197,6 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
     }
 
     class PlayerInventoryHUD : InventoryHUD(true, 104, 180){
-
-        override fun getItem(index: Int): ItemStack? {
-            if (mc.thePlayer == null) return null
-            return mc.thePlayer.inventory.mainInventory[index + 9]
-        }
-
-    class PlayerInventoryHUD : InventoryHUD(400, 700) {
         override fun getItem(index: Int): ItemStack? =
             mc.thePlayer?.inventory?.mainInventory?.get(index + 9)
     }
