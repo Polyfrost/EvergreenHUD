@@ -15,6 +15,7 @@ import cc.polyfrost.oneconfig.gui.animations.EaseInOutQuad
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
 import cc.polyfrost.oneconfig.libs.universal.UGraphics
+import cc.polyfrost.oneconfig.libs.universal.UGraphics.GL
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.gui.Gui
@@ -25,6 +26,9 @@ import net.minecraft.inventory.ContainerChest
 import net.minecraft.inventory.IInventory
 import net.minecraft.item.ItemStack
 import net.minecraft.util.ResourceLocation
+
+private const val VANILLA = false
+private val vanillaBackgroundTexture: ResourceLocation = ResourceLocation("textures/gui/container/inventory.png")
 
 class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/inventory.json", false) {
 
@@ -40,8 +44,8 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
 
     abstract class InventoryHUD(
         x: Int,
-        y: Int
-    ) : BasicHud(false, x.toFloat(), y.toFloat()){
+        y: Int,
+    ) : BasicHud(false, x.toFloat(), y.toFloat()) {
 
         @Switch(name = "Dynamic Rows")
         protected var dynamic = false
@@ -55,40 +59,49 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
         @Slider(name = "Animation Duration", min = 0f, max = 1000f)
         protected var duration = 200f
 
-        @Transient protected var size = 0
-        @Transient protected var height = 0F
-        @Transient protected var itemsX: ArrayList<Float> = ArrayList()
-        @Transient protected var itemsY: ArrayList<Float> = ArrayList()
-        @Transient protected var lastHasItem: ArrayList<Boolean> = ArrayList()
-        @Transient protected var animationsY: ArrayList<Animation?> = ArrayList()
-        @Transient protected val Tex: ResourceLocation = ResourceLocation("textures/gui/container/inventory.png")
-        @Transient protected var enderChest: IInventory? = null
+        @Transient
+        protected var size = 0
 
-        override fun draw(matrices: UMatrixStack?, x: Float, y: Float, scale: Float, example: Boolean) {
+        @Transient
+        protected var height = 0F
+
+        @Transient
+        protected var itemsX: ArrayList<Float> = ArrayList()
+
+        @Transient
+        protected var itemsY: ArrayList<Float> = ArrayList()
+
+        @Transient
+        protected var lastHasItem: ArrayList<Boolean> = ArrayList()
+
+        @Transient
+        protected var animationsY: ArrayList<Animation?> = ArrayList()
+
+        override fun draw(matrices: UMatrixStack, x: Float, y: Float, scale: Float, example: Boolean) {
             if (itemsY.isEmpty()) initArray()
-            UGraphics.GL.pushMatrix()
-            UGraphics.GL.translate(x, y, 100f)
-            UGraphics.GL.scale(scale, scale, 1.0f)
+            GL.pushMatrix()
+            GL.translate(x, y, 100f)
+            GL.scale(scale, scale, 1.0f)
             GlStateManager.enableRescaleNormal()
             UGraphics.enableBlend()
             UGraphics.tryBlendFuncSeparate(770, 771, 1, 0)
-            mc.textureManager.bindTexture(Tex)
-            if (!backgroundType){
+            if (backgroundType == VANILLA) {
+                mc.textureManager.bindTexture(vanillaBackgroundTexture)
                 Gui.drawScaledCustomSizeModalRect(0, 0, 0f, 0f, 176, 7, 176, 7, 256f, 256f)
                 Gui.drawScaledCustomSizeModalRect(0, 7, 0f, 83f, 176, 54, 176, 54, 256f, 256f)
                 Gui.drawScaledCustomSizeModalRect(0, 61, 0f, 159f, 176, 7, 176, 7, 256f, 256f)
+                GL.translate(8f, 8f, 8f)
             }
             RenderHelper.enableGUIStandardItemLighting()
-            if (!backgroundType) UGraphics.GL.translate(8f, 8f, 8f)
 
-            val padding = if (backgroundType) 16f + spacing else 18f
+            val padding = if (backgroundType == VANILLA) 16f + spacing else 18f
             var i = 0
             var biggestHeight = 0F
             for (row in 0..2) {
                 val itemY = i * padding
 
-                if (getRows()[row] != lastHasItem[row]){
-                    if (!lastHasItem[row]){
+                if (getRows()[row] != lastHasItem[row]) {
+                    if (!lastHasItem[row]) {
                         animationsY[row] = EaseInOutQuad(0, itemY, itemY, false)
                         itemsY[row] = itemY
                     }
@@ -107,15 +120,15 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
 
                 if (thisHeight > biggestHeight) biggestHeight = thisHeight
 
-                UGraphics.GL.pushMatrix()
-                UGraphics.GL.translate(0f, translation, 0f)
+                GL.pushMatrix()
+                GL.translate(0f, translation, 0f)
                 for (column in 0..8) {
                     val index = row * 9 + column
                     drawItem(getItem(index))
-                    GlStateManager.translate(padding, 0f, 0f)
+                    GL.translate(padding, 0f, 0f)
                 }
-                GlStateManager.translate(-padding * 9, padding, 0f)
-                UGraphics.GL.popMatrix()
+                GL.translate(-padding * 9, padding, 0f)
+                GL.popMatrix()
 
                 i++
             }
@@ -126,26 +139,26 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
             UGraphics.disableBlend()
             GlStateManager.disableRescaleNormal()
             UGraphics.enableAlpha()
-            UGraphics.GL.popMatrix()
+            GL.popMatrix()
         }
 
-        private fun initArray(){
-            for(i in 0..2){
+        private fun initArray() {
+            for (i in 0..2) {
                 itemsY.add(0f)
                 animationsY.add(null)
                 lastHasItem.add(false)
             }
-            for (i in 0..35){
+            for (i in 0..35) {
                 itemsX.add(0f)
             }
         }
 
-         private fun drawItem(item: ItemStack?) {
-             if (item == null) return
-             val itemRenderer = mc.renderItem
-             itemRenderer.renderItemAndEffectIntoGUI(item, 0, 0)
-             itemRenderer.renderItemOverlayIntoGUI(mc.fontRendererObj, item, 0, 0, null)
-         }
+        private fun drawItem(item: ItemStack?) {
+            if (item == null) return
+            val itemRenderer = mc.renderItem
+            itemRenderer.renderItemAndEffectIntoGUI(item, 0, 0)
+            itemRenderer.renderItemOverlayIntoGUI(mc.fontRendererObj, item, 0, 0, null)
+        }
 
         protected abstract fun getItem(index: Int): ItemStack?
 
@@ -157,11 +170,11 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
                         val index = row * 9 + column
                         if (getItem(index) != null && getItem(index)?.item != null) {
                             add(true)
-                            this@InventoryHUD.size ++
+                            this@InventoryHUD.size++
                             break
                         }
                     }
-                    if (this.size == row) add(false)
+                    if (this@InventoryHUD.size == row) add(false)
                 }
                 return@run this
             }
@@ -179,21 +192,18 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
             return super.shouldShow() && (!dynamic || size > 0)
         }
 
-        override fun shouldDrawBackground(): Boolean {
-            return super.shouldDrawBackground() && backgroundType
-        }
-
+        override fun shouldDrawBackground() = super.shouldDrawBackground() && backgroundType
     }
 
-    class PlayerInventoryHUD : InventoryHUD(400, 700){
-        override fun getItem(index: Int): ItemStack? {
-            if (mc.thePlayer == null) return null
-            return mc.thePlayer.inventory.mainInventory[index + 9]
-        }
-
+    class PlayerInventoryHUD : InventoryHUD(400, 700) {
+        override fun getItem(index: Int): ItemStack? =
+            mc.thePlayer?.inventory?.mainInventory?.get(index + 9)
     }
 
-    class EnderChestHUD : InventoryHUD(600, 700){
+    class EnderChestHUD : InventoryHUD(600, 700) {
+        @Transient
+        private var enderChest: IInventory? = null
+
         init {
             EventManager.INSTANCE.register(this)
         }
@@ -215,13 +225,11 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
                     //$$ net.minecraft.network.play.server.SPacketJoinGame
                     //#else
                     net.minecraft.network.play.server.S01PacketJoinGame
-                    //#endif
-                ) return
+            //#endif
+            ) return
             enderChest = null
         }
 
-        override fun getItem(index: Int): ItemStack? {
-            return if (enderChest == null) null else enderChest!!.getStackInSlot(index)
-        }
+        override fun getItem(index: Int): ItemStack? = enderChest?.getStackInSlot(index)
     }
 }

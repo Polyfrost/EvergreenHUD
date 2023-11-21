@@ -117,7 +117,7 @@ class CustomImages : Config(Mod("Custom Images", ModType.HUD, "/assets/evergreen
         ) : Image(filePath) {
             private val scale = 64f / min(imageWidth, imageHeight).toFloat()
             val width = imageWidth.toFloat() * scale
-            val height = imageWidth.toFloat() * scale
+            val height = imageHeight.toFloat() * scale
         }
     }
 
