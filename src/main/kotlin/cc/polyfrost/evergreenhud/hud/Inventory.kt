@@ -31,7 +31,7 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
     @HUD(name = "Player Inventory", category = "Player Inventory")
     var playerInventoryHUD = PlayerInventoryHUD()
 
-    @HUD(name = "Player Inventory", category = "Ender Chest")
+    @HUD(name = "Ender Chest", category = "Ender Chest")
     var enderChestHUD = EnderChestHUD()
 
     init {
@@ -39,9 +39,10 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
     }
 
     abstract class InventoryHUD(
+        enabled: Boolean = false,
         x: Int,
         y: Int
-    ) : BasicHud(false, x.toFloat(), y.toFloat()){
+    ) : BasicHud(enabled, x.toFloat(), y.toFloat()){
 
         @Switch(name = "Dynamic Rows")
         protected var dynamic = false
@@ -185,7 +186,8 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
 
     }
 
-    class PlayerInventoryHUD : InventoryHUD(400, 700){
+    class PlayerInventoryHUD : InventoryHUD(true, 104, 180){
+
         override fun getItem(index: Int): ItemStack? {
             if (mc.thePlayer == null) return null
             return mc.thePlayer.inventory.mainInventory[index + 9]
@@ -193,7 +195,7 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
 
     }
 
-    class EnderChestHUD : InventoryHUD(600, 700){
+    class EnderChestHUD : InventoryHUD(false, 280, 180){
         init {
             EventManager.INSTANCE.register(this)
         }
