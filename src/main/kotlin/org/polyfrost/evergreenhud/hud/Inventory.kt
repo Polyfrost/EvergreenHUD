@@ -45,8 +45,8 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
     abstract class InventoryHUD(
         enabled: Boolean = false,
         x: Int,
-        y: Int
-    ) : BasicHud(enabled, x.toFloat(), y.toFloat()){
+        y: Int,
+    ) : BasicHud(enabled, x.toFloat(), y.toFloat()) {
 
         @Switch(name = "Dynamic Rows")
         protected var dynamic = false
@@ -59,9 +59,6 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
 
         @Slider(name = "Animation Duration", min = 0f, max = 1000f)
         protected var duration = 200f
-
-        @Transient
-        protected var size = 0
 
         @Transient
         protected var height = 0F
@@ -101,12 +98,12 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
             for (row in 0..2) {
                 val itemY = i * padding
 
-                if (getRows()[row] != lastHasItem[row]) {
-                    if (!lastHasItem[row]) {
+                if (getRowAreShownList()[row] != lastHasItem[row]) {
+                    if (!lastHasItem[row]) { // now true
                         animationsY[row] = EaseInOutQuad(0, itemY, itemY, false)
                         itemsY[row] = itemY
                     }
-                    lastHasItem[row] = getRows()[row] ?: true
+                    lastHasItem[row] = getRowAreShownList()[row]
                 }
 
                 if (itemsY[row] != itemY) {
@@ -114,7 +111,7 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
                     itemsY[row] = itemY
                 }
 
-                if (dynamic && getRows()[row] == false && backgroundType) continue
+                if (dynamic && !getRowAreShownList()[row] && backgroundType) continue
 
                 val thisHeight = (animationsY[row]?.get() ?: 0).toFloat() + 16f
                 val translation = if (backgroundType && dynamic) animationsY[row]?.get() ?: itemY else itemY
@@ -155,53 +152,50 @@ class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/eve
         }
 
         private fun drawItem(item: ItemStack?) {
-            if (item == null) return
-            val itemRenderer = mc.renderItem
-            itemRenderer.renderItemAndEffectIntoGUI(item, 0, 0)
-            itemRenderer.renderItemOverlayIntoGUI(mc.fontRendererObj, item, 0, 0, null)
+            item ?: return
+            with(mc.renderItem) {
+                renderItemAndEffectIntoGUI(item, 0, 0)
+                renderItemOverlayIntoGUI(mc.fontRendererObj, item, 0, 0, null)
+            }
         }
 
-        protected abstract fun getItem(index: Int): ItemStack?
+        abstract fun getItem(index: Int): ItemStack?
 
-        private fun getRows() =
-            arrayListOf<Boolean?>().run {
-                this@InventoryHUD.size = 0
-                for (row in 0..2) {
-                    for (column in 0..8) {
-                        val index = row * 9 + column
-                        if (getItem(index) != null && getItem(index)?.item != null) {
-                            add(true)
-                            this@InventoryHUD.size++
-                            break
-                        }
-                    }
-                    if (this@InventoryHUD.size == row) add(false)
+        private fun getRowAreShownList() =
+            (0..2).map { row ->
+                (0..8).any { column ->
+                    getItem(row * 9 + column) != null
                 }
-                return@run this
             }
 
-        override fun getWidth(scale: Float, example: Boolean): Float {
-            return if (backgroundType) spacing * 8 + 144f else 176f
-        }
+        override fun getWidth(scale: Float, example: Boolean): Float =
+            if (backgroundType) {
+                spacing * 8 + 144f
+            } else {
+                176f
+            }
 
-        override fun getHeight(scale: Float, example: Boolean): Float {
-            return if (dynamic && !example && backgroundType) height else if (backgroundType) spacing * 2 + 48f else 68f
-        }
+        override fun getHeight(scale: Float, example: Boolean): Float =
+            if (dynamic && !example && backgroundType) {
+                height
+            } else if (backgroundType) {
+                spacing * 2 + 48f
+            } else {
+                68f
+            }
 
-        override fun shouldShow(): Boolean {
-            getRows()
-            return super.shouldShow() && (!dynamic || size > 0)
-        }
+        override fun shouldShow(): Boolean =
+            super.shouldShow() && (!dynamic || true in getRowAreShownList())
 
         override fun shouldDrawBackground() = super.shouldDrawBackground() && backgroundType
     }
 
-    class PlayerInventoryHUD : InventoryHUD(true, 104, 180){
+    class PlayerInventoryHUD : InventoryHUD(true, 104, 180) {
         override fun getItem(index: Int): ItemStack? =
             mc.thePlayer?.inventory?.mainInventory?.get(index + 9)
     }
 
-    class EnderChestHUD : InventoryHUD(false, 280, 180){
+    class EnderChestHUD : InventoryHUD(false, 280, 180) {
         @Transient
         private var enderChest: IInventory? = null
 
