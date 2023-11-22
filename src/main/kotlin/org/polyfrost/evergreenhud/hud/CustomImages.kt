@@ -9,6 +9,7 @@ import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.config.elements.OptionPage
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
+import cc.polyfrost.oneconfig.renderer.TinyFD
 import cc.polyfrost.oneconfig.renderer.asset.Image
 import cc.polyfrost.oneconfig.utils.Notifications
 import cc.polyfrost.oneconfig.utils.dsl.nanoVGHelper
@@ -46,17 +47,23 @@ class CustomImages : Config(Mod("Custom Images", ModType.HUD, "/assets/evergreen
         val browseButton = Runnable { browse() }
 
         private fun browse() = runAsync {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
-            val fileChooser = JFileChooser()
-            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName())
-            fileChooser.fileFilter = FileNameExtensionFilter("Image File", "png", "jpg")
-
             notify("A file dialogue has opened. You may need to tab out to see it.")
 
-            val result = fileChooser.showOpenDialog(null)
+            val result = TinyFD.INSTANCE.openFileSelector(
+                "Select an image",
+                "",
+                arrayOf("*.png", "*.jpg", "*.jpeg"),
+                "Image Files"
+            )
 
-            if (result == JFileChooser.APPROVE_OPTION) {
-                imagePath = fileChooser.selectedFile.path
+            if (result != null) {
+                result.absolutePath.let {
+                    if (!it.endsWith(".png") && !it.endsWith(".jpg") && !it.endsWith(".jpeg")) {
+                        notify("You must select a PNG or JPG image.")
+                        return@runAsync
+                    }
+                    imagePath = it
+                }
                 refreshed = false
                 notify("You have selected a new image.")
             } else {
@@ -100,7 +107,7 @@ class CustomImages : Config(Mod("Custom Images", ModType.HUD, "/assets/evergreen
 
             if (imagePath.isBlank()) return
             val file = File(imagePath)
-            if (!file.exists()) return
+            if (!file.exists() || !file.isFile) return
 
             val bufferedImage = ImageIO.read(file)
             loadedImage = ScaledImage(imagePath, file.name, bufferedImage.width, bufferedImage.height)

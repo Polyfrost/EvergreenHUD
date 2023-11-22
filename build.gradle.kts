@@ -94,9 +94,9 @@ repositories {
 
 // Configures the libraries/dependencies for your mod.
 dependencies {
-    "dummyCompileOnly"("cc.polyfrost:oneconfig-$platform:0.2.0-alpha+")
+    "dummyCompileOnly"("cc.polyfrost:oneconfig-$platform:0.2.1-alpha184")
     // Adds the OneConfig library, so we can develop with it.
-    modCompileOnly("cc.polyfrost:oneconfig-$platform:0.2.1-alpha+")
+    modCompileOnly("cc.polyfrost:oneconfig-$platform:0.2.1-alpha184")
 
     modRuntimeOnly("me.djtheredstoner:DevAuth-${if (platform.isFabric) "fabric" else if (platform.isLegacyForge) "forge-legacy" else "forge-latest"}:1.1.2")
 
