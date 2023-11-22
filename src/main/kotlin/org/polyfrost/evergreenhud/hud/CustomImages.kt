@@ -34,7 +34,7 @@ class CustomImages : Config(Mod("Custom Images", ModType.HUD, "/assets/evergreen
     }
 
     override fun getCustomOption(
-        field: Field, annotation: CustomOption, page: OptionPage, mod: Mod, migrate: Boolean
+        field: Field, annotation: CustomOption, page: OptionPage, mod: Mod, migrate: Boolean,
     ) = huds.addOptionTo(this, page)
 
     class ImageHudList : HudList<CustomImageHud>() {
@@ -44,9 +44,9 @@ class CustomImages : Config(Mod("Custom Images", ModType.HUD, "/assets/evergreen
 
     class CustomImageHud : BasicHud(true, 180f, 30f) {
         @Button(name = "Image", text = "Browse")
-        val browseButton = Runnable { browse() }
+        val browseButton = Runnable { runAsync { browse() } }
 
-        private fun browse() = runAsync {
+        private fun browse() {
             notify("A file dialogue has opened. You may need to tab out to see it.")
 
             val result = TinyFD.INSTANCE.openFileSelector(
@@ -54,21 +54,20 @@ class CustomImages : Config(Mod("Custom Images", ModType.HUD, "/assets/evergreen
                 "",
                 arrayOf("*.png", "*.jpg", "*.jpeg"),
                 "Image Files"
-            )
-
-            if (result != null) {
-                result.absolutePath.let {
-                    if (!it.endsWith(".png") && !it.endsWith(".jpg") && !it.endsWith(".jpeg")) {
-                        notify("You must select a PNG or JPG image.")
-                        return@runAsync
-                    }
-                    imagePath = it
-                }
-                refreshed = false
-                notify("You have selected a new image.")
-            } else {
+            ) ?: run {
                 notify("You must select an image.")
+                return
             }
+
+            imagePath = result.absolutePath.takeIf {
+                it.endsWith(".png") || it.endsWith(".jpg") || it.endsWith(".jpeg")
+            } ?: run {
+                notify("You must select a PNG or JPG image.")
+                return
+            }
+
+            refreshed = false
+            notify("You have selected a new image.")
         }
 
         @Button(name = "Refresh Image", text = "Refresh")
@@ -120,7 +119,7 @@ class CustomImages : Config(Mod("Custom Images", ModType.HUD, "/assets/evergreen
             filePath: String,
             val fileName: String,
             imageWidth: Int,
-            imageHeight: Int
+            imageHeight: Int,
         ) : Image(filePath) {
             private val scale = 64f / min(imageWidth, imageHeight).toFloat()
             val width = imageWidth.toFloat() * scale
