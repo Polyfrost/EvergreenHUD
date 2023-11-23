@@ -8,7 +8,7 @@ import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
 
-class ECounter: Config(Mod("E Counter", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/ecounter.json", false) {
+class ECounter: Config(Mod("E Counter", ModType.HUD), "evergreenhud/ecounter.json", false) {
     @HUD(name = "Main")
     var hud = ECounterHUD()
 

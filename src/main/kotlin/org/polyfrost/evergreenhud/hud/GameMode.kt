@@ -10,7 +10,7 @@ import cc.polyfrost.oneconfig.utils.hypixel.HypixelUtils
 import cc.polyfrost.oneconfig.utils.hypixel.LocrawUtil
 import java.util.*
 
-class GameMode : Config(Mod("Game Mode", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/gamemode.json", false) {
+class GameMode : Config(Mod("Game Mode", ModType.HUD), "evergreenhud/gamemode.json", false) {
 
     @HUD(
         name = "Main"

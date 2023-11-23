@@ -8,7 +8,7 @@ import cc.polyfrost.oneconfig.config.data.Mod
 import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 
-class Playtime: Config(Mod("Playtime", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/playtime.json", false) {
+class Playtime: Config(Mod("Playtime", ModType.HUD), "evergreenhud/playtime.json", false) {
     @HUD(name = "Main")
     var hud = PlaytimeHud()
 

@@ -11,7 +11,7 @@ import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
 
-class Yaw : Config(Mod("Yaw", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/yaw.json", false) {
+class Yaw : Config(Mod("Yaw", ModType.HUD), "evergreenhud/yaw.json", false) {
     @HUD(name = "Main")
     var hud = YawHud()
 

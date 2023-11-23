@@ -9,7 +9,7 @@ import cc.polyfrost.oneconfig.events.event.ReceivePacketEvent
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
 
-class TPS : Config(Mod("TPS", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/tps.json", false) {
+class TPS : Config(Mod("TPS", ModType.HUD), "evergreenhud/tps.json", false) {
     @HUD(name = "Main")
     var hud = TPSHud()
 

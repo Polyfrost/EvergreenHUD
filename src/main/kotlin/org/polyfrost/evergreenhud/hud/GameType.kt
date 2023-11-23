@@ -9,7 +9,7 @@ import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.hypixel.HypixelUtils
 import cc.polyfrost.oneconfig.utils.hypixel.LocrawUtil
 
-class GameType : Config(Mod("Game Type", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/gametype.json", false) {
+class GameType : Config(Mod("Game Type", ModType.HUD), "evergreenhud/gametype.json", false) {
 
     @HUD(
         name = "Main"

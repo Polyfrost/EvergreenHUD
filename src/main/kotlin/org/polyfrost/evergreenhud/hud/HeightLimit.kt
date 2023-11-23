@@ -11,7 +11,7 @@ import cc.polyfrost.oneconfig.utils.dsl.mc
 import cc.polyfrost.oneconfig.utils.hypixel.HypixelUtils
 import cc.polyfrost.oneconfig.utils.hypixel.LocrawUtil
 
-class HeightLimit : Config(Mod("Height Limit", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/heightlimit.json", false) {
+class HeightLimit : Config(Mod("Height Limit", ModType.HUD), "evergreenhud/heightlimit.json", false) {
 
     @HUD(
         name = "Main"

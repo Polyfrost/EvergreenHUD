@@ -9,7 +9,7 @@ import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.hypixel.HypixelUtils
 import cc.polyfrost.oneconfig.utils.hypixel.LocrawUtil
 
-class Map : Config(Mod("Map", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/map.json", false) {
+class Map : Config(Mod("Map", ModType.HUD), "evergreenhud/map.json", false) {
 
     @HUD(
         name = "Main"

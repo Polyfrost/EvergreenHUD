@@ -16,7 +16,7 @@ import net.minecraft.block.BlockVine
 import net.minecraft.init.Blocks
 import net.minecraft.util.BlockPos
 
-class BlockAbove: Config(Mod("Block Above", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/blockabove.json", false) {
+class BlockAbove: Config(Mod("Block Above", ModType.HUD), "evergreenhud/blockabove.json", false) {
     @HUD(name = "Main")
     var hud = BlockAboveHud()
 

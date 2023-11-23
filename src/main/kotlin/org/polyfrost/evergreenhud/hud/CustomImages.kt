@@ -25,7 +25,7 @@ import kotlin.math.min
 
 private fun notify(message: String) = Notifications.INSTANCE.send("EvergreenHUD", message)
 
-class CustomImages : Config(Mod("Custom Images", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/customimages.json", false) {
+class CustomImages : Config(Mod("Custom Images", ModType.HUD), "evergreenhud/customimages.json", false) {
     @CustomOption
     var huds = ImageHudList()
 

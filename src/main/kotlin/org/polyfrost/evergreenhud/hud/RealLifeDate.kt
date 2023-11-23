@@ -10,7 +10,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-class RealLifeDate : Config(Mod("IRL Date", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/irldate.json", false) {
+class RealLifeDate : Config(Mod("IRL Date", ModType.HUD), "evergreenhud/irldate.json", false) {
     @HUD(name = "Main")
     var hud = RealLifeDateHud()
 

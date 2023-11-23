@@ -10,7 +10,7 @@ import cc.polyfrost.oneconfig.config.elements.OptionPage
 import cc.polyfrost.oneconfig.hud.TextHud
 import java.lang.reflect.Field
 
-class CustomTexts : Config(Mod("Custom Texts", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/customtexts.json", false) {
+class CustomTexts : Config(Mod("Custom Texts", ModType.HUD), "evergreenhud/customtexts.json", false) {
     @CustomOption
     var huds = TextHudList()
 

@@ -15,7 +15,7 @@ import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.entity.EntityLivingBase
 
 
-class PlayerPreview: Config(Mod("Player Preview", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/playerpreview.json", false) {
+class PlayerPreview: Config(Mod("Player Preview", ModType.HUD), "evergreenhud/playerpreview.json", false) {
     @HUD(
         name = "Self Preview"
     )

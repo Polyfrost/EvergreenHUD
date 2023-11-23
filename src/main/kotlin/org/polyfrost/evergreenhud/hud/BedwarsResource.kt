@@ -26,7 +26,7 @@ private val DIAMOND = ItemStack(Items.diamond)
 private val EMERALD = ItemStack(Items.emerald)
 private var enderChest: IInventory? = null
 
-class BedwarsResource : Config(Mod("Bedwars Resource", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/bedwarsresource.json", false) {
+class BedwarsResource : Config(Mod("Bedwars Resource", ModType.HUD), "evergreenhud/bedwarsresource.json", false) {
 
     @HUD(name = "Main")
     var hud = BedwarsResourceHud()

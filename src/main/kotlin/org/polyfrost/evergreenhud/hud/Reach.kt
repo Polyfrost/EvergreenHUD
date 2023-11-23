@@ -17,7 +17,7 @@ import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.entity.Entity
 
-class Reach: Config(Mod("Reach", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/reach.json", false) {
+class Reach: Config(Mod("Reach", ModType.HUD), "evergreenhud/reach.json", false) {
     @HUD(name = "Main")
     var hud = ReachHud()
 

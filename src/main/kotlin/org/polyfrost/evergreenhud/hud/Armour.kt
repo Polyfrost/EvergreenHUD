@@ -19,7 +19,7 @@ import kotlin.math.*
 //$$ import net.minecraft.inventory.EntityEquipmentSlot
 //#endif
 
-class Armour: Config(Mod("ArmourHud", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/armour.json", false) {
+class Armour: Config(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", false) {
     @HUD(name = "Main")
     var hud = ArmourHud()
 

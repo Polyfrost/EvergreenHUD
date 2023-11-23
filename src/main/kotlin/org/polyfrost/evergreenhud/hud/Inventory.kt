@@ -30,7 +30,7 @@ import net.minecraft.util.ResourceLocation
 private const val VANILLA = false
 private val vanillaBackgroundTexture: ResourceLocation = ResourceLocation("textures/gui/container/inventory.png")
 
-class Inventory : Config(Mod("Inventory", ModType.HUD, "/assets/evergreenhud/evergreenhud.svg"), "evergreenhud/inventory.json", false) {
+class Inventory : Config(Mod("Inventory", ModType.HUD), "evergreenhud/inventory.json", false) {
 
     @HUD(name = "Player Inventory", category = "Player Inventory")
     var playerInventoryHUD = PlayerInventoryHUD()
