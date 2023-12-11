@@ -1,13 +1,18 @@
 package org.polyfrost.evergreenhud.mixins;
 
 import net.minecraft.client.gui.GuiIngame;
-import net.minecraft.item.ItemStack;
+// import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(GuiIngame.class)
 public interface GuiIngameAccessor {
 
+// most of the below interface is from VanillaHUD.
+// it's been commented out in case anyone else finds it useful
+// until then, it's only being used for the HeldItemLore.kt class
+// -ery
+/*
     @Accessor("recordPlaying")
     String getRecordPlaying();
 
@@ -36,8 +41,9 @@ public interface GuiIngameAccessor {
     String getDisplayedSubTitle();
 
     @Accessor()
-    int getRemainingHighlightTicks();
+    ItemStack getHighlightingItemStack();
+*/
 
     @Accessor()
-    ItemStack getHighlightingItemStack();
+    int getRemainingHighlightTicks();
 }

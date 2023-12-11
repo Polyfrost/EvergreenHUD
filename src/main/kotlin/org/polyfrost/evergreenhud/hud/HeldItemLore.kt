@@ -60,11 +60,11 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
             "§7Make friends. Go on a hike. §7§nDo both at once!",
         )
 
-        fun drawLine(line: String?, x: Float, y: Float, c: OneColor, scale: Float) {
+        override fun drawLine(line: String?, x: Float, y: Float, scale: Float) {
             val color = OneColor(
                 ColorUtils.setAlpha(
-                    c.rgb,
-                    min(c.alpha.toDouble(), opacity.toDouble()).toInt()
+                    this.color.rgb,
+                    min(this.color.alpha.toDouble(), opacity.toDouble()).toInt()
                 ) or (this.opacity shl 24)
             )
             UGraphics.enableBlend()
@@ -159,7 +159,7 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
             //#endif
             val itemName = theHeldItem.displayName
             val itemLore = theHeldItem.getLore()
-            if (itemName.isNotEmpty() && !skipItemName) lines.add("§r$itemName")
+            if (itemName.isNotEmpty() && !skipItemName) lines.add("§r$itemName§r") // §r to avoid coloring either the inventory or enderchest huds
             if (itemLore.isNotEmpty()) {
                 addXToY(itemLore, lines)
             }
