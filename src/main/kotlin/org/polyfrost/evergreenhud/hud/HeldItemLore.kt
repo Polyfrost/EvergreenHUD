@@ -17,7 +17,7 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
         initialize()
     }
 
-    class HeldItemLoreHud : TextHud(false, 0, 0) {
+    class HeldItemLoreHud : TextHud(false, 50, 50) {
 
         @Switch(
             name = "Fade Out"
