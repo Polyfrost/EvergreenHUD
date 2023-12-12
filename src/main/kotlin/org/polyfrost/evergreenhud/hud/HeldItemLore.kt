@@ -57,8 +57,8 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
         @Number(name = "Stop After Line", min = 0F, max = 100F, description = "The HUD will stop rendering lore lines after this amount. Leave at 0 to render all lines in an item lore.\nThis setting won't count the item's display name as a line.")
          var stopAfterLine: Int = 0
 
-        // @Number(name = "Extra Seconds of Held Item Lore", min = 0F, max = 60F, description = "The number of extra seconds the tooltip will remain on screen before fading out.")
-        // var extraSeconds = 0
+         // @Number(name = "Extra Seconds", min = 0F, max = 60F, description = "The number of extra seconds the tooltip will remain on screen before fading out.")
+         // var extraSeconds: Int = 0
         // above line is my attempt at extending the time a tooltip had before fading out -ery
 
         @Exclude private var opacity = 0
@@ -187,7 +187,7 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
                 if (line.isEmpty() && removeEmptyLines) continue
                 lines.add(line)
                 index++
-                if (index >= stopAfterLine && stopAfterLine > 0) break
+                if (stopAfterLine in 1..index) break
             }
         }
     }
