@@ -10,7 +10,7 @@
   "client": [
     "EntityPlayerMixin",
     "ForgeHooksMixin",
-    "GuiIngameAccessor",,
+    "GuiIngameAccessor",
     "LevelheadAboveHeadRenderMixin",
     "MainMixin",
     "RendererLivingEntityMixin"

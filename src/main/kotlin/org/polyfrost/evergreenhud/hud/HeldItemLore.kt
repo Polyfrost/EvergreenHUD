@@ -17,21 +17,6 @@ import org.polyfrost.evergreenhud.mixins.GuiIngameAccessor
 import org.polyfrost.evergreenhud.utils.ItemStackUtils.getLore
 import kotlin.math.min
 
-/**
-    HeldItemLore.kt
-
-    A Kotlin class written by Erymanthus | RayDeeUx, Wyvest, and ImToggle
-    for the EvergreenHUD mod.
-
-    Displays the item lore of the currently held item (if there is any).
-
-    Allows for options to limit the number of lines to show, as well as skipping any
-    empty lore lines.
-
-    Also allows for omitting the item of the name from the HUD
-    (useful if VanillaHUD) is also installed.
- */
-
 class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/helditemlore.json", false) {
     @HUD(name = "Main")
     var hud = HeldItemLoreHud()
@@ -40,13 +25,10 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
         initialize()
     }
 
-    class HeldItemLoreHud : TextHud(false, 50, 50) {
+    class HeldItemLoreHud : TextHud(true, 50, 50) {
 
         @Switch(name = "Fade Out", description = "If disabled, the held item lore HUD will persist indefinitely.")
-        var fadeOut: Boolean = true
-
-        @Switch(name = "Instant Fade", description = "Requires \"Fade Out\" to be enabled, otherwise this toggle is ignored.")
-        var instantFade: Boolean = false
+        var fadeOut: Boolean = false
 
         @Switch(name = "Remove Empty Lines")
         var removeEmptyLines: Boolean = false
@@ -63,7 +45,7 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
 
         @Exclude private var opacity = 0
 
-        @Exclude private final val TOOLTIP: MutableList<String> = mutableListOf(
+        @Exclude private val TOOLTIP: MutableList<String> = mutableListOf(
             "§bExample Item Lore §7(Left click and hold to drag this!)",
             "",
             "§7If you can read this, you're spending",
@@ -143,7 +125,7 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
                 if (fadeOut) (remainingTicks * 256 / 10)
                 else 255
             if (o > 255) o = 255
-            opacity = if (instantFade) 255 else o
+            opacity = o
             return o > 0 && super.shouldShow()
         }
 
