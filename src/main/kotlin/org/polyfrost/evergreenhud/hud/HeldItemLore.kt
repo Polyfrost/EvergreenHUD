@@ -1,9 +1,8 @@
 package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.Exclude
-import cc.polyfrost.oneconfig.config.annotations.HUD
-import cc.polyfrost.oneconfig.config.annotations.Switch
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.annotations.Number
 import cc.polyfrost.oneconfig.config.core.OneColor
 import cc.polyfrost.oneconfig.config.data.Mod
 import cc.polyfrost.oneconfig.config.data.ModType
@@ -18,6 +17,20 @@ import org.polyfrost.evergreenhud.mixins.GuiIngameAccessor
 import org.polyfrost.evergreenhud.utils.ItemStackUtils.getLore
 import kotlin.math.min
 
+/**
+    HeldItemLore.kt
+
+    A Kotlin class written by Erymanthus | RayDeeUx, Wyvest, and ImToggle
+    for the EvergreenHUD mod.
+
+    Displays the item lore of the currently held item (if there is any).
+
+    Allows for options to limit the number of lines to show, as well as skipping any
+    empty lore lines.
+
+    Also allows for omitting the item of the name from the HUD
+    (useful if VanillaHUD) is also installed.
+ */
 
 class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/helditemlore.json", false) {
     @HUD(name = "Main")
@@ -41,11 +54,14 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
         @Switch(name = "Skip Item Name")
         var skipItemName: Boolean = false
 
+        @Number(name = "Stop After Line", min = 0F, max = 100F, description = "The HUD will stop rendering lore lines after this amount. Leave at 0 to render all lines in an item lore.\nThis setting won't count the item's display name as a line.")
+         var stopAfterLine: Int = 0
+
         // @Number(name = "Extra Seconds of Held Item Lore", min = 0F, max = 60F, description = "The number of extra seconds the tooltip will remain on screen before fading out.")
         // var extraSeconds = 0
         // above line is my attempt at extending the time a tooltip had before fading out -ery
 
-        @Exclude private var opacity = 0 // a place to start in case anyone gets around to implementing gradual fadeout -ery
+        @Exclude private var opacity = 0
 
         @Exclude private final val TOOLTIP: MutableList<String> = mutableListOf(
             "§bExample Item Lore §7(Left click and hold to drag this!)",
@@ -145,7 +161,7 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
 
             if (example) {
                 lines.clear()
-                addXToY(TOOLTIP, lines)
+                addTextToHUD(TOOLTIP, lines)
                 return
             }
 
@@ -161,18 +177,17 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
             val itemLore = theHeldItem.getLore()
             if (itemName.isNotEmpty() && !skipItemName) lines.add("§r$itemName§r") // §r to avoid coloring either the inventory or enderchest huds
             if (itemLore.isNotEmpty()) {
-                addXToY(itemLore, lines)
+                addTextToHUD(itemLore, lines)
             }
         }
 
-        private fun addXToY(theListToAdd: List<String>, lines: MutableList<String>) {
-            if (!removeEmptyLines) lines.addAll(theListToAdd)
-            else {
-                for (line in theListToAdd) {
-                    if (line.isNotEmpty()) {
-                        lines.add(line)
-                    }
-                }
+        private fun addTextToHUD(theListToAdd: List<String>, lines: MutableList<String>) {
+            var index = 0
+            for (line in theListToAdd) {
+                if (line.isEmpty() && removeEmptyLines) continue
+                lines.add(line)
+                index++
+                if (index >= stopAfterLine && stopAfterLine > 0) break
             }
         }
     }
