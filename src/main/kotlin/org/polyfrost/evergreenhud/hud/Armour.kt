@@ -25,7 +25,6 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", 
 
     init {
         initialize()
-        addDependency("showOffhand", "Minecraft Version 1.9 or later") { Platform.getInstance().minecraftVersion >= 10900 }
     }
 
     class ArmourHud : BasicHud(true, 1920f - 5, 1080f - 5) {
@@ -60,11 +59,6 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", 
             name = "Show Main Hand Item"
         )
         var showMainHand = true
-
-        @Switch(
-            name = "Show Offhand Item"
-        )
-        var showOffhand = true
 
         @Slider(
             name = "Item Padding",
