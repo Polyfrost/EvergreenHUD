@@ -13,6 +13,7 @@ import cc.polyfrost.oneconfig.renderer.NanoVGHelper
 import cc.polyfrost.oneconfig.renderer.TextRenderer
 import cc.polyfrost.oneconfig.utils.color.ColorUtils
 import cc.polyfrost.oneconfig.utils.dsl.mc
+import net.minecraft.item.ItemStack
 import org.polyfrost.evergreenhud.mixins.GuiIngameAccessor
 import org.polyfrost.evergreenhud.utils.ItemStackUtils.getLore
 import kotlin.math.min
@@ -149,12 +150,13 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
 
             if (!shouldShow()) return
 
-            val theHeldItem =
+            val theHeldItem: ItemStack =
                 //#if MC>=11202
                 //$$ mc.player.heldItemMainhand
                 //#else
                 mc.thePlayer.heldItem
-            //#endif
+                //#endif
+            ?: return
             val itemName = theHeldItem.displayName
             val itemLore = theHeldItem.getLore()
             if (itemName.isNotEmpty() && !skipItemName) lines.add("§r$itemName§r") // §r to avoid coloring either the inventory or enderchest huds
