@@ -252,21 +252,25 @@ class Armour: Config(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", 
                 RenderHelper.enableGUIStandardItemLighting()
                 UGraphics.GL.translate(animationIconX[i]?.get() ?: iconX.toFloat(), animationItemY[i]?.get() ?: itemY.toFloat(), 0f)
                 mc.renderItem.zLevel = 200f
-                mc.renderItem.renderItemAndEffectIntoGUI(stack, 0, 0)
-                mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, stack, 0, 0, "")
-                RenderHelper.disableStandardItemLighting()
-                UGraphics.GL.popMatrix()
-                UGraphics.GL.pushMatrix()
-                UGraphics.GL.translate(animationTextX[i]?.get() ?: textX.toFloat(), (animationItemY[i]?.get() ?: itemY.toFloat()) + mc.fontRendererObj.FONT_HEIGHT / 2f, 0f)
-                TextRenderer.drawScaledString(
-                    text,
-                    0f,
-                    0f,
-                    textColor.rgb,
-                    TextRenderer.TextType.toType(textType),
-                    1f
-                )
-                UGraphics.GL.popMatrix()
+                try {
+                    mc.renderItem.renderItemAndEffectIntoGUI(stack, 0, 0)
+                    mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, stack, 0, 0, "")
+                    RenderHelper.disableStandardItemLighting()
+                    UGraphics.GL.popMatrix()
+                    UGraphics.GL.pushMatrix()
+                    UGraphics.GL.translate(animationTextX[i]?.get() ?: textX.toFloat(), (animationItemY[i]?.get() ?: itemY.toFloat()) + mc.fontRendererObj.FONT_HEIGHT / 2f, 0f)
+                    TextRenderer.drawScaledString(
+                        text,
+                        0f,
+                        0f,
+                        textColor.rgb,
+                        TextRenderer.TextType.toType(textType),
+                        1f
+                    )
+                    UGraphics.GL.popMatrix()
+                } finally {
+                    mc.renderItem.zLevel = 0f
+                }
                 index++
                 if (!type) preWidth += offset.toInt() + textWidth + if (textWidth > 0) iconPadding else 0
             }

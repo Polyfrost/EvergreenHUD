@@ -204,17 +204,21 @@ class BedwarsResource : Config(Mod("Bedwars Resource", ModType.HUD), "evergreenh
 
                 RenderHelper.enableGUIStandardItemLighting()
                 mc.renderItem.zLevel = 200f
-                mc.renderItem.renderItemAndEffectIntoGUI(item, iconX, itemY.toInt())
-                mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, item, 0, 0, "")
-                RenderHelper.disableStandardItemLighting()
-                TextRenderer.drawScaledString(
-                    text,
-                    textX.toFloat(),
-                    itemY.toFloat() + mc.fontRendererObj.FONT_HEIGHT / 2f,
-                    textColor.rgb,
-                    TextRenderer.TextType.toType(textType),
-                    1f
-                )
+                try {
+                    mc.renderItem.renderItemAndEffectIntoGUI(item, iconX, itemY.toInt())
+                    mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, item, 0, 0, "")
+                    RenderHelper.disableStandardItemLighting()
+                    TextRenderer.drawScaledString(
+                        text,
+                        textX.toFloat(),
+                        itemY.toFloat() + mc.fontRendererObj.FONT_HEIGHT / 2f,
+                        textColor.rgb,
+                        TextRenderer.TextType.toType(textType),
+                        1f
+                    )
+                } finally {
+                    mc.renderItem.zLevel = 0f
+                }
                 size++
                 if (!type) lastWidth += offset.toInt() + textWidth + iconPadding
             }
