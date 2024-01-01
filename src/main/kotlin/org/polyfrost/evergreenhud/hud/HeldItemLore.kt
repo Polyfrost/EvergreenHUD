@@ -8,6 +8,7 @@ import cc.polyfrost.oneconfig.config.data.Mod
 import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.TextHud
 import cc.polyfrost.oneconfig.libs.universal.UGraphics
+import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.libs.universal.UMinecraft
 import cc.polyfrost.oneconfig.renderer.NanoVGHelper
 import cc.polyfrost.oneconfig.renderer.TextRenderer
@@ -113,6 +114,13 @@ class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/he
                         borderSize * scale
                     )
                 }
+            }
+        }
+
+        override fun drawAll(matrices: UMatrixStack?, example: Boolean) {
+            if (example) {
+                opacity = 255
+                super.drawAll(matrices, true)
             }
         }
 
