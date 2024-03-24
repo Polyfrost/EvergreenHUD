@@ -2,8 +2,7 @@ package org.polyfrost.evergreenhud.hud.hudlist
 
 import cc.polyfrost.oneconfig.config.Config
 import cc.polyfrost.oneconfig.config.core.ConfigUtils
-import cc.polyfrost.oneconfig.config.elements.BasicOption
-import cc.polyfrost.oneconfig.config.elements.OptionPage
+import cc.polyfrost.oneconfig.config.elements.*
 import cc.polyfrost.oneconfig.hud.Hud
 
 abstract class HudList<T : Hud> : ArrayList<T>() {

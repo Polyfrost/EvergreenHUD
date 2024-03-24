@@ -1,15 +1,12 @@
 package org.polyfrost.evergreenhud.hud
 
-import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.HUD
-import cc.polyfrost.oneconfig.config.annotations.Switch
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
-import cc.polyfrost.oneconfig.utils.hypixel.HypixelUtils
-import cc.polyfrost.oneconfig.utils.hypixel.LocrawUtil
+import cc.polyfrost.oneconfig.utils.hypixel.*
+import org.polyfrost.evergreenhud.config.HudConfig
 
-class GameType : Config(Mod("Game Type", ModType.HUD), "evergreenhud/gametype.json", false) {
+class GameType : HudConfig(Mod("Game Type", ModType.HUD), "evergreenhud/gametype.json", false) {
 
     @HUD(
         name = "Main"

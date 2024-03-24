@@ -1,21 +1,16 @@
 package org.polyfrost.evergreenhud.hud
 
-import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.Exclude
-import cc.polyfrost.oneconfig.config.annotations.HUD
-import cc.polyfrost.oneconfig.config.annotations.Slider
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.utils.dsl.mc
-import net.minecraft.client.renderer.GlStateManager
-import net.minecraft.client.renderer.OpenGlHelper
-import net.minecraft.client.renderer.RenderHelper
+import net.minecraft.client.renderer.*
 import net.minecraft.entity.EntityLivingBase
+import org.polyfrost.evergreenhud.config.HudConfig
 
 
-class PlayerPreview: Config(Mod("Player Preview", ModType.HUD), "evergreenhud/playerpreview.json", false) {
+class PlayerPreview: HudConfig(Mod("Player Preview", ModType.HUD), "evergreenhud/playerpreview.json", false) {
     @HUD(
         name = "Self Preview"
     )

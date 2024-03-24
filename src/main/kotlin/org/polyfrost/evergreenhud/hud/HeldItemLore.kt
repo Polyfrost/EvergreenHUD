@@ -1,25 +1,21 @@
 package org.polyfrost.evergreenhud.hud
 
-import cc.polyfrost.oneconfig.config.Config
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.annotations.Number
 import cc.polyfrost.oneconfig.config.core.OneColor
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.TextHud
-import cc.polyfrost.oneconfig.libs.universal.UGraphics
-import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
-import cc.polyfrost.oneconfig.libs.universal.UMinecraft
-import cc.polyfrost.oneconfig.renderer.NanoVGHelper
-import cc.polyfrost.oneconfig.renderer.TextRenderer
+import cc.polyfrost.oneconfig.libs.universal.*
+import cc.polyfrost.oneconfig.renderer.*
 import cc.polyfrost.oneconfig.utils.color.ColorUtils
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.item.ItemStack
+import org.polyfrost.evergreenhud.config.HudConfig
 import org.polyfrost.evergreenhud.mixins.GuiIngameAccessor
 import org.polyfrost.evergreenhud.utils.ItemStackUtils.getLore
 import kotlin.math.min
 
-class HeldItemLore : Config(Mod("Held Item Lore", ModType.HUD), "evergreenhud/helditemlore.json", false) {
+class HeldItemLore : HudConfig(Mod("Held Item Lore", ModType.HUD), "evergreenhud/helditemlore.json", false) {
     @HUD(name = "Main")
     var hud = HeldItemLoreHud()
 

@@ -7,11 +7,13 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.world.World
 import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.event.FMLInitializationEvent
+import org.polyfrost.evergreenhud.config.ModConfig
 
 @Mod(modid = EvergreenHUD.MODID, name = EvergreenHUD.NAME, version = EvergreenHUD.VERSION)
 class EvergreenHUD {
     @Mod.EventHandler
     fun onFMLInitialization(event: FMLInitializationEvent) {
+        ModConfig.initialize()
         PinkuluAPIManager.initialize()
         Armour()
         BedwarsResource()
@@ -52,6 +54,7 @@ class EvergreenHUD {
     }
 
     companion object {
+        var mods: ArrayList<cc.polyfrost.oneconfig.config.data.Mod> = ArrayList()
         const val MODID = "@ID@"
         const val NAME = "@NAME@"
         const val VERSION = "@VER@"

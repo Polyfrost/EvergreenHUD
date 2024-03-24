@@ -1,22 +1,16 @@
 package org.polyfrost.evergreenhud.hud
 
-import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.Exclude
-import cc.polyfrost.oneconfig.config.annotations.HUD
-import cc.polyfrost.oneconfig.config.annotations.Slider
-import cc.polyfrost.oneconfig.config.annotations.Switch
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.libs.universal.USound
 import cc.polyfrost.oneconfig.utils.dsl.mc
-import net.minecraft.block.BlockBanner
-import net.minecraft.block.BlockSign
-import net.minecraft.block.BlockVine
+import net.minecraft.block.*
 import net.minecraft.init.Blocks
 import net.minecraft.util.BlockPos
+import org.polyfrost.evergreenhud.config.HudConfig
 
-class BlockAbove: Config(Mod("Block Above", ModType.HUD), "evergreenhud/blockabove.json", false) {
+class BlockAbove: HudConfig(Mod("Block Above", ModType.HUD), "evergreenhud/blockabove.json", false) {
     @HUD(name = "Main")
     var hud = BlockAboveHud()
 

@@ -1,6 +1,5 @@
 package org.polyfrost.evergreenhud.hud
 
-import cc.polyfrost.oneconfig.config.Config
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.core.OneColor
 import cc.polyfrost.oneconfig.config.data.*
@@ -13,13 +12,14 @@ import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.init.Items
 import net.minecraft.item.ItemStack
+import org.polyfrost.evergreenhud.config.HudConfig
 import kotlin.math.*
 
 //#if MC>=10900
 //$$ import net.minecraft.inventory.EntityEquipmentSlot
 //#endif
 
-class Armour: Config(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", false) {
+class Armour: HudConfig(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", false) {
     @HUD(name = "Main")
     var hud = ArmourHud()
 

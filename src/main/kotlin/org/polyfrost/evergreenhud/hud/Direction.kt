@@ -1,15 +1,13 @@
 package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.utils.Facing
-import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.HUD
-import cc.polyfrost.oneconfig.config.annotations.Switch
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
+import org.polyfrost.evergreenhud.config.HudConfig
 
-class Direction: Config(Mod("Direction", ModType.HUD), "evergreenhud/direction.json", false) {
+class Direction: HudConfig(Mod("Direction", ModType.HUD), "evergreenhud/direction.json", false) {
     @HUD(name = "Main")
     var hud = DirectionHud()
 

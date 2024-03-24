@@ -2,22 +2,17 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.ClientDamageEntityEvent
 import org.polyfrost.evergreenhud.utils.decimalFormat
-import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.HUD
-import cc.polyfrost.oneconfig.config.annotations.Slider
-import cc.polyfrost.oneconfig.config.annotations.Switch
-import cc.polyfrost.oneconfig.config.annotations.Text
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.events.EventManager
-import cc.polyfrost.oneconfig.events.event.Stage
-import cc.polyfrost.oneconfig.events.event.TickEvent
+import cc.polyfrost.oneconfig.events.event.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.entity.Entity
+import org.polyfrost.evergreenhud.config.HudConfig
 
-class Reach: Config(Mod("Reach", ModType.HUD), "evergreenhud/reach.json", false) {
+class Reach: HudConfig(Mod("Reach", ModType.HUD), "evergreenhud/reach.json", false) {
     @HUD(name = "Main")
     var hud = ReachHud()
 

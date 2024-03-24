@@ -1,19 +1,16 @@
 package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.utils.FrameTimeHelper
-import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.Dropdown
-import cc.polyfrost.oneconfig.config.annotations.HUD
-import cc.polyfrost.oneconfig.config.annotations.Switch
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import net.minecraft.client.Minecraft
+import org.polyfrost.evergreenhud.config.HudConfig
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-class FPS : Config(Mod("FPS", ModType.HUD), "evergreenhud/fps.json", false) {
+class FPS : HudConfig(Mod("FPS", ModType.HUD), "evergreenhud/fps.json", false) {
     @HUD(name = "FPS", category = "FPS")
     var fps = FPSHud()
 

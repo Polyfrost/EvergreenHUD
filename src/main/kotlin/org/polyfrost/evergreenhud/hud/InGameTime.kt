@@ -1,17 +1,15 @@
 package org.polyfrost.evergreenhud.hud
 
-import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.HUD
-import cc.polyfrost.oneconfig.config.annotations.Switch
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.libs.universal.UMinecraft
+import org.polyfrost.evergreenhud.config.HudConfig
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class InGameTime : Config(Mod("In Game Time", ModType.HUD), "evergreenhud/ingametime.json", false) {
+class InGameTime : HudConfig(Mod("In Game Time", ModType.HUD), "evergreenhud/ingametime.json", false) {
     @HUD(name = "Main")
     var hud = InGameTimeHud()
 

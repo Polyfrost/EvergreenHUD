@@ -14,5 +14,9 @@
     "LevelheadAboveHeadRenderMixin",
     "MainMixin",
     "RendererLivingEntityMixin"
+  ],
+  "mixins": [
+    "ModCardMixin",
+    "ModsPageMixin"
   ]
 }

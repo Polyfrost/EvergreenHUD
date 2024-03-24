@@ -1,6 +1,5 @@
 package org.polyfrost.evergreenhud.hud
 
-import cc.polyfrost.oneconfig.config.Config
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.core.OneColor
 import cc.polyfrost.oneconfig.config.data.*
@@ -17,6 +16,7 @@ import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.init.Items
 import net.minecraft.inventory.*
 import net.minecraft.item.ItemStack
+import org.polyfrost.evergreenhud.config.HudConfig
 import kotlin.collections.Map
 
 
@@ -26,7 +26,7 @@ private val DIAMOND = ItemStack(Items.diamond)
 private val EMERALD = ItemStack(Items.emerald)
 private var enderChest: IInventory? = null
 
-class BedwarsResource : Config(Mod("Bedwars Resource", ModType.HUD), "evergreenhud/bedwarsresource.json", false) {
+class BedwarsResource : HudConfig(Mod("Bedwars Resource", ModType.HUD), "evergreenhud/bedwarsresource.json", false) {
 
     @HUD(name = "Main")
     var hud = BedwarsResourceHud()

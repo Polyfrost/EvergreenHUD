@@ -1,16 +1,14 @@
 package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.hud.hudlist.HudList
-import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.CustomOption
-import cc.polyfrost.oneconfig.config.annotations.Text
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.config.elements.OptionPage
 import cc.polyfrost.oneconfig.hud.TextHud
+import org.polyfrost.evergreenhud.config.HudConfig
 import java.lang.reflect.Field
 
-class CustomTexts : Config(Mod("Custom Texts", ModType.HUD), "evergreenhud/customtexts.json", false) {
+class CustomTexts : HudConfig(Mod("Custom Texts", ModType.HUD), "evergreenhud/customtexts.json", false) {
     @CustomOption
     var huds = TextHudList()
 

@@ -1,14 +1,12 @@
 package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.hook.PlaytimeHook
-import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.HUD
-import cc.polyfrost.oneconfig.config.annotations.Switch
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
+import org.polyfrost.evergreenhud.config.HudConfig
 
-class Playtime: Config(Mod("Playtime", ModType.HUD), "evergreenhud/playtime.json", false) {
+class Playtime: HudConfig(Mod("Playtime", ModType.HUD), "evergreenhud/playtime.json", false) {
     @HUD(name = "Main")
     var hud = PlaytimeHud()
 

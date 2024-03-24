@@ -1,16 +1,13 @@
 package org.polyfrost.evergreenhud.hud
 
-import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.HUD
-import cc.polyfrost.oneconfig.config.annotations.Switch
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
+import org.polyfrost.evergreenhud.config.HudConfig
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.*
 
-class RealLifeDate : Config(Mod("IRL Date", ModType.HUD), "evergreenhud/irldate.json", false) {
+class RealLifeDate : HudConfig(Mod("IRL Date", ModType.HUD), "evergreenhud/irldate.json", false) {
     @HUD(name = "Main")
     var hud = RealLifeDateHud()
 

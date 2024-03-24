@@ -1,31 +1,25 @@
 package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.hud.hudlist.HudList
-import cc.polyfrost.oneconfig.config.Config
-import cc.polyfrost.oneconfig.config.annotations.Button
-import cc.polyfrost.oneconfig.config.annotations.CustomOption
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
+import cc.polyfrost.oneconfig.config.annotations.*
+import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.config.elements.OptionPage
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.renderer.TinyFD
 import cc.polyfrost.oneconfig.renderer.asset.Image
 import cc.polyfrost.oneconfig.utils.Notifications
-import cc.polyfrost.oneconfig.utils.dsl.nanoVGHelper
-import cc.polyfrost.oneconfig.utils.dsl.runAsync
+import cc.polyfrost.oneconfig.utils.dsl.*
+import org.polyfrost.evergreenhud.config.HudConfig
 import java.io.File
 import java.io.IOException
 import java.lang.reflect.Field
 import javax.imageio.ImageIO
-import javax.swing.JFileChooser
-import javax.swing.UIManager
-import javax.swing.filechooser.FileNameExtensionFilter
 import kotlin.math.min
 
 private fun notify(message: String) = Notifications.INSTANCE.send("EvergreenHUD", message)
 
-class CustomImages : Config(Mod("Custom Images", ModType.HUD), "evergreenhud/customimages.json", false) {
+class CustomImages : HudConfig(Mod("Custom Images", ModType.HUD), "evergreenhud/customimages.json", false) {
     @CustomOption
     var huds = ImageHudList()
 
