@@ -36,7 +36,7 @@ public class HUDUtilsMixin {
             ArrayList<Field> fieldArrayList = ConfigUtils.getClassFields(hud.getClass());
             HashMap<String, Field> fields = new HashMap<>();
             for (Field f : fieldArrayList) fields.put(f.getName(), f);
-            BasicOption option = new ConfigSlider(fields.get("padding"), hud, "Padding", "The padding of the HUD.", category, subcategory, 0, 10, 0, false);
+            BasicOption option = new ConfigSlider(fields.get("padding"), hud, "Padding:", "The padding of the HUD.", category, subcategory, 0, 10, 0, false);
             option.addDependency(hudAnnotation.name(), hud::isEnabled);
             HudCore.hudOptions.add(option);
             ConfigUtils.getSubCategory(page, hudAnnotation.category(), hudAnnotation.subcategory()).options.add(option);
