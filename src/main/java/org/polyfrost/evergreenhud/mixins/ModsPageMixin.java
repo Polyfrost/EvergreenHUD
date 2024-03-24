@@ -28,10 +28,4 @@ public abstract class ModsPageMixin {
         }
     }
 
-    @ModifyConstant(method = "draw", constant = @Constant(intValue = 72))
-    private int y(int constant) {
-        ModsPage page = (ModsPage) ((Object) this);
-        return page instanceof HudPage ? 16 : 72;
-    }
-
 }
