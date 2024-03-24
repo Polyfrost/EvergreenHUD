@@ -20,6 +20,7 @@ class EvergreenHUD {
         Biome()
         BlockAbove()
         CCounter()
+        Clock
         Combo()
         Coordinates()
         CPS()
