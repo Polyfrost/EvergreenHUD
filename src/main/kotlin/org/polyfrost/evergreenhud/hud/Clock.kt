@@ -11,7 +11,7 @@ import org.polyfrost.evergreenhud.config.HudConfig
 import java.util.*
 import kotlin.math.*
 
-object Clock : HudConfig(Mod("Clock", ModType.HUD), "evergreenhud/clock.json", false) {
+class Clock : HudConfig(Mod("Clock", ModType.HUD), "evergreenhud/clock.json", false) {
 
     @HUD(
         name = "Main"

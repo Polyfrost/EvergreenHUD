@@ -20,7 +20,7 @@ class EvergreenHUD {
         Biome()
         BlockAbove()
         CCounter()
-        Clock
+        Clock()
         Combo()
         Coordinates()
         CPS()
@@ -47,6 +47,7 @@ class EvergreenHUD {
         Reach()
         RealLifeDate()
         RealLifeTime()
+        ResourcePack()
         Saturation()
         ServerIP()
         Speed()
