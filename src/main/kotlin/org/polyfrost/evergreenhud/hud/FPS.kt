@@ -51,8 +51,7 @@ class FPS : HudConfig(Mod("FPS", ModType.HUD), "evergreenhud/fps.json", false) {
 
         override fun getText(example: Boolean): String {
             return if (updateFast) {
-                val fps = (1000 / (average(FrameTimeHelper.frameTimes).takeUnless { it.isNaN() } ?: 1.0)).roundToInt().toString()
-                fps
+                (1000 / (average(FrameTimeHelper.frameTimes).takeUnless { it.isNaN() } ?: 1.0)).roundToInt().toString()
             } else {
                 Minecraft.getDebugFPS().toString()
             }
@@ -77,8 +76,7 @@ class FPS : HudConfig(Mod("FPS", ModType.HUD), "evergreenhud/fps.json", false) {
         }
 
         override fun getText(example: Boolean): String {
-            val consistency = ((1 - FrameTimeHelper.frameTimes.consistency()) * 100).roundToInt()
-            return "$consistency%"
+            return "${((1 - FrameTimeHelper.frameTimes.consistency()) * 100).roundToInt()}%"
         }
     }
 
@@ -104,9 +102,7 @@ class FPS : HudConfig(Mod("FPS", ModType.HUD), "evergreenhud/fps.json", false) {
         }
 
         override fun getText(example: Boolean): String {
-            // converts average to FPS
-            val frameTime = (average(FrameTimeHelper.frameTimes).takeUnless { it.isNaN() } ?: 1.0).roundToInt()
-            return frameTime.toString() + "ms"
+            return (average(FrameTimeHelper.frameTimes).takeUnless { it.isNaN() } ?: 1.0).roundToInt().toString() + "ms"
         }
     }
 }
