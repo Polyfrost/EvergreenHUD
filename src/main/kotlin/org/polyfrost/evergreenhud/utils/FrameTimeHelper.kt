@@ -3,13 +3,12 @@ package org.polyfrost.evergreenhud.utils
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.RenderEvent
 import cc.polyfrost.oneconfig.events.event.Stage
+import cc.polyfrost.oneconfig.events.event.TickEvent
 import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
-import kotlin.properties.ReadOnlyProperty
-import kotlin.reflect.KProperty
 
-class FrameTimeHelper : ReadOnlyProperty<Any?, MutableList<Double>> {
+object FrameTimeHelper {
     private var lastTime = System.currentTimeMillis().toDouble()
-    private val frameTimes = mutableListOf<Double>()
+    val frameTimes = mutableListOf<Double>()
 
     init {
         EventManager.INSTANCE.register(this)
@@ -23,5 +22,11 @@ class FrameTimeHelper : ReadOnlyProperty<Any?, MutableList<Double>> {
         }
     }
 
-    override fun getValue(thisRef: Any?, property: KProperty<*>) = frameTimes
+    @Subscribe
+    private fun onTick(event: TickEvent) {
+        if (event.stage == Stage.END) {
+            frameTimes.clear()
+        }
+    }
+
 }
