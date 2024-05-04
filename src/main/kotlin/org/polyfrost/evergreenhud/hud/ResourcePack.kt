@@ -9,6 +9,8 @@ import cc.polyfrost.oneconfig.renderer.TextRenderer
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.gui.Gui
 import net.minecraft.client.renderer.GlStateManager
+import net.minecraft.client.renderer.texture.DynamicTexture
+import net.minecraft.client.resources.ResourcePackRepository
 import org.lwjgl.opengl.GL11
 import org.polyfrost.evergreenhud.config.HudConfig
 
@@ -38,6 +40,17 @@ class ResourcePack: HudConfig(Mod("Resource Pack", ModType.HUD), "evergreenhud/r
         )
         var iconPadding = 2
 
+        @Exclude
+        var pack: ResourcePackRepository.Entry? = mc.resourcePackRepository.repositoryEntries.getOrNull(0)
+
+        @Exclude
+        val defaultIcon = mc.textureManager.getDynamicTextureLocation("texturepackicon", DynamicTexture(mc.resourcePackRepository.rprDefaultResourcePack.packImage))
+
+        override fun drawAll(matrices: UMatrixStack?, example: Boolean) {
+            pack = mc.resourcePackRepository.repositoryEntries.getOrNull(0)
+            super.drawAll(matrices, example)
+        }
+
         override fun draw(matrices: UMatrixStack?, x: Float, y: Float, scale: Float, example: Boolean) {
             GlStateManager.pushMatrix()
             GlStateManager.translate(x, y, 0f)
@@ -45,15 +58,15 @@ class ResourcePack: HudConfig(Mod("Resource Pack", ModType.HUD), "evergreenhud/r
             GlStateManager.enableBlend()
             GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0)
             GL11.glColor4f(1f, 1f, 1f, 1f)
-            mc.resourcePackRepository.repositoryEntries[0].bindTexturePackIcon(mc.textureManager)
+            pack?.bindTexturePackIcon(mc.textureManager) ?: mc.textureManager.bindTexture(defaultIcon)
             Gui.drawScaledCustomSizeModalRect(0, 0, 0f, 0f, 64, 64, iconSize, iconSize, 64f, 64f)
-            TextRenderer.drawScaledString(mc.resourcePackRepository.repositoryEntries[0].resourcePackName, (iconSize + iconPadding).toFloat(), (iconSize - 8) / 2f, color.rgb, TextRenderer.TextType.toType(textType), 1f)
+            TextRenderer.drawScaledString(pack?.resourcePackName ?: "Default", (iconSize + iconPadding).toFloat(), (iconSize - 8) / 2f, color.rgb, TextRenderer.TextType.toType(textType), 1f)
             GlStateManager.disableBlend()
             GlStateManager.popMatrix()
         }
 
         override fun getWidth(scale: Float, example: Boolean): Float {
-            return (iconSize + iconPadding + mc.fontRendererObj.getStringWidth(mc.resourcePackRepository.repositoryEntries[0].resourcePackName)) * scale
+            return (iconSize + iconPadding + mc.fontRendererObj.getStringWidth(pack?.resourcePackName ?: "Default")) * scale
         }
 
         override fun getHeight(scale: Float, example: Boolean): Float = iconSize * scale

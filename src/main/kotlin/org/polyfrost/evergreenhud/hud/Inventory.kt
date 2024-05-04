@@ -39,35 +39,19 @@ class Inventory : HudConfig(Mod("Inventory", ModType.HUD), "evergreenhud/invento
         y: Int,
     ) : BasicHud(enabled, x.toFloat(), y.toFloat()) {
 
-        @Switch(name = "Dynamic Rows")
-        protected var dynamic = false
-
         @DualOption(name = "Background Type", left = "Vanilla", right = "OneConfig")
         protected var backgroundType = false
+
+        @Switch(name = "Dynamic Rows")
+        protected var dynamic = false
 
         @Slider(name = "Items Spacing", min = 0f, max = 10f)
         protected var spacing = 4f
 
-        @Slider(name = "Animation Duration", min = 0f, max = 1000f)
-        protected var duration = 200f
-
         @Transient
         protected var height = 0F
 
-        @Transient
-        protected var itemsX: ArrayList<Float> = ArrayList()
-
-        @Transient
-        protected var itemsY: ArrayList<Float> = ArrayList()
-
-        @Transient
-        protected var lastHasItem: ArrayList<Boolean> = ArrayList()
-
-        @Transient
-        protected var animationsY: ArrayList<Animation?> = ArrayList()
-
         override fun draw(matrices: UMatrixStack, x: Float, y: Float, scale: Float, example: Boolean) {
-            if (itemsY.isEmpty()) initArray()
             GL.pushMatrix()
             GL.translate(x, y, 100f)
             GL.scale(scale, scale, 1.0f)
@@ -83,34 +67,20 @@ class Inventory : HudConfig(Mod("Inventory", ModType.HUD), "evergreenhud/invento
             }
             RenderHelper.enableGUIStandardItemLighting()
 
-            val padding = if (backgroundType == VANILLA) 16f + spacing else 18f
+            val padding = if (backgroundType == VANILLA) 18f else 16f + spacing
             var i = 0
             var biggestHeight = 0F
             for (row in 0..2) {
                 val itemY = i * padding
 
-                if (getRowAreShownList()[row] != lastHasItem[row]) {
-                    if (!lastHasItem[row]) { // now true
-                        animationsY[row] = EaseInOutQuad(0, itemY, itemY, false)
-                        itemsY[row] = itemY
-                    }
-                    lastHasItem[row] = getRowAreShownList()[row]
-                }
-
-                if (itemsY[row] != itemY) {
-                    animationsY[row] = EaseInOutQuad(duration.toInt(), itemsY[row], itemY, false)
-                    itemsY[row] = itemY
-                }
-
                 if (dynamic && !getRowAreShownList()[row] && backgroundType) continue
 
-                val thisHeight = (animationsY[row]?.get() ?: 0).toFloat() + 16f
-                val translation = if (backgroundType && dynamic) animationsY[row]?.get() ?: itemY else itemY
+                val thisHeight = itemY + 16f
 
                 if (thisHeight > biggestHeight) biggestHeight = thisHeight
 
                 GL.pushMatrix()
-                GL.translate(0f, translation, 0f)
+                GL.translate(0f, itemY, 0f)
                 for (column in 0..8) {
                     val index = row * 9 + column
                     drawItem(getItem(index))
@@ -129,17 +99,6 @@ class Inventory : HudConfig(Mod("Inventory", ModType.HUD), "evergreenhud/invento
             GlStateManager.disableRescaleNormal()
             UGraphics.enableAlpha()
             GL.popMatrix()
-        }
-
-        private fun initArray() {
-            for (i in 0..2) {
-                itemsY.add(0f)
-                animationsY.add(null)
-                lastHasItem.add(false)
-            }
-            for (i in 0..35) {
-                itemsX.add(0f)
-            }
         }
 
         private fun drawItem(item: ItemStack?) {

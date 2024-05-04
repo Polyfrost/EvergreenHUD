@@ -1,11 +1,14 @@
 package org.polyfrost.evergreenhud.hud
 
+import cc.polyfrost.oneconfig.config.Config
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.core.OneColor
-import cc.polyfrost.oneconfig.config.data.*
-import cc.polyfrost.oneconfig.gui.animations.*
+import cc.polyfrost.oneconfig.config.data.Mod
+import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.BasicHud
-import cc.polyfrost.oneconfig.libs.universal.*
+import cc.polyfrost.oneconfig.libs.universal.UGraphics
+import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
+import cc.polyfrost.oneconfig.libs.universal.UMinecraft
 import cc.polyfrost.oneconfig.platform.Platform
 import cc.polyfrost.oneconfig.renderer.TextRenderer
 import cc.polyfrost.oneconfig.utils.dsl.mc
@@ -13,7 +16,7 @@ import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.init.Items
 import net.minecraft.item.ItemStack
 import org.polyfrost.evergreenhud.config.HudConfig
-import kotlin.math.*
+import kotlin.math.ceil
 
 //#if MC>=10900
 //$$ import net.minecraft.inventory.EntityEquipmentSlot
@@ -25,6 +28,7 @@ class Armour: HudConfig(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json
 
     init {
         initialize()
+        addDependency("showOffhand", "Minecraft Version 1.9 or later") { Platform.getInstance().minecraftVersion >= 10900 }
     }
 
     class ArmourHud : BasicHud(true, 1920f - 5, 1080f - 5) {
@@ -34,6 +38,9 @@ class Armour: HudConfig(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json
         @Transient val diamondLeggings = ItemStack(Items.diamond_leggings)
         @Transient val diamondBoots = ItemStack(Items.diamond_boots)
         @Transient val diamondSword = ItemStack(Items.diamond_sword)
+        //#if MC>=10900
+        //$$ @Transient val shield = ItemStack(Items.SHIELD)
+        //#endif
 
         @Switch(
             name = "Show Helmet"
@@ -60,6 +67,11 @@ class Armour: HudConfig(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json
         )
         var showMainHand = true
 
+        @Switch(
+            name = "Show Offhand Item"
+        )
+        var showOffhand = true
+
         @Slider(
             name = "Item Padding",
             min = 0F,
@@ -73,13 +85,6 @@ class Armour: HudConfig(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json
             max = 10F
         )
         var iconPadding = 5
-
-        @Slider(
-            name = "Animation Duration",
-            min = 0f,
-            max = 1000f
-        )
-        var duration = 5
 
         @DualOption(
             name = "Type",
@@ -111,23 +116,16 @@ class Armour: HudConfig(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json
 
         @DualOption(
             name = "Text Alignment",
-            left = "Left", right = "Right"
+            left = "Left",
+            right = "Right",
         )
         var alignment = true
 
-        @Transient private var actualWidth = 0f
-        @Transient private var actualHeight = 0f
-        @Transient private var iconsX: ArrayList<Float> = ArrayList()
-        @Transient private var itemsY: ArrayList<Float> = ArrayList()
-        @Transient private var textsX: ArrayList<Float> = ArrayList()
-        @Transient private var animationIconX: ArrayList<Animation?> = ArrayList()
-        @Transient private var animationItemY: ArrayList<Animation?> = ArrayList()
-        @Transient private var animationTextX: ArrayList<Animation?> = ArrayList()
-        @Transient private var lastItems: ArrayList<ItemStack?> = ArrayList()
+        @Transient private var actualWidth = 5F
+        @Transient private var actualHeight = 5F
+        @Transient private var translation = 0F
 
         override fun draw(matrices: UMatrixStack?, x: Float, y: Float, scale: Float, example: Boolean) {
-            if (lastItems.isEmpty()) initArrayList()
-            getItems(example)
             draw(matrices, x, y, scale, getItems(example))
         }
 
@@ -138,52 +136,46 @@ class Armour: HudConfig(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json
                 if (showLeggings) add(diamondLeggings)
                 if (showBoots) add(diamondBoots)
                 if (showMainHand) add(diamondSword)
+                //#if MC>=10900
+                //$$ if (showOffhand) add(shield)
+                //#endif
 
                 if (displayType) reverse()
                 return@run this
             }
         } else {
-            arrayListOf<ItemStack?>().run {
+            arrayListOf<ItemStack>().run {
+                //#if MC<10900
                 val inventory = UMinecraft.getPlayer()!!.inventory
-                if (showHelmet) add(inventory.armorInventory[3]) else add(null)
-                if (showChestplate) add(inventory.armorInventory[2]) else add(null)
-                if (showLeggings) add(inventory.armorInventory[1]) else add(null)
-                if (showBoots) add(inventory.armorInventory[0]) else add(null)
-                if (showMainHand) add(inventory.getCurrentItem()) else add(null)
+                if (showHelmet) inventory.armorInventory[3]?.let { add(it) }
+                if (showChestplate) inventory.armorInventory[2]?.let { add(it) }
+                if (showLeggings) inventory.armorInventory[1]?.let { add(it) }
+                if (showBoots) inventory.armorInventory[0]?.let { add(it) }
+                @Suppress("UNNECESSARY_SAFE_CALL") // on 1.8 ItemStacks can be null
+                if (showMainHand) UMinecraft.getPlayer()!!.heldItem?.let { add(it) }
+                //#else
+                //$$ if (showHelmet) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.HEAD).let { if (!it.isEmpty) add(it) }
+                //$$ if (showChestplate) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.CHEST).let { if (!it.isEmpty) add(it) }
+                //$$ if (showLeggings) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.LEGS).let { if (!it.isEmpty) add(it) }
+                //$$ if (showBoots) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.FEET).let { if (!it.isEmpty) add(it) }
+                //$$ if (showMainHand) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.MAINHAND).let { if (!it.isEmpty) add(it) }
+                //$$ if (showOffhand) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.OFFHAND).let { if (!it.isEmpty) add(it) }
+                //#endif
 
                 if (displayType) reverse()
                 return@run this
-            }
-        }
-
-        private fun getSize(example: Boolean) =
-            arrayListOf<Boolean?>().run {
-                getItems(example).forEachIndexed { i: Int, stack: ItemStack ->
-                    if (stack != null) add(true)
-                }
-                return@run this
-            }
-
-        private fun initArrayList() {
-            for (i in 0..4) {
-                iconsX.add(0f)
-                itemsY.add(0f)
-                textsX.add(0f)
-                animationIconX.add(null)
-                animationItemY.add(null)
-                animationTextX.add(null)
-                lastItems.add(null)
             }
         }
 
         private fun draw(matrices: UMatrixStack?, x: Float, y: Float, scale: Float, items: List<ItemStack>) {
             val iconSize = 16f
             val offset = iconSize + padding
+
             val texts = items.map {
                 when (extraInfo) {
-                    1 -> if (it != null && it.isItemStackDamageable) (it.maxDamage - it.itemDamage).toString() else ""
-                    2 -> if (it != null && it.isItemStackDamageable) "${ceil((it.maxDamage - it.itemDamage).toFloat() / it.maxDamage.toFloat() * 100f).toInt()}%" else ""
-                    3 -> if (it != null) it.displayName ?: "" else ""
+                    1 -> if (it.isItemStackDamageable) (it.maxDamage - it.itemDamage).toString() else ""
+                    2 -> if (it.isItemStackDamageable) "${ceil((it.maxDamage - it.itemDamage).toFloat() / it.maxDamage.toFloat() * 100f).toInt()}%" else ""
+                    3 -> it.displayName ?: ""
                     else -> ""
                 }.let { text ->
                     text to mc.fontRendererObj.getStringWidth(text)
@@ -191,92 +183,58 @@ class Armour: HudConfig(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json
             }
 
             val longestWidth = texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0
-            var index = 0
-            var preWidth = 0
-            var biggestWidth = 0f
-            var biggestHeight = 0f
+
+            actualWidth = if (type) longestWidth + iconSize else (padding * (items.size - 1)).toFloat()
+
+            actualHeight = if (type) items.size * offset - padding else offset - padding
+
+            translation = 0F
+
+            if (longestWidth > 0 && type) actualWidth += iconPadding
+
             UGraphics.GL.pushMatrix()
             UGraphics.GL.scale(scale, scale, 1f)
             UGraphics.GL.translate(x / scale, y / scale, 0f)
             items.forEachIndexed { i: Int, stack: ItemStack ->
 
                 val (text, textWidth) = texts[i]
-                val itemY = if (type) index * offset else 0
-                val iconX = when (alignment) {
-                    false -> if (type) longestWidth + if (longestWidth > 0) iconPadding else 0 else preWidth + textWidth + if (textWidth > 0) iconPadding else 0
-                    true -> preWidth.toFloat()
+
+                if (!type) actualWidth += texts[i].second + iconSize + if (textWidth > 0) iconPadding else 0
+
+                val width = if (type) actualWidth else textWidth + iconSize + iconPadding
+
+                val itemY = if (type) i * offset else 0
+
+                val itemX = when (alignment) {
+                    false -> width - iconSize - if (textWidth == 0 && !type) iconPadding else 0
+                    true -> 0
                 }
+
                 val textX = when (alignment) {
-                    false -> if (type) longestWidth - textWidth else preWidth
-                    true -> iconSize + if (type) +iconPadding else preWidth + iconPadding
+                    false -> width - iconSize - textWidth - iconPadding
+                    true -> iconSize + iconPadding
                 }
 
-                if (lastItems[i] != stack) {
-                    if (lastItems[i] == null) {
-                        animationIconX[i] = EaseInOutQuad(0, iconX.toFloat(), iconX.toFloat(), false)
-                        animationItemY[i] = EaseInOutQuad(0, itemY.toFloat(), itemY.toFloat(), false)
-                        animationTextX[i] = EaseInOutQuad(0, textX.toFloat(), textX.toFloat(), false)
-                        iconsX[i] = iconX.toFloat()
-                        itemsY[i] = itemY.toFloat()
-                        textsX[i] = textX.toFloat()
-                    }
-                    lastItems[i] = stack
-                }
+                if (!type && i > 0) translation += offset + texts[i - 1].second + if (texts[i - 1].second > 0) iconPadding else 0
 
-                if (iconX.toFloat() != iconsX[i]) {
-                    animationIconX[i] = EaseInOutQuad(duration, iconsX[i], iconX.toFloat(), false)
-                    iconsX[i] = iconX.toFloat()
-                }
-                if (itemY.toFloat() != itemsY[i]) {
-                    animationItemY[i] = EaseInOutQuad(duration, itemsY[i], itemY.toFloat(), false)
-                    itemsY[i] = itemY.toFloat()
-                }
-                if (textX.toFloat() != textsX[i]) {
-                    animationTextX[i] = EaseInOutQuad(duration, textsX[i], textX.toFloat(), false)
-                    textsX[i] = textX.toFloat()
-                }
-
-                if (stack == null) return@forEachIndexed
-
-                val thisWidth = if (textWidth > 0){
-                    max((animationIconX[i]?.get() ?: 0).toFloat() + iconSize, (animationTextX[i]?.get() ?: 0).toFloat() + textWidth.toFloat())
-                }else{
-                    (animationIconX[i]?.get() ?: 0).toFloat() + iconSize
-                }
-                val thisHeight = (animationItemY[i]?.get() ?: 0).toFloat() + iconSize
-
-                if (thisWidth > biggestWidth) biggestWidth = thisWidth
-                if (thisHeight > biggestHeight) biggestHeight = thisHeight
+                RenderHelper.enableGUIStandardItemLighting()
+                mc.renderItem.zLevel = 200f
+                mc.renderItem.renderItemAndEffectIntoGUI(stack, itemX.toInt() + translation.toInt(), itemY.toInt())
+                mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, stack, itemX.toInt() + translation.toInt(), itemY.toInt(), null)
+                RenderHelper.disableStandardItemLighting()
 
                 UGraphics.GL.pushMatrix()
-                RenderHelper.enableGUIStandardItemLighting()
-                UGraphics.GL.translate(animationIconX[i]?.get() ?: iconX.toFloat(), animationItemY[i]?.get() ?: itemY.toFloat(), 0f)
-                mc.renderItem.zLevel = 200f
-                try {
-                    mc.renderItem.renderItemAndEffectIntoGUI(stack, 0, 0)
-                    mc.renderItem.renderItemOverlayIntoGUI(mc.fontRendererObj, stack, 0, 0, "")
-                    RenderHelper.disableStandardItemLighting()
-                    UGraphics.GL.popMatrix()
-                    UGraphics.GL.pushMatrix()
-                    UGraphics.GL.translate(animationTextX[i]?.get() ?: textX.toFloat(), (animationItemY[i]?.get() ?: itemY.toFloat()) + mc.fontRendererObj.FONT_HEIGHT / 2f, 0f)
-                    TextRenderer.drawScaledString(
-                        text,
-                        0f,
-                        0f,
-                        textColor.rgb,
-                        TextRenderer.TextType.toType(textType),
-                        1f
-                    )
-                    UGraphics.GL.popMatrix()
-                } finally {
-                    mc.renderItem.zLevel = 0f
-                }
-                index++
-                if (!type) preWidth += offset.toInt() + textWidth + if (textWidth > 0) iconPadding else 0
+                TextRenderer.drawScaledString(
+                    text,
+                    textX + translation,
+                    itemY.toFloat() + mc.fontRendererObj.FONT_HEIGHT / 2f,
+                    textColor.rgb,
+                    TextRenderer.TextType.toType(textType),
+                    1f
+                )
+                UGraphics.GL.popMatrix()
             }
             UGraphics.GL.popMatrix()
-            actualWidth = biggestWidth
-            actualHeight = biggestHeight
         }
 
         override fun getWidth(scale: Float, example: Boolean): Float = actualWidth * scale
@@ -284,7 +242,7 @@ class Armour: HudConfig(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json
         override fun getHeight(scale: Float, example: Boolean): Float = actualHeight * scale
 
         override fun shouldShow(): Boolean {
-            return super.shouldShow() && getSize(false).isNotEmpty()
+            return super.shouldShow() && getItems(false).isNotEmpty()
         }
     }
 }

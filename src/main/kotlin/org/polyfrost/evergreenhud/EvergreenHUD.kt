@@ -39,7 +39,7 @@ class EvergreenHUD {
         Map()
         MapType()
         Memory()
-        //Ping()
+        Ping()
         Pitch()
         PlaceCount()
         PlayerPreview()
