@@ -9,6 +9,10 @@ class Biome: HudConfig("Biome", "evergreenhud/biome.json", false) {
     @HUD(name = "Main")
     var hud = BiomeHud()
 
+    init {
+        initialize()
+    }
+
     class BiomeHud: SingleTextHud("Biome", true, 400, 50) {
         override fun getText(example: Boolean): String {
             val player = mc.thePlayer ?: return "Unknown"

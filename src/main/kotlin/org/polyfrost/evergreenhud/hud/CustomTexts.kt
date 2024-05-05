@@ -12,6 +12,10 @@ class CustomTexts : HudConfig("Custom Texts", "evergreenhud/customtexts.json", f
     @CustomOption
     var huds = TextHudList()
 
+    init {
+        initialize()
+    }
+
     override fun getCustomOption(
         field: Field, annotation: CustomOption, page: OptionPage, mod: Mod, migrate: Boolean
     ) = huds.addOptionTo(this, page)

@@ -14,6 +14,10 @@ class HeightLimit : HudConfig("Height Limit", "evergreenhud/heightlimit.json", f
     )
     var hud = HeightLimitHud()
 
+    init {
+        initialize()
+    }
+
     class HeightLimitHud : SingleTextHud("Height Limit", true, 180, 150) {
 
         @Switch(

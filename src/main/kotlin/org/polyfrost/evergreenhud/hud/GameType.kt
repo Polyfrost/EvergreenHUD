@@ -12,6 +12,10 @@ class GameType : HudConfig("Game Type", "evergreenhud/gametype.json", false) {
     )
     var hud = GameTypeHud()
 
+    init {
+        initialize()
+    }
+
     class GameTypeHud : SingleTextHud("Game Type", true, 180, 130) {
 
         @Switch(

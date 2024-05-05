@@ -10,6 +10,10 @@ class Pitch: HudConfig("Pitch", "evergreenhud/pitch.json", false) {
     @HUD(name = "Main")
     var hud = PitchHud()
 
+    init {
+        initialize()
+    }
+
     class PitchHud: SingleTextHud("Pitch", true, 180, 50) {
 
         @Slider(

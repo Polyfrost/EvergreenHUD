@@ -9,6 +9,10 @@ class ECounter: HudConfig("E Counter", "evergreenhud/ecounter.json", false) {
     @HUD(name = "Main")
     var hud = ECounterHUD()
 
+    init {
+        initialize()
+    }
+
     class ECounterHUD : SingleTextHud("E", true, 400, 90) {
 
         @Switch(

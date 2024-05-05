@@ -23,6 +23,10 @@ class CustomImages : HudConfig("Custom Images", "evergreenhud/customimages.json"
     @CustomOption
     var huds = ImageHudList()
 
+    init {
+        initialize()
+    }
+
     override fun getCustomOption(
         field: Field, annotation: CustomOption, page: OptionPage, mod: Mod, migrate: Boolean,
     ) = huds.addOptionTo(this, page)

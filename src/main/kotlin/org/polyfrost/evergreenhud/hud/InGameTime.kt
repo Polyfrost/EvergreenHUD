@@ -12,6 +12,10 @@ class InGameTime : HudConfig("In Game Time", "evergreenhud/ingametime.json", fal
     @HUD(name = "Main")
     var hud = InGameTimeHud()
 
+    init {
+        initialize()
+    }
+
     class InGameTimeHud : SingleTextHud("Time", true, 400, 10) {
 
         @Switch(name = "Twelve Hour Time")

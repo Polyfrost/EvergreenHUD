@@ -11,6 +11,10 @@ class TPS : HudConfig("TPS", "evergreenhud/tps.json", false) {
     @HUD(name = "Main")
     var hud = TPSHud()
 
+    init {
+        initialize()
+    }
+
     class TPSHud : SingleTextHud("TPS", true, 60, 70) {
         @Transient
         private var lastUpdated = 0L

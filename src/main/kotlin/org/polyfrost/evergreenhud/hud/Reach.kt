@@ -15,6 +15,10 @@ class Reach: HudConfig("Reach", "evergreenhud/reach.json", false) {
     @HUD(name = "Main")
     var hud = ReachHud()
 
+    init {
+        initialize()
+    }
+
     class ReachHud: SingleTextHud("Reach", true, 0, 90) {
         @Switch(name = "Trailing Zeros")
         var trailingZeros = false

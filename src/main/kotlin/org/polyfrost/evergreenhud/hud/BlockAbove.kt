@@ -13,6 +13,10 @@ class BlockAbove: HudConfig("Block Above", "evergreenhud/blockabove.json", false
     @HUD(name = "Main")
     var hud = BlockAboveHud()
 
+    init {
+        initialize()
+    }
+
     class BlockAboveHud: SingleTextHud("Above", true, 120, 50) {
         @Switch(
             name = "Notify With Sound"

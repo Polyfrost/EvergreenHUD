@@ -10,6 +10,10 @@ class Coordinates: HudConfig("Coordinates", "evergreenhud/coordinates.json", tru
     @HUD(name = "Main")
     var hud = CoordinatesHud()
 
+    init {
+        initialize()
+    }
+
     class CoordinatesHud : TextHud(true, 0, 0) {
         @DualOption(
             name = "Mode",

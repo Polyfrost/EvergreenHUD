@@ -13,6 +13,10 @@ class GameMode : HudConfig("Game Mode", "evergreenhud/gamemode.json", false) {
     )
     var hud = GameModeHud()
 
+    init {
+        initialize()
+    }
+
     class GameModeHud : SingleTextHud("Game Mode", true, 180, 150) {
 
         @Switch(

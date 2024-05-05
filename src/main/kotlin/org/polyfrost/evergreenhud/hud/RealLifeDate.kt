@@ -10,6 +10,10 @@ class RealLifeDate : HudConfig("IRL Date", "evergreenhud/irldate.json", false) {
     @HUD(name = "Main")
     var hud = RealLifeDateHud()
 
+    init {
+        initialize()
+    }
+
     class RealLifeDateHud : SingleTextHud("Date", true, 120, 20) {
 
         /*

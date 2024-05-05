@@ -19,6 +19,10 @@ class FPS : HudConfig("FPS", "evergreenhud/fps.json", false) {
     @HUD(name = "Frame Time", category = "Frame Time")
     var frameTime = FrameTimeHud()
 
+    init {
+        initialize()
+    }
+
     class FPSHud : SingleTextHud("FPS", true, 60, 50) {
         @Switch(
             name = "Update Fast"

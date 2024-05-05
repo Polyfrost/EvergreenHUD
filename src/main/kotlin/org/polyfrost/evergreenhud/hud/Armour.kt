@@ -23,8 +23,8 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
     @HUD(name = "Main")
     var hud = ArmourHud()
 
-    override fun initialize() {
-        super.initialize()
+    init {
+        initialize()
         addDependency("showOffhand", "Minecraft Version 1.9 or later") { Platform.getInstance().minecraftVersion >= 10900 }
     }
 

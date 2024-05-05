@@ -18,6 +18,10 @@ class HeldItemLore : HudConfig("Held Item Lore", "evergreenhud/helditemlore.json
     @HUD(name = "Main")
     var hud = HeldItemLoreHud()
 
+    init {
+        initialize()
+    }
+
     class HeldItemLoreHud : TextHud(true, 50, 50) {
 
         @Switch(name = "Fade Out", description = "If disabled, the held item lore HUD will persist indefinitely.")

@@ -10,6 +10,10 @@ class RealLifeTime : HudConfig("IRL Time", "evergreenhud/irltime.json", false) {
     @HUD(name = "Main")
     var hud = RealLifeTimeHud()
 
+    init {
+        initialize()
+    }
+
     class RealLifeTimeHud : SingleTextHud("Time", true, 120, 10) {
 
         @Switch(name = "Twelve Hour Time")

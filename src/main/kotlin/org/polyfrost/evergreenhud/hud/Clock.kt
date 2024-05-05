@@ -18,6 +18,9 @@ class Clock : HudConfig("Clock", "evergreenhud/clock.json", false) {
     )
     var hud = ClockHud()
 
+    init {
+        initialize()
+    }
 
     class ClockHud : BasicHud() {
 

@@ -15,6 +15,10 @@ class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.jso
     )
     var selfPreview = SelfPreviewHud()
 
+    init {
+        initialize()
+    }
+
     class SelfPreviewHud: BasicHud(true, 1920 - 80f, 1080 - 120f) {
 
         @Slider(

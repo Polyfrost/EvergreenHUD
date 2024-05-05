@@ -9,6 +9,10 @@ class CCounter: HudConfig("C Counter", "evergreenhud/ccounter.json", false) {
     @HUD(name = "Main")
     var hud = CCounterHud()
 
+    init {
+        initialize()
+    }
+
     class CCounterHud: SingleTextHud("C", true, 400, 70) {
 
         @Switch(

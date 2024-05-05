@@ -13,6 +13,10 @@ class PlaceCount: HudConfig("Block Place Count", "evergreenhud/placecount.json",
     @HUD(name = "Main")
     var hud = PlaceCountHud()
 
+    init {
+        initialize()
+    }
+
     class PlaceCountHud : SingleTextHud("Blocks", true, 120, 30) {
         @Slider(
             name = "Interval",

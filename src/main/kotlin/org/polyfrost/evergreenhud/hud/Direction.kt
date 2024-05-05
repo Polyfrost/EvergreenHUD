@@ -10,6 +10,10 @@ class Direction: HudConfig("Direction", "evergreenhud/direction.json", false) {
     @HUD(name = "Main")
     var hud = DirectionHud()
 
+    init {
+        initialize()
+    }
+
     class DirectionHud: SingleTextHud("Direction", true, 260, 10) {
 
         @Switch(

@@ -9,6 +9,10 @@ class Playtime: HudConfig("Playtime", "evergreenhud/playtime.json", false) {
     @HUD(name = "Main")
     var hud = PlaytimeHud()
 
+    init {
+        initialize()
+    }
+
     class PlaytimeHud: SingleTextHud("Playtime", true, 0, 130) {
         @Switch(name = "Show Seconds")
         var seconds = true

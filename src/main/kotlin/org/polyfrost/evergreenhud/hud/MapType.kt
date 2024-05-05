@@ -13,6 +13,10 @@ class MapType : HudConfig("Map Type", "evergreenhud/maptype.json", false) {
     )
     var hud = MapTypeHud()
 
+    init {
+        initialize()
+    }
+
     class MapTypeHud : SingleTextHud("Map Type", true, 180, 110) {
 
         @Switch(

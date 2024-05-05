@@ -10,6 +10,10 @@ class ServerIP: HudConfig("Server IP", "evergreenhud/serverip.json", false) {
     @HUD(name = "Main")
     var hud = ServerIPHud()
 
+    init {
+        initialize()
+    }
+
     @Suppress("SENSELESS_COMPARISON", "UNNECESSARY_SAFE_CALL")
     class ServerIPHud: SingleTextHud("Server", true, 180, 30) {
 

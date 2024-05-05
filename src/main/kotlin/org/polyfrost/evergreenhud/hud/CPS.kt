@@ -13,6 +13,10 @@ class CPS: HudConfig("CPS", "evergreenhud/cps.json", false) {
     @HUD(name = "Main")
     var hud = CPSHud()
 
+    init {
+        initialize()
+    }
+
     class CPSHud: SingleTextHud("CPS", true, 0, 50) {
 
         @Switch(

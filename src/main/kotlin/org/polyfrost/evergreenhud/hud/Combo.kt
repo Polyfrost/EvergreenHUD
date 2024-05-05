@@ -15,6 +15,10 @@ class Combo: HudConfig("Combo", "evergreenhud/combo.json", false) {
     @HUD(name = "Main")
     var hud = ComboHud()
 
+    init {
+        initialize()
+    }
+
     class ComboHud: SingleTextHud("Combo", true, 0, 70) {
         @Slider(
             name = "Discard Time",

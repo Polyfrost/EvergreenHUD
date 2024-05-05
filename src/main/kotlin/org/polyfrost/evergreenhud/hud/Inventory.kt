@@ -27,6 +27,10 @@ class Inventory : HudConfig("Inventory", "evergreenhud/inventory.json", false) {
     @HUD(name = "Ender Chest", category = "Ender Chest")
     var enderChestHUD = EnderChestHUD()
 
+    init {
+        initialize()
+    }
+
     abstract class InventoryHUD(
         enabled: Boolean = false,
         x: Int,

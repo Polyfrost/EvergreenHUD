@@ -11,6 +11,10 @@ class Ping: HudConfig("Ping", "evergreenhud/ping.json", false) {
     @HUD(name = "Main")
     var hud = PingHud()
 
+    init {
+        initialize()
+    }
+
     class PingHud : SingleTextHud("Ping", true, 60, 70) {
 
         @Slider(

@@ -10,6 +10,10 @@ class Saturation: HudConfig("Saturation", "evergreenhud/saturation.json", false)
     @HUD(name = "Main")
     var hud = SaturationHud()
 
+    init {
+        initialize()
+    }
+
     class SaturationHud: SingleTextHud("Saturation", true, 180, 10) {
         override fun getText(example: Boolean): String {
             return decimalFormat(1, true).format(mc.thePlayer?.foodStats?.saturationLevel ?: 20)

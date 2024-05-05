@@ -9,6 +9,10 @@ class Memory: HudConfig("Memory", "evergreenhud/memory.json", false) {
     @HUD(name = "Main")
     var hud = MemoryHud()
 
+    init {
+        initialize()
+    }
+
     class MemoryHud: SingleTextHud("Memory", true, 60, 90) {
         @DualOption(
             name = "Display Type",

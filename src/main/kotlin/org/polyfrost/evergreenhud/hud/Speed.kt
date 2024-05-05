@@ -11,6 +11,10 @@ class Speed: HudConfig("Speed", "evergreenhud/speed.json", false) {
     @HUD(name = "Main")
     var hud = SpeedHud()
 
+    init {
+        initialize()
+    }
+
     class SpeedHud: SingleTextHud("Speed", true, 0, 110) {
 
         @Switch(name = "Use X")

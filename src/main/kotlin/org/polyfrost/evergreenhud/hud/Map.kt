@@ -12,6 +12,10 @@ class Map : HudConfig("Map", "evergreenhud/map.json", false) {
     )
     var hud = MapHud()
 
+    init {
+        initialize()
+    }
+
     class MapHud : SingleTextHud("Map", true, 180, 90) {
         @Switch(
             name = "Hide If Not In-Game or Supported"

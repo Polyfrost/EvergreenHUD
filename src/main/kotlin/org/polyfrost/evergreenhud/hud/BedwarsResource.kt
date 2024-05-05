@@ -32,6 +32,7 @@ class BedwarsResource : HudConfig("Bedwars Resource", "evergreenhud/bedwarsresou
 
     init {
         EventManager.INSTANCE.register(this)
+        initialize()
     }
 
     @Subscribe
@@ -46,10 +47,10 @@ class BedwarsResource : HudConfig("Bedwars Resource", "evergreenhud/bedwarsresou
     @Subscribe
     fun onWorldLoad(e: ReceivePacketEvent) {
         if (e.packet !is
-                //#if MC>=11202
-                //$$ net.minecraft.network.play.server.SPacketJoinGame
-                //#else
-                net.minecraft.network.play.server.S01PacketJoinGame
+                    //#if MC>=11202
+                    //$$ net.minecraft.network.play.server.SPacketJoinGame
+                    //#else
+                    net.minecraft.network.play.server.S01PacketJoinGame
         //#endif
         ) return
         enderChest = null
@@ -230,10 +231,10 @@ class BedwarsResource : HudConfig("Bedwars Resource", "evergreenhud/bedwarsresou
         override fun getHeight(scale: Float, example: Boolean): Float = actualHeight * scale
 
         override fun shouldShow(): Boolean = super.shouldShow()
-            && (!hideZero || (shownItems.maxOfOrNull { getItemAmount(it) } ?: 0) > 0)
-            && HypixelUtils.INSTANCE.isHypixel
-            && LocrawUtil.INSTANCE.isInGame
-            && LocrawUtil.INSTANCE.locrawInfo?.mapName?.isNotBlank() == true
-            && LocrawUtil.INSTANCE.locrawInfo?.gameType == LocrawInfo.GameType.BEDWARS
+                && (!hideZero || (shownItems.maxOfOrNull { getItemAmount(it) } ?: 0) > 0)
+                && HypixelUtils.INSTANCE.isHypixel
+                && LocrawUtil.INSTANCE.isInGame
+                && LocrawUtil.INSTANCE.locrawInfo?.mapName?.isNotBlank() == true
+                && LocrawUtil.INSTANCE.locrawInfo?.gameType == LocrawInfo.GameType.BEDWARS
     }
 }

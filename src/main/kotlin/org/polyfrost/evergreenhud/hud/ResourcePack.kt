@@ -18,6 +18,10 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
     @HUD(name = "Main")
     var hud = ResourcePackHUD()
 
+    init {
+        initialize()
+    }
+
     class ResourcePackHUD: BasicHud(true, 100f, 0f){
 
         @Color(name = "Text Color")
