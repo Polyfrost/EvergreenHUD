@@ -64,7 +64,7 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
             name = "Icon Padding",
             min = 0f, max = 10f
         )
-        var iconPadding = 2
+        var iconPadding = 5
 
         @Exclude
         var pack: ResourcePackRepository.Entry? = mc.resourcePackRepository.repositoryEntries.getOrNull(if (ignoreOverlay) 0 else mc.resourcePackRepository.repositoryEntries.size - 1)
@@ -87,7 +87,7 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
         }
 
         override fun getWidth(scale: Float, example: Boolean): Float {
-            return (iconSize + (iconPadding / 2) + mc.fontRendererObj.getStringWidth(pack?.resourcePackName ?: "Default")) * scale
+            return (iconSize + iconPadding + mc.fontRendererObj.getStringWidth(pack?.resourcePackName ?: "Default")) * scale
         }
 
         override fun getHeight(scale: Float, example: Boolean): Float = iconSize * scale
