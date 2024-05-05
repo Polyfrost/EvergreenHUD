@@ -22,7 +22,7 @@ class Clock : HudConfig("Clock", "evergreenhud/clock.json", false) {
         initialize()
     }
 
-    class ClockHud : BasicHud() {
+    class ClockHud : BasicHud(true) {
 
         var padding = 4f
 
@@ -44,12 +44,12 @@ class Clock : HudConfig("Clock", "evergreenhud/clock.json", false) {
         @Color(
             name = "Hour Color"
         )
-        var hourColor = OneColor(0, 0, 0, 255)
+        var hourColor = OneColor(255, 255, 255)
 
         @Color(
             name = "Minute Color"
         )
-        var minuteColor = OneColor(0, 0, 0, 255)
+        var minuteColor = OneColor(255, 255, 255)
 
         @Color(
             name = "Second Color"
@@ -59,7 +59,7 @@ class Clock : HudConfig("Clock", "evergreenhud/clock.json", false) {
         @Color(
             name = "Lines Color"
         )
-        var linesColor = OneColor(0, 0, 0, 255)
+        var linesColor = OneColor(255, 255, 255)
 
         private fun degreeToPosition(degree: Number, length: Float): Vector2f {
             val radian = Math.toRadians(degree.toDouble())
