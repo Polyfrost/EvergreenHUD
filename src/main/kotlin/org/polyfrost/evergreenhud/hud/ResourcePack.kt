@@ -10,6 +10,10 @@ import net.minecraft.client.gui.Gui
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.client.renderer.texture.DynamicTexture
 import net.minecraft.client.resources.ResourcePackRepository
+import net.minecraftforge.client.event.TextureStitchEvent
+import net.minecraftforge.common.MinecraftForge
+import net.minecraftforge.event.entity.EntityJoinWorldEvent
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.lwjgl.opengl.GL11
 import org.polyfrost.evergreenhud.config.HudConfig
 
@@ -23,6 +27,25 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
     }
 
     class ResourcePackHUD: BasicHud(true, 100f, 0f){
+
+        init {
+            MinecraftForge.EVENT_BUS.register(this)
+        }
+
+        @SubscribeEvent
+        fun onEntityJoin(e: EntityJoinWorldEvent) {
+            if (e.entity.equals(mc.thePlayer)) {
+                reloadPack()
+            }
+        }
+
+        @SubscribeEvent
+        fun onPackChange(e: TextureStitchEvent.Post) {
+            reloadPack()
+        }
+
+        @Switch(name = "Ignore Overlay Pack", description = "Use only the first pack applied in the resource pack list.")
+        var ignoreOverlay = true
 
         @Color(name = "Text Color")
         var color = OneColor(255, 255, 255)
@@ -44,15 +67,10 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
         var iconPadding = 2
 
         @Exclude
-        var pack: ResourcePackRepository.Entry? = mc.resourcePackRepository.repositoryEntries.getOrNull(0)
+        var pack: ResourcePackRepository.Entry? = mc.resourcePackRepository.repositoryEntries.getOrNull(if (ignoreOverlay) 0 else mc.resourcePackRepository.repositoryEntries.size - 1)
 
         @Exclude
         val defaultIcon = mc.textureManager.getDynamicTextureLocation("texturepackicon", DynamicTexture(mc.resourcePackRepository.rprDefaultResourcePack.packImage))
-
-        override fun drawAll(matrices: UMatrixStack?, example: Boolean) {
-            pack = mc.resourcePackRepository.repositoryEntries.getOrNull(0)
-            super.drawAll(matrices, example)
-        }
 
         override fun draw(matrices: UMatrixStack?, x: Float, y: Float, scale: Float, example: Boolean) {
             GlStateManager.pushMatrix()
@@ -69,10 +87,14 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
         }
 
         override fun getWidth(scale: Float, example: Boolean): Float {
-            return (iconSize + iconPadding + mc.fontRendererObj.getStringWidth(pack?.resourcePackName ?: "Default")) * scale
+            return (iconSize + (iconPadding / 2) + mc.fontRendererObj.getStringWidth(pack?.resourcePackName ?: "Default")) * scale
         }
 
         override fun getHeight(scale: Float, example: Boolean): Float = iconSize * scale
+
+        fun reloadPack() {
+            pack = mc.resourcePackRepository.repositoryEntries.getOrNull(if (ignoreOverlay) 0 else mc.resourcePackRepository.repositoryEntries.size - 1)
+        }
 
     }
 
