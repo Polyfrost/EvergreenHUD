@@ -1,7 +1,6 @@
 package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.utils.dsl.mc
@@ -10,15 +9,11 @@ import net.minecraft.entity.EntityLivingBase
 import org.polyfrost.evergreenhud.config.HudConfig
 
 
-class PlayerPreview: HudConfig(Mod("Player Preview", ModType.HUD), "evergreenhud/playerpreview.json", false) {
+class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.json", false) {
     @HUD(
         name = "Self Preview"
     )
     var selfPreview = SelfPreviewHud()
-
-    init {
-        initialize()
-    }
 
     class SelfPreviewHud: BasicHud(true, 1920 - 80f, 1080 - 120f) {
 
@@ -30,6 +25,9 @@ class PlayerPreview: HudConfig(Mod("Player Preview", ModType.HUD), "evergreenhud
         var rotation = 0
 
         @Transient private var drawBackground = false
+        @Transient var cancelNametags = false
+            private set
+
         override fun shouldDrawBackground() = drawBackground
 
         override fun draw(matrices: UMatrixStack?, x: Float, y: Float, scale: Float, example: Boolean) {
@@ -57,16 +55,6 @@ class PlayerPreview: HudConfig(Mod("Player Preview", ModType.HUD), "evergreenhud
             GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit)
             GlStateManager.popMatrix()
         }
-
-        override fun getWidth(scale: Float, example: Boolean): Float = 80 * scale
-
-        override fun getHeight(scale: Float, example: Boolean): Float = 120 * scale
-    }
-
-    @Exclude
-    companion object {
-        var cancelNametags = false
-        private set
 
         private fun renderLiving(ent: EntityLivingBase, matrices: UMatrixStack?, x: Float, y: Float, scale: Float, rotation: Int) {
             GlStateManager.enableColorMaterial()
@@ -102,5 +90,10 @@ class PlayerPreview: HudConfig(Mod("Player Preview", ModType.HUD), "evergreenhud
             ent.rotationYawHead = f4
             GlStateManager.popMatrix()
         }
+
+        override fun getWidth(scale: Float, example: Boolean): Float = 80 * scale
+
+        override fun getHeight(scale: Float, example: Boolean): Float = 120 * scale
     }
+
 }

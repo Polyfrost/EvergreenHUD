@@ -1,7 +1,6 @@
 package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
@@ -10,13 +9,9 @@ import cc.polyfrost.oneconfig.utils.dsl.mc
 import org.lwjgl.input.Mouse
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class CPS: HudConfig(Mod("CPS", ModType.HUD), "evergreenhud/cps.json", false) {
+class CPS: HudConfig("CPS", "evergreenhud/cps.json", false) {
     @HUD(name = "Main")
     var hud = CPSHud()
-
-    init {
-        initialize()
-    }
 
     class CPSHud: SingleTextHud("CPS", true, 0, 50) {
 

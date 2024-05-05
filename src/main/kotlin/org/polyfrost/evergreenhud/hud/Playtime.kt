@@ -2,17 +2,12 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.hook.PlaytimeHook
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class Playtime: HudConfig(Mod("Playtime", ModType.HUD), "evergreenhud/playtime.json", false) {
+class Playtime: HudConfig("Playtime", "evergreenhud/playtime.json", false) {
     @HUD(name = "Main")
     var hud = PlaytimeHud()
-
-    init {
-        initialize()
-    }
 
     class PlaytimeHud: SingleTextHud("Playtime", true, 0, 130) {
         @Switch(name = "Show Seconds")

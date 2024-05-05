@@ -1,6 +1,6 @@
 package org.polyfrost.evergreenhud.mixins;
 
-import org.polyfrost.evergreenhud.hud.PlayerPreview;
+import org.polyfrost.evergreenhud.config.ModConfig;
 import net.minecraft.client.renderer.entity.RendererLivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class RendererLivingEntityMixin {
     @Inject(method = "canRenderName(Lnet/minecraft/entity/EntityLivingBase;)Z", at = @At("HEAD"), cancellable = true)
     private void onCanRenderName(CallbackInfoReturnable<Boolean> cir) {
-        if (PlayerPreview.Companion.getCancelNametags()) {
+        if (ModConfig.INSTANCE.getPlayerPreview().getSelfPreview().getCancelNametags()) {
             cir.setReturnValue(false);
         }
     }

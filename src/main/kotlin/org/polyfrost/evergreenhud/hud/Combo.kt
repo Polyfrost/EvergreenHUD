@@ -2,7 +2,6 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.ClientDamageEntityEvent
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
@@ -12,13 +11,9 @@ import net.minecraft.network.play.server.S19PacketEntityStatus
 import org.polyfrost.evergreenhud.config.HudConfig
 
 
-class Combo: HudConfig(Mod("Combo", ModType.HUD), "evergreenhud/combo.json", false) {
+class Combo: HudConfig("Combo", "evergreenhud/combo.json", false) {
     @HUD(name = "Main")
     var hud = ComboHud()
-
-    init {
-        initialize()
-    }
 
     class ComboHud: SingleTextHud("Combo", true, 0, 70) {
         @Slider(

@@ -2,19 +2,14 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.utils.decimalFormat
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import org.polyfrost.evergreenhud.config.HudConfig
 import kotlin.math.sqrt
 
-class Speed: HudConfig(Mod("Speed", ModType.HUD), "evergreenhud/speed.json", false) {
+class Speed: HudConfig("Speed", "evergreenhud/speed.json", false) {
     @HUD(name = "Main")
     var hud = SpeedHud()
-
-    init {
-        initialize()
-    }
 
     class SpeedHud: SingleTextHud("Speed", true, 0, 110) {
 

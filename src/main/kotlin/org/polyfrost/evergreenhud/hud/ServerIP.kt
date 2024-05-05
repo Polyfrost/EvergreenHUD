@@ -1,19 +1,14 @@
 package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class ServerIP: HudConfig(Mod("Server IP", ModType.HUD), "evergreenhud/serverip.json", false) {
+class ServerIP: HudConfig("Server IP", "evergreenhud/serverip.json", false) {
     @HUD(name = "Main")
     var hud = ServerIPHud()
-
-    init {
-        initialize()
-    }
 
     @Suppress("SENSELESS_COMPARISON", "UNNECESSARY_SAFE_CALL")
     class ServerIPHud: SingleTextHud("Server", true, 180, 30) {

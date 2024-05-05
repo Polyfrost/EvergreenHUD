@@ -1,10 +1,8 @@
 package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.*
-import cc.polyfrost.oneconfig.gui.animations.*
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
 import cc.polyfrost.oneconfig.libs.universal.*
@@ -21,17 +19,13 @@ import org.polyfrost.evergreenhud.config.HudConfig
 private const val VANILLA = false
 private val vanillaBackgroundTexture: ResourceLocation = ResourceLocation("textures/gui/container/inventory.png")
 
-class Inventory : HudConfig(Mod("Inventory", ModType.HUD), "evergreenhud/inventory.json", false) {
+class Inventory : HudConfig("Inventory", "evergreenhud/inventory.json", false) {
 
     @HUD(name = "Player Inventory", category = "Player Inventory")
     var playerInventoryHUD = PlayerInventoryHUD()
 
     @HUD(name = "Ender Chest", category = "Ender Chest")
     var enderChestHUD = EnderChestHUD()
-
-    init {
-        initialize()
-    }
 
     abstract class InventoryHUD(
         enabled: Boolean = false,

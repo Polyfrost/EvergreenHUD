@@ -2,17 +2,12 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.utils.decimalFormat
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class Memory: HudConfig(Mod("Memory", ModType.HUD), "evergreenhud/memory.json", false) {
+class Memory: HudConfig("Memory", "evergreenhud/memory.json", false) {
     @HUD(name = "Main")
     var hud = MemoryHud()
-
-    init {
-        initialize()
-    }
 
     class MemoryHud: SingleTextHud("Memory", true, 60, 90) {
         @DualOption(

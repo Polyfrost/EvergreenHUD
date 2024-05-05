@@ -19,13 +19,9 @@ import kotlin.math.min
 
 private fun notify(message: String) = Notifications.INSTANCE.send("EvergreenHUD", message)
 
-class CustomImages : HudConfig(Mod("Custom Images", ModType.HUD), "evergreenhud/customimages.json", false) {
+class CustomImages : HudConfig("Custom Images", "evergreenhud/customimages.json", false) {
     @CustomOption
     var huds = ImageHudList()
-
-    init {
-        initialize()
-    }
 
     override fun getCustomOption(
         field: Field, annotation: CustomOption, page: OptionPage, mod: Mod, migrate: Boolean,

@@ -2,22 +2,17 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.utils.PinkuluAPIManager
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import cc.polyfrost.oneconfig.utils.hypixel.*
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class HeightLimit : HudConfig(Mod("Height Limit", ModType.HUD), "evergreenhud/heightlimit.json", false) {
+class HeightLimit : HudConfig("Height Limit", "evergreenhud/heightlimit.json", false) {
 
     @HUD(
         name = "Main"
     )
     var hud = HeightLimitHud()
-
-    init {
-        initialize()
-    }
 
     class HeightLimitHud : SingleTextHud("Height Limit", true, 180, 150) {
 

@@ -2,18 +2,13 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.utils.*
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class Yaw : HudConfig(Mod("Yaw", ModType.HUD), "evergreenhud/yaw.json", false) {
+class Yaw : HudConfig("Yaw", "evergreenhud/yaw.json", false) {
     @HUD(name = "Main")
     var hud = YawHud()
-
-    init {
-        initialize()
-    }
 
     class YawHud : SingleTextHud("Yaw", true, 180, 70) {
 

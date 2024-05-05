@@ -3,7 +3,6 @@ package org.polyfrost.evergreenhud.hud
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.annotations.Number
 import cc.polyfrost.oneconfig.config.core.OneColor
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.TextHud
 import cc.polyfrost.oneconfig.libs.universal.*
 import cc.polyfrost.oneconfig.renderer.*
@@ -15,13 +14,9 @@ import org.polyfrost.evergreenhud.mixins.GuiIngameAccessor
 import org.polyfrost.evergreenhud.utils.ItemStackUtils.getLore
 import kotlin.math.min
 
-class HeldItemLore : HudConfig(Mod("Held Item Lore", ModType.HUD), "evergreenhud/helditemlore.json", false) {
+class HeldItemLore : HudConfig("Held Item Lore", "evergreenhud/helditemlore.json", false) {
     @HUD(name = "Main")
     var hud = HeldItemLoreHud()
-
-    init {
-        initialize()
-    }
 
     class HeldItemLoreHud : TextHud(true, 50, 50) {
 

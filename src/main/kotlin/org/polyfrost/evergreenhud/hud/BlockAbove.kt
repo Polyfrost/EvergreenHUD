@@ -1,7 +1,6 @@
 package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.libs.universal.USound
 import cc.polyfrost.oneconfig.utils.dsl.mc
@@ -10,13 +9,9 @@ import net.minecraft.init.Blocks
 import net.minecraft.util.BlockPos
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class BlockAbove: HudConfig(Mod("Block Above", ModType.HUD), "evergreenhud/blockabove.json", false) {
+class BlockAbove: HudConfig("Block Above", "evergreenhud/blockabove.json", false) {
     @HUD(name = "Main")
     var hud = BlockAboveHud()
-
-    init {
-        initialize()
-    }
 
     class BlockAboveHud: SingleTextHud("Above", true, 120, 50) {
         @Switch(

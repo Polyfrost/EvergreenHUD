@@ -2,7 +2,7 @@ package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.core.OneColor
-import cc.polyfrost.oneconfig.config.data.*
+import cc.polyfrost.oneconfig.config.elements.SubConfig
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.utils.dsl.*
@@ -11,16 +11,13 @@ import org.polyfrost.evergreenhud.config.HudConfig
 import java.util.*
 import kotlin.math.*
 
-class Clock : HudConfig(Mod("Clock", ModType.HUD), "evergreenhud/clock.json", false) {
+class Clock : HudConfig("Clock", "evergreenhud/clock.json", false) {
 
     @HUD(
         name = "Main"
     )
     var hud = ClockHud()
 
-    init {
-        initialize()
-    }
 
     class ClockHud : BasicHud() {
 
@@ -36,9 +33,7 @@ class Clock : HudConfig(Mod("Clock", ModType.HUD), "evergreenhud/clock.json", fa
             runAsync {
                 caches.clear()
                 for (i in 0..59) {
-                    val start = degreeToPosition(i * 6, radius)
-                    val end = degreeToPosition(i * 6, radius - if (i % 5 == 0) 8 else 4)
-                    caches.add(LineInfo(start, end, 1.5f))
+                    caches.add(LineInfo(i * 6.0, radius, radius - if (i % 5 == 0) 8 else 4, 1.5f))
                 }
             }
         }
@@ -79,10 +74,9 @@ class Clock : HudConfig(Mod("Clock", ModType.HUD), "evergreenhud/clock.json", fa
             val sec = calendar[Calendar.SECOND] + calendar[Calendar.MILLISECOND] / 1000f
             val min = calendar[Calendar.MINUTE] + sec / 60f
             val hr = calendar[Calendar.HOUR] + min / 60f
-            val start = Vector2f(0f, 0f)
-            val hour = LineInfo(start, degreeToPosition(hr * 30, 12f), 1.5)
-            val minute = LineInfo(start, degreeToPosition(min * 6, 21f), 1)
-            val second = LineInfo(degreeToPosition(sec * 6, -6f), degreeToPosition(sec * 6, 30f), 0.5f)
+            val hour = LineInfo(hr * 30.0, 0f, 12f, 1.5)
+            val minute = LineInfo(min * 6.0, 0f, 21f, 1)
+            val second = LineInfo(sec * 6.0, -6f, 30f, 0.5)
             nanoVG(true) {
                 translate(x + radius * scale, y + radius * scale)
                 scale(scale, scale)
@@ -104,7 +98,9 @@ class Clock : HudConfig(Mod("Clock", ModType.HUD), "evergreenhud/clock.json", fa
         }
 
         private fun drawLine(vg: VG, lineInfo: LineInfo, color: OneColor) {
-            vg.drawLine(lineInfo.start.x, lineInfo.start.y, lineInfo.end.x, lineInfo.end.y, lineInfo.width, color.rgb)
+            nanoVGHelper.rotate(vg.instance, lineInfo.degree)
+            vg.drawLine(0, - lineInfo.start, 0, - lineInfo.end, lineInfo.width, color.rgb)
+            nanoVGHelper.rotate(vg.instance, - lineInfo.degree)
         }
 
         override fun getWidth(scale: Float, example: Boolean): Float {
@@ -117,5 +113,5 @@ class Clock : HudConfig(Mod("Clock", ModType.HUD), "evergreenhud/clock.json", fa
 
     }
 
-    data class LineInfo(var start: Vector2f, var end: Vector2f, var width: Number)
+    data class LineInfo(var degree: Double, var start: Float, var end: Float, var width: Number)
 }

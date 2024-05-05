@@ -3,7 +3,6 @@ package org.polyfrost.evergreenhud.hud
 import org.polyfrost.evergreenhud.ClientDamageEntityEvent
 import org.polyfrost.evergreenhud.utils.decimalFormat
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
@@ -12,13 +11,9 @@ import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.entity.Entity
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class Reach: HudConfig(Mod("Reach", ModType.HUD), "evergreenhud/reach.json", false) {
+class Reach: HudConfig("Reach", "evergreenhud/reach.json", false) {
     @HUD(name = "Main")
     var hud = ReachHud()
-
-    init {
-        initialize()
-    }
 
     class ReachHud: SingleTextHud("Reach", true, 0, 90) {
         @Switch(name = "Trailing Zeros")

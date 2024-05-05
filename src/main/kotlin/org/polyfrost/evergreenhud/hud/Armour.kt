@@ -1,10 +1,7 @@
 package org.polyfrost.evergreenhud.hud
 
-import cc.polyfrost.oneconfig.config.Config
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.core.OneColor
-import cc.polyfrost.oneconfig.config.data.Mod
-import cc.polyfrost.oneconfig.config.data.ModType
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.universal.UGraphics
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
@@ -22,12 +19,12 @@ import kotlin.math.ceil
 //$$ import net.minecraft.inventory.EntityEquipmentSlot
 //#endif
 
-class Armour: HudConfig(Mod("ArmourHud", ModType.HUD), "evergreenhud/armour.json", false) {
+class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
     @HUD(name = "Main")
     var hud = ArmourHud()
 
-    init {
-        initialize()
+    override fun initialize() {
+        super.initialize()
         addDependency("showOffhand", "Minecraft Version 1.9 or later") { Platform.getInstance().minecraftVersion >= 10900 }
     }
 

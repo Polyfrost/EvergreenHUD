@@ -2,7 +2,6 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.utils.FrameTimeHelper
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import net.minecraft.client.Minecraft
 import org.polyfrost.evergreenhud.config.HudConfig
@@ -10,7 +9,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-class FPS : HudConfig(Mod("FPS", ModType.HUD), "evergreenhud/fps.json", false) {
+class FPS : HudConfig("FPS", "evergreenhud/fps.json", false) {
     @HUD(name = "FPS", category = "FPS")
     var fps = FPSHud()
 
@@ -19,10 +18,6 @@ class FPS : HudConfig(Mod("FPS", ModType.HUD), "evergreenhud/fps.json", false) {
 
     @HUD(name = "Frame Time", category = "Frame Time")
     var frameTime = FrameTimeHud()
-
-    init {
-        initialize()
-    }
 
     class FPSHud : SingleTextHud("FPS", true, 60, 50) {
         @Switch(

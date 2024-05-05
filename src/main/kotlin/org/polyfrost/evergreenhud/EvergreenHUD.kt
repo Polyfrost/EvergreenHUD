@@ -1,6 +1,5 @@
 package org.polyfrost.evergreenhud
 
-import org.polyfrost.evergreenhud.hud.*
 import org.polyfrost.evergreenhud.utils.PinkuluAPIManager
 import net.minecraft.entity.Entity
 import net.minecraft.entity.player.EntityPlayer
@@ -15,44 +14,6 @@ class EvergreenHUD {
     fun onFMLInitialization(event: FMLInitializationEvent) {
         ModConfig.initialize()
         PinkuluAPIManager.initialize()
-        Armour()
-        BedwarsResource()
-        Biome()
-        BlockAbove()
-        CCounter()
-        Clock()
-        Combo()
-        Coordinates()
-        CPS()
-        CustomImages()
-        CustomTexts()
-        Day()
-        Direction()
-        ECounter()
-        FPS()
-        GameMode()
-        GameType()
-        HeightLimit()
-        HeldItemLore()
-        InGameTime()
-        Inventory()
-        Map()
-        MapType()
-        Memory()
-        Ping()
-        Pitch()
-        PlaceCount()
-        PlayerPreview()
-        Playtime()
-        Reach()
-        RealLifeDate()
-        RealLifeTime()
-        ResourcePack()
-        Saturation()
-        ServerIP()
-        Speed()
-        TPS()
-        Yaw()
     }
 
     companion object {

@@ -2,7 +2,6 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.ClientPlaceBlockEvent
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
@@ -10,13 +9,9 @@ import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class PlaceCount: HudConfig(Mod("Block Place Count", ModType.HUD), "evergreenhud/placecount.json", false) {
+class PlaceCount: HudConfig("Block Place Count", "evergreenhud/placecount.json", false) {
     @HUD(name = "Main")
     var hud = PlaceCountHud()
-
-    init {
-        initialize()
-    }
 
     class PlaceCountHud : SingleTextHud("Blocks", true, 120, 30) {
         @Slider(

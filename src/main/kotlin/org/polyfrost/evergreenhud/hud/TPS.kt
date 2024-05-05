@@ -1,20 +1,15 @@
 package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.HUD
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.ReceivePacketEvent
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class TPS : HudConfig(Mod("TPS", ModType.HUD), "evergreenhud/tps.json", false) {
+class TPS : HudConfig("TPS", "evergreenhud/tps.json", false) {
     @HUD(name = "Main")
     var hud = TPSHud()
-
-    init {
-        initialize()
-    }
 
     class TPSHud : SingleTextHud("TPS", true, 60, 70) {
         @Transient

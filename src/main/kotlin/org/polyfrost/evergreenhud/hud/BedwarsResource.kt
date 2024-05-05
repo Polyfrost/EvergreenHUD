@@ -2,7 +2,6 @@ package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.core.OneColor
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.events.EventManager
 import cc.polyfrost.oneconfig.events.event.*
 import cc.polyfrost.oneconfig.hud.BasicHud
@@ -26,13 +25,12 @@ private val DIAMOND = ItemStack(Items.diamond)
 private val EMERALD = ItemStack(Items.emerald)
 private var enderChest: IInventory? = null
 
-class BedwarsResource : HudConfig(Mod("Bedwars Resource", ModType.HUD), "evergreenhud/bedwarsresource.json", false) {
+class BedwarsResource : HudConfig("Bedwars Resource", "evergreenhud/bedwarsresource.json", false) {
 
     @HUD(name = "Main")
     var hud = BedwarsResourceHud()
 
     init {
-        initialize()
         EventManager.INSTANCE.register(this)
     }
 

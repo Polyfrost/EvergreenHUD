@@ -8,13 +8,9 @@ import cc.polyfrost.oneconfig.hud.TextHud
 import org.polyfrost.evergreenhud.config.HudConfig
 import java.lang.reflect.Field
 
-class CustomTexts : HudConfig(Mod("Custom Texts", ModType.HUD), "evergreenhud/customtexts.json", false) {
+class CustomTexts : HudConfig("Custom Texts", "evergreenhud/customtexts.json", false) {
     @CustomOption
     var huds = TextHudList()
-
-    init {
-        initialize()
-    }
 
     override fun getCustomOption(
         field: Field, annotation: CustomOption, page: OptionPage, mod: Mod, migrate: Boolean

@@ -2,21 +2,16 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.utils.PinkuluAPIManager
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.hypixel.*
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class MapType : HudConfig(Mod("Map Type", ModType.HUD), "evergreenhud/maptype.json", false) {
+class MapType : HudConfig("Map Type", "evergreenhud/maptype.json", false) {
 
     @HUD(
         name = "Main"
     )
     var hud = MapTypeHud()
-
-    init {
-        initialize()
-    }
 
     class MapTypeHud : SingleTextHud("Map Type", true, 180, 110) {
 

@@ -1,6 +1,6 @@
 package org.polyfrost.evergreenhud.mixins;
 
-import org.polyfrost.evergreenhud.hud.PlayerPreview;
+import org.polyfrost.evergreenhud.config.ModConfig;
 import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -14,7 +14,7 @@ public class LevelheadAboveHeadRenderMixin {
     @Dynamic("Levelhead")
     @Inject(method = "render(Lnet/minecraftforge/client/event/RenderLivingEvent$Specials$Post;)V", at = @At("HEAD"), cancellable = true)
     private void onRender(CallbackInfo ci) {
-        if (PlayerPreview.Companion.getCancelNametags()) {
+        if (ModConfig.INSTANCE.getPlayerPreview().getSelfPreview().getCancelNametags()) {
             ci.cancel();
         }
     }

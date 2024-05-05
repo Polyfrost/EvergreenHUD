@@ -2,18 +2,13 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.utils.*
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.TextHud
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class Coordinates: HudConfig(Mod("Coordinates", ModType.HUD), "evergreenhud/coordinates.json", true) {
+class Coordinates: HudConfig("Coordinates", "evergreenhud/coordinates.json", true) {
     @HUD(name = "Main")
     var hud = CoordinatesHud()
-
-    init {
-        initialize()
-    }
 
     class CoordinatesHud : TextHud(true, 0, 0) {
         @DualOption(

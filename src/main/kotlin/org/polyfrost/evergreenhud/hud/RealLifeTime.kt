@@ -1,19 +1,14 @@
 package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import org.polyfrost.evergreenhud.config.HudConfig
 import java.text.SimpleDateFormat
 import java.util.*
 
-class RealLifeTime : HudConfig(Mod("IRL Time", ModType.HUD), "evergreenhud/irltime.json", false) {
+class RealLifeTime : HudConfig("IRL Time", "evergreenhud/irltime.json", false) {
     @HUD(name = "Main")
     var hud = RealLifeTimeHud()
-
-    init {
-        initialize()
-    }
 
     class RealLifeTimeHud : SingleTextHud("Time", true, 120, 10) {
 

@@ -2,19 +2,14 @@ package org.polyfrost.evergreenhud.hud
 
 import org.polyfrost.evergreenhud.utils.ServerPinger
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class Ping: HudConfig(Mod("Ping", ModType.HUD), "evergreenhud/ping.json", false) {
+class Ping: HudConfig("Ping", "evergreenhud/ping.json", false) {
     @HUD(name = "Main")
     var hud = PingHud()
-
-    init {
-        initialize()
-    }
 
     class PingHud : SingleTextHud("Ping", true, 60, 70) {
 

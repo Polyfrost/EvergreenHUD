@@ -2,7 +2,6 @@ package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.core.OneColor
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.renderer.TextRenderer
@@ -14,7 +13,7 @@ import net.minecraft.client.resources.ResourcePackRepository
 import org.lwjgl.opengl.GL11
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class ResourcePack: HudConfig(Mod("Resource Pack", ModType.HUD), "evergreenhud/resourcepack.json", true) {
+class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json", true) {
 
     @HUD(name = "Main")
     var hud = ResourcePackHUD()
@@ -73,7 +72,4 @@ class ResourcePack: HudConfig(Mod("Resource Pack", ModType.HUD), "evergreenhud/r
 
     }
 
-    init {
-        initialize()
-    }
 }

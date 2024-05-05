@@ -1,21 +1,16 @@
 package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.hypixel.*
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class Map : HudConfig(Mod("Map", ModType.HUD), "evergreenhud/map.json", false) {
+class Map : HudConfig("Map", "evergreenhud/map.json", false) {
 
     @HUD(
         name = "Main"
     )
     var hud = MapHud()
-
-    init {
-        initialize()
-    }
 
     class MapHud : SingleTextHud("Map", true, 180, 90) {
         @Switch(

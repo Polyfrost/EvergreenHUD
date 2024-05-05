@@ -1,21 +1,16 @@
 package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
-import cc.polyfrost.oneconfig.config.data.*
 import cc.polyfrost.oneconfig.hud.SingleTextHud
 import cc.polyfrost.oneconfig.utils.hypixel.*
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class GameType : HudConfig(Mod("Game Type", ModType.HUD), "evergreenhud/gametype.json", false) {
+class GameType : HudConfig("Game Type", "evergreenhud/gametype.json", false) {
 
     @HUD(
         name = "Main"
     )
     var hud = GameTypeHud()
-
-    init {
-        initialize()
-    }
 
     class GameTypeHud : SingleTextHud("Game Type", true, 180, 130) {
 
