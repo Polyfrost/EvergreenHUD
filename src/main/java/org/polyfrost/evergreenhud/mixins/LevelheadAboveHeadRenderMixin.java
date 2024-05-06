@@ -14,7 +14,7 @@ public class LevelheadAboveHeadRenderMixin {
     @Dynamic("Levelhead")
     @Inject(method = "render(Lnet/minecraftforge/client/event/RenderLivingEvent$Specials$Post;)V", at = @At("HEAD"), cancellable = true)
     private void onRender(CallbackInfo ci) {
-        if (ModConfig.INSTANCE.getPlayerPreview().getSelfPreview().getCancelNametags()) {
+        if (ModConfig.INSTANCE.getPlayerPreview().getSelfPreview().getRenderingNametag() && !ModConfig.INSTANCE.getPlayerPreview().getSelfPreview().getShowNametag()) {
             ci.cancel();
         }
     }

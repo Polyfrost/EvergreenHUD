@@ -9,8 +9,11 @@ import cc.polyfrost.oneconfig.gui.elements.config.ConfigSlider;
 import cc.polyfrost.oneconfig.hud.HUDUtils;
 import cc.polyfrost.oneconfig.hud.Hud;
 import cc.polyfrost.oneconfig.internal.hud.HudCore;
+import org.polyfrost.evergreenhud.EvergreenHUD;
 import org.polyfrost.evergreenhud.hud.Clock;
+import org.polyfrost.evergreenhud.hud.PlayerPreview;
 import org.polyfrost.evergreenhud.hud.ResourcePack;
+import org.polyfrost.polynametag.config.ModConfig;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,8 +30,8 @@ public class HUDUtilsMixin {
     @Inject(method = "addHudOptions", at = @At("TAIL"))
     private static void hudUtils$modifyOptions(OptionPage page, Field field, Object instance, Config config, CallbackInfo ci) {
         Hud hud = (Hud) ConfigUtils.getField(field, instance);
+        HUD hudAnnotation = field.getAnnotation(HUD.class);
         if (hud instanceof Clock.ClockHud) {
-            HUD hudAnnotation = field.getAnnotation(HUD.class);
             String category = hudAnnotation.category();
             String subcategory = hudAnnotation.subcategory();
             HudCore.hudOptions.removeIf(HUDUtilsMixin::hudUtils$shouldRemove);
@@ -44,7 +47,6 @@ public class HUDUtilsMixin {
             }  catch (Exception ignored) {
             }
         } else if (hud instanceof ResourcePack.ResourcePackHUD) {
-            HUD hudAnnotation = field.getAnnotation(HUD.class);
             for (BasicOption option : HudCore.hudOptions) {
                 if (option.getField().getName().equals("ignoreOverlay")) {
                     option.addListener(() -> ((ResourcePack.ResourcePackHUD) hud).reloadPack());
@@ -55,6 +57,19 @@ public class HUDUtilsMixin {
                     option.addListener(() -> ((ResourcePack.ResourcePackHUD) hud).reloadPack());
                 }
             }
+        } else if (hud instanceof PlayerPreview.SelfPreviewHud) {
+            HudCore.hudOptions.forEach(HUDUtilsMixin::modifyOption);
+            ConfigUtils.getSubCategory(page, hudAnnotation.category(), hudAnnotation.subcategory()).options.forEach(HUDUtilsMixin::modifyOption);
+        }
+    }
+
+    @Unique
+    private static void modifyOption(BasicOption option) {
+        String fieldName = option.getField().getName();
+        Object hud = option.getParent();
+        if (!(hud instanceof PlayerPreview.SelfPreviewHud)) return;
+        if (fieldName.equals("showNametag")) {
+            option.addHideCondition(() -> !EvergreenHUD.Companion.isPolyNametag() || !ModConfig.INSTANCE.getShowOwnNametag());
         }
     }
 

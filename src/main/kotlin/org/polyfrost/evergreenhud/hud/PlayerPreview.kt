@@ -6,7 +6,9 @@ import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.renderer.*
 import net.minecraft.entity.EntityLivingBase
+import org.polyfrost.evergreenhud.EvergreenHUD
 import org.polyfrost.evergreenhud.config.HudConfig
+import org.polyfrost.polynametag.config.ModConfig
 
 
 class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.json", false) {
@@ -21,6 +23,11 @@ class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.jso
 
     class SelfPreviewHud: BasicHud(true, 1920 - 80f, 1080 - 120f) {
 
+        @Switch(
+            name = "Show Nametag"
+        )
+        var showNametag = false
+
         @Slider(
             name = "Rotation",
             min = 0F,
@@ -28,8 +35,12 @@ class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.jso
         )
         var rotation = 0
 
+        @Exclude
+        private var nametagExtend = 0
+            get() = if (showNametag && EvergreenHUD.isPolyNametag && ModConfig.showOwnNametag) 26 else 0
+
         @Transient private var drawBackground = false
-        @Transient var cancelNametags = false
+        @Transient var renderingNametag = false
             private set
 
         override fun shouldDrawBackground() = drawBackground
@@ -63,7 +74,7 @@ class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.jso
         private fun renderLiving(ent: EntityLivingBase, matrices: UMatrixStack?, x: Float, y: Float, scale: Float, rotation: Int) {
             GlStateManager.enableColorMaterial()
             GlStateManager.pushMatrix()
-            GlStateManager.translate(x.toDouble() + (40 * scale), y.toDouble() + (107 * scale), 50.0)
+            GlStateManager.translate(x.toDouble() + (40 * scale), y.toDouble() + (107 + nametagExtend) * scale, 50.0)
             GlStateManager.scale(-(scale * 50), scale * 50, scale * 50)
             GlStateManager.rotate(180.0f, 0.0f, 0.0f, 1.0f)
             val f = ent.renderYawOffset
@@ -81,11 +92,12 @@ class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.jso
             ent.prevRotationYawHead = ent.rotationYaw
             GlStateManager.translate(0.0f, 0.0f, 0.0f)
             val rendermanager = mc.renderManager
+            rendermanager.playerViewX = 0f
             rendermanager.setPlayerViewY(180.0f)
             rendermanager.isRenderShadow = false
-            cancelNametags = true
+            renderingNametag = true
             rendermanager.doRenderEntity(ent, 0.0, 0.0, 0.0, 0.0f, 1.0f, false)
-            cancelNametags = false
+            renderingNametag = false
             rendermanager.isRenderShadow = true
             ent.renderYawOffset = f
             ent.rotationYaw = f1
@@ -97,7 +109,7 @@ class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.jso
 
         override fun getWidth(scale: Float, example: Boolean): Float = 80 * scale
 
-        override fun getHeight(scale: Float, example: Boolean): Float = 120 * scale
+        override fun getHeight(scale: Float, example: Boolean): Float = (120 + nametagExtend) * scale
     }
 
 }
