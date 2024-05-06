@@ -9,11 +9,10 @@ import cc.polyfrost.oneconfig.gui.elements.config.ConfigSlider;
 import cc.polyfrost.oneconfig.hud.HUDUtils;
 import cc.polyfrost.oneconfig.hud.Hud;
 import cc.polyfrost.oneconfig.internal.hud.HudCore;
-import org.polyfrost.evergreenhud.EvergreenHUD;
 import org.polyfrost.evergreenhud.hud.Clock;
 import org.polyfrost.evergreenhud.hud.PlayerPreview;
 import org.polyfrost.evergreenhud.hud.ResourcePack;
-import org.polyfrost.polynametag.config.ModConfig;
+import org.polyfrost.evergreenhud.utils.ModCompatKt;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -69,7 +68,7 @@ public class HUDUtilsMixin {
         Object hud = option.getParent();
         if (!(hud instanceof PlayerPreview.SelfPreviewHud)) return;
         if (fieldName.equals("showNametag")) {
-            option.addHideCondition(() -> !EvergreenHUD.Companion.isPolyNametag() || !ModConfig.INSTANCE.getShowOwnNametag());
+            option.addHideCondition(() -> !ModCompatKt.getSelfNameTagEnabled());
         }
     }
 

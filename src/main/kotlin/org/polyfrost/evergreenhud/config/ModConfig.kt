@@ -34,7 +34,7 @@ object ModConfig : Config(Mod(EvergreenHUD.NAME, ModType.HUD, "/assets/evergreen
     @SubConfig var map = Map()
     @SubConfig var mapType = MapType()
     @SubConfig var memory = Memory()
-    @SubConfig var ping = Ping()
+//    @SubConfig var ping = Ping()
     @SubConfig var pitch = Pitch()
     @SubConfig var placeCount = PlaceCount()
     @SubConfig var playerPreview = PlayerPreview()
