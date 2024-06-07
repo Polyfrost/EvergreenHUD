@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class HudCore {
-    public static boolean editing;
     public static final ConcurrentHashMap<Map.Entry<Field, Object>, Hud> huds = new ConcurrentHashMap<>();
     public static final ArrayList<BasicOption> hudOptions = new ArrayList<>();
 }

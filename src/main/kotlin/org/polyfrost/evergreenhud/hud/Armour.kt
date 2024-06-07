@@ -2,12 +2,7 @@ package org.polyfrost.evergreenhud.hud
 
 import cc.polyfrost.oneconfig.config.annotations.*
 import cc.polyfrost.oneconfig.config.core.OneColor
-import cc.polyfrost.oneconfig.events.EventManager
-import cc.polyfrost.oneconfig.events.event.Stage
-import cc.polyfrost.oneconfig.events.event.TickEvent
 import cc.polyfrost.oneconfig.hud.BasicHud
-import cc.polyfrost.oneconfig.internal.hud.HudCore
-import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
 import cc.polyfrost.oneconfig.libs.universal.UGraphics
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.libs.universal.UMinecraft
@@ -126,20 +121,9 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
         @Transient private var actualWidth = 5F
         @Transient private var actualHeight = 5F
         @Transient private var translation = 0F
-        @Transient private var items = ArrayList<ItemStack>()
-
-        init {
-            EventManager.INSTANCE.register(this)
-        }
 
         override fun draw(matrices: UMatrixStack?, x: Float, y: Float, scale: Float, example: Boolean) {
-            draw(matrices, x, y, scale, items)
-        }
-
-        @Subscribe
-        fun onTick(e: TickEvent) {
-            if (e.stage != Stage.END) return
-            items = getItems(HudCore.editing)
+            draw(matrices, x, y, scale, getItems(example))
         }
 
         private fun getItems(example: Boolean) = if (example) {
@@ -255,7 +239,7 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
         override fun getHeight(scale: Float, example: Boolean): Float = actualHeight * scale
 
         override fun shouldShow(): Boolean {
-            return super.shouldShow() && items.isNotEmpty()
+            return super.shouldShow() && getItems(false).isNotEmpty()
         }
     }
 }
