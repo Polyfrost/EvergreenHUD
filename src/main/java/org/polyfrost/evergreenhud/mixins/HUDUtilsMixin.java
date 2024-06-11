@@ -10,9 +10,7 @@ import cc.polyfrost.oneconfig.hud.HUDUtils;
 import cc.polyfrost.oneconfig.hud.Hud;
 import cc.polyfrost.oneconfig.internal.hud.HudCore;
 import org.polyfrost.evergreenhud.hud.Clock;
-import org.polyfrost.evergreenhud.hud.PlayerPreview;
 import org.polyfrost.evergreenhud.hud.ResourcePack;
-import org.polyfrost.evergreenhud.utils.ModCompatKt;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -56,19 +54,6 @@ public class HUDUtilsMixin {
                     option.addListener(() -> ((ResourcePack.ResourcePackHUD) hud).reloadPack());
                 }
             }
-        } else if (hud instanceof PlayerPreview.SelfPreviewHud) {
-            HudCore.hudOptions.forEach(HUDUtilsMixin::modifyOption);
-            ConfigUtils.getSubCategory(page, hudAnnotation.category(), hudAnnotation.subcategory()).options.forEach(HUDUtilsMixin::modifyOption);
-        }
-    }
-
-    @Unique
-    private static void modifyOption(BasicOption option) {
-        String fieldName = option.getField().getName();
-        Object hud = option.getParent();
-        if (!(hud instanceof PlayerPreview.SelfPreviewHud)) return;
-        if (fieldName.equals("showNametag")) {
-            option.addHideCondition(() -> !ModCompatKt.getSelfNameTagEnabled());
         }
     }
 
