@@ -18,13 +18,7 @@ class EvergreenHUD {
         PinkuluAPIManager.initialize()
     }
 
-    @Mod.EventHandler
-    fun onPostInit(event: FMLPostInitializationEvent) {
-        isPolyNametag = Loader.isModLoaded("polynametag")
-    }
-
     companion object {
-        var isPolyNametag = false
         const val MODID = "@ID@"
         const val NAME = "@NAME@"
         const val VERSION = "@VER@"

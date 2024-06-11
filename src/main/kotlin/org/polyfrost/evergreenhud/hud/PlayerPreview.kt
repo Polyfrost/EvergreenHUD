@@ -7,8 +7,6 @@ import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.renderer.*
 import net.minecraft.entity.EntityLivingBase
 import org.polyfrost.evergreenhud.config.HudConfig
-import org.polyfrost.evergreenhud.utils.selfNameTagEnabled
-
 
 class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.json", false) {
     @HUD(
@@ -36,7 +34,7 @@ class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.jso
 
         @Exclude
         private var nametagExtend = 0
-            get() = if (showNametag && selfNameTagEnabled) 26 else 0
+            get() = if (showNametag) 26 else 0
 
         @Transient private var drawBackground = false
         @Transient var renderingNametag = false
