@@ -17,7 +17,7 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.lwjgl.opengl.GL11
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json", true) {
+class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json", false) {
 
     @HUD(name = "Main")
     var hud = ResourcePackHUD()
