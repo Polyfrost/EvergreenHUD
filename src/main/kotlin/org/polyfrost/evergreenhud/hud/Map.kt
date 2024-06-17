@@ -27,7 +27,7 @@ class Map : HudConfig("Map", "evergreenhud/map.json", false) {
         }
 
         override fun shouldShow(): Boolean {
-            return super.shouldShow() && (!hide || (HypixelUtils.INSTANCE.isHypixel && LocrawUtil.INSTANCE.isInGame && LocrawUtil.INSTANCE.locrawInfo?.mapName?.isNotBlank() == true))
+            return super.shouldShow() && (!hide || LocrawUtil.INSTANCE.locrawInfo?.mapName?.isNotBlank() == true)
         }
     }
 }

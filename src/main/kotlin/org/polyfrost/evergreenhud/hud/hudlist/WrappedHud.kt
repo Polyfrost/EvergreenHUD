@@ -14,7 +14,6 @@ import cc.polyfrost.oneconfig.renderer.font.Fonts
 import cc.polyfrost.oneconfig.utils.InputHandler
 import cc.polyfrost.oneconfig.utils.color.ColorPalette
 import cc.polyfrost.oneconfig.utils.dsl.nanoVGHelper
-import kotlin.reflect.jvm.javaField
 
 private val MINUS_ICON = SVG("/assets/evergreenhud/minus.svg")
 private const val WHITE_90 = 0xE5FFFFFF.toInt()
@@ -30,7 +29,7 @@ class WrappedHud<T : Hud>(
     private val page: ModConfigPage
 
     init {
-        HUDUtils.addHudOptions(optionPage, ::hud.javaField, this, hudListOption.config)
+        HUDUtils.addHudOptions(optionPage, WrappedHud::class.java.getDeclaredField("hud"), this, hudListOption.config)
         // subcategory must be generated before creating config page
         page = ModConfigPage(optionPage)
 

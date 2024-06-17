@@ -38,30 +38,36 @@ class RealLifeDate : HudConfig("IRL Date", "evergreenhud/irldate.json", false) {
         var showYear = false
 
         fun determineFormatter(): DateTimeFormatter {
-            var baseString = "d" //d
-            if (twoDigitDay) { baseString = "d" + baseString } //dd
-            if (monthBeforeDate) {
-                baseString = "MMM " + baseString //MMM d
-                if (fullLengthDate) {
-                    baseString = "M" + baseString //MMMM dd
-                }
-            } else {
-                baseString = baseString + " MMM" //d MMM
-                if (fullLengthDate) {
-                    baseString = baseString + "M" //dd MMMM
-                }
-            }
+            val stringBuilder = StringBuilder()
             if (dayOfWeek) {
-                baseString = "EEE, " + baseString //EEE, MMM d | EEE, d MMM
                 if (fullLengthDate) {
-                    baseString = "E" + baseString //EEEE, MMMM dd | EEEE, dd MMMM
+                    stringBuilder.append("E") //EEEE, MMMM dd | EEEE, dd MMMM
                 }
-            }
-            if (showYear) {
-                baseString = baseString + " YYYY"
+                stringBuilder.append("EEE, ") //EEE, MMM d | EEE, d MMM
             }
 
-            return DateTimeFormatter.ofPattern(baseString)!!
+            if (monthBeforeDate) {
+                if (fullLengthDate) {
+                    stringBuilder.append("M") //MMMM dd
+                }
+                stringBuilder.append("MMM ") //MMM d
+            }
+
+            stringBuilder.append("d")
+            if (twoDigitDay) { stringBuilder.append("d") } //dd
+
+            if (!monthBeforeDate) {
+                stringBuilder.append(" MMM") //d MMM
+                if (fullLengthDate) {
+                    stringBuilder.append("M") //dd MMMM
+                }
+            }
+
+            if (showYear) {
+                stringBuilder.append(" YYYY")
+            }
+
+            return DateTimeFormatter.ofPattern(stringBuilder.toString())
         }
 
         override fun getText(example: Boolean): String = determineFormatter().format(ZonedDateTime.now())

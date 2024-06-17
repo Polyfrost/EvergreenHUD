@@ -33,7 +33,7 @@ class GameMode : HudConfig("Game Mode", "evergreenhud/gamemode.json", false) {
         }
 
         override fun shouldShow(): Boolean {
-            return super.shouldShow() && (!hide || (HypixelUtils.INSTANCE.isHypixel && LocrawUtil.INSTANCE.isInGame && LocrawUtil.INSTANCE.locrawInfo?.gameMode?.isNotBlank() == true))
+            return super.shouldShow() && (!hide || LocrawUtil.INSTANCE.locrawInfo?.gameMode?.isNotBlank() == true)
         }
     }
 }

@@ -9,6 +9,7 @@ import cc.polyfrost.oneconfig.gui.elements.config.ConfigSlider;
 import cc.polyfrost.oneconfig.hud.HUDUtils;
 import cc.polyfrost.oneconfig.hud.Hud;
 import cc.polyfrost.oneconfig.internal.hud.HudCore;
+import org.polyfrost.evergreenhud.hud.Armour;
 import org.polyfrost.evergreenhud.hud.Clock;
 import org.polyfrost.evergreenhud.hud.ResourcePack;
 import org.spongepowered.asm.mixin.Mixin;
@@ -46,12 +47,12 @@ public class HUDUtilsMixin {
         } else if (hud instanceof ResourcePack.ResourcePackHUD) {
             for (BasicOption option : HudCore.hudOptions) {
                 if (option.getField().getName().equals("ignoreOverlay")) {
-                    option.addListener(() -> ((ResourcePack.ResourcePackHUD) hud).reloadPack());
+                    option.addListener(() -> ((ResourcePack.ResourcePackHUD) hud).setPack(((ResourcePack.ResourcePackHUD) hud).getResourcePack()));
                 }
             }
             for (BasicOption option : ConfigUtils.getSubCategory(page, hudAnnotation.category(), hudAnnotation.subcategory()).options) {
                 if (option.getField().getName().equals("ignoreOverlay")) {
-                    option.addListener(() -> ((ResourcePack.ResourcePackHUD) hud).reloadPack());
+                    option.addListener(() -> ((ResourcePack.ResourcePackHUD) hud).setPack(((ResourcePack.ResourcePackHUD) hud).getResourcePack()));
                 }
             }
         }

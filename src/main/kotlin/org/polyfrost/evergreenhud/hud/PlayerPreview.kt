@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.*
 import net.minecraft.entity.EntityLivingBase
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.json", false) {
+class PlayerPreview : HudConfig("Player Preview", "evergreenhud/playerpreview.json", false) {
     @HUD(
         name = "Self Preview"
     )
@@ -18,7 +18,7 @@ class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.jso
         initialize()
     }
 
-    class SelfPreviewHud: BasicHud(true, 1920 - 80f, 1080 - 120f) {
+    class SelfPreviewHud : BasicHud(true, 1920 - 80f, 1080 - 120f) {
 
         @Switch(
             name = "Show Nametag"
@@ -36,8 +36,11 @@ class PlayerPreview: HudConfig("Player Preview", "evergreenhud/playerpreview.jso
         private var nametagExtend = 0
             get() = if (showNametag) 26 else 0
 
-        @Transient private var drawBackground = false
-        @Transient var renderingNametag = false
+        @Transient
+        private var drawBackground = false
+
+        @Transient
+        var renderingNametag = false
             private set
 
         override fun shouldDrawBackground() = drawBackground

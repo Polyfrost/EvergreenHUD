@@ -6,7 +6,6 @@ import cc.polyfrost.oneconfig.libs.universal.UMinecraft
 import org.polyfrost.evergreenhud.config.HudConfig
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 class InGameTime : HudConfig("In Game Time", "evergreenhud/ingametime.json", false) {
     @HUD(name = "Main")
@@ -24,7 +23,7 @@ class InGameTime : HudConfig("In Game Time", "evergreenhud/ingametime.json", fal
         override fun getText(example: Boolean): String {
             UMinecraft.getWorld()?.let {
                 // ticks to ticks in day to seconds to millis plus six hours (time 0 = 6am)
-                val date = Date(it.worldTime / 20 * 1000 + TimeUnit.HOURS.toMillis(6))
+                val date = Date(it.worldTime / 20 * 1000 + 21_600_000) // 6 hours == 21,600,000 milliseconds
                 return SimpleDateFormat(if (twelveHour) "hh:mm a" else "HH:mm")
                     .format(date).uppercase()
             }

@@ -29,7 +29,7 @@ class MapType : HudConfig("Map Type", "evergreenhud/maptype.json", false) {
         }
 
         override fun shouldShow(): Boolean {
-            return super.shouldShow() && (!hide || (HypixelUtils.INSTANCE.isHypixel && LocrawUtil.INSTANCE.isInGame && LocrawUtil.INSTANCE.locrawInfo?.mapName?.isNotBlank() == true && PinkuluAPIManager.getMapPool() != null))
+            return super.shouldShow() && (!hide || (LocrawUtil.INSTANCE.locrawInfo?.mapName?.isNotBlank() == true && PinkuluAPIManager.getMapPool() != null))
         }
     }
 }

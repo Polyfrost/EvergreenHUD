@@ -14,7 +14,6 @@ class ServerIP: HudConfig("Server IP", "evergreenhud/serverip.json", false) {
         initialize()
     }
 
-    @Suppress("SENSELESS_COMPARISON", "UNNECESSARY_SAFE_CALL")
     class ServerIPHud: SingleTextHud("Server", true, 180, 30) {
 
         @Switch(

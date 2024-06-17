@@ -35,13 +35,13 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
         @SubscribeEvent
         fun onEntityJoin(e: EntityJoinWorldEvent) {
             if (e.entity.equals(mc.thePlayer)) {
-                reloadPack()
+                pack = getPack()
             }
         }
 
         @SubscribeEvent
         fun onPackChange(e: TextureStitchEvent.Post) {
-            reloadPack()
+            pack = getPack()
         }
 
         @Switch(name = "Ignore Overlay Pack", description = "Use only the first pack applied in the resource pack list.")
@@ -67,7 +67,7 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
         var iconPadding = 5
 
         @Exclude
-        var pack: ResourcePackRepository.Entry? = mc.resourcePackRepository.repositoryEntries.getOrNull(if (ignoreOverlay) 0 else mc.resourcePackRepository.repositoryEntries.size - 1)
+        var pack: ResourcePackRepository.Entry? = getPack()
 
         @Exclude
         val defaultIcon = mc.textureManager.getDynamicTextureLocation("texturepackicon", DynamicTexture(mc.resourcePackRepository.rprDefaultResourcePack.packImage))
@@ -92,8 +92,8 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
 
         override fun getHeight(scale: Float, example: Boolean): Float = iconSize * scale
 
-        fun reloadPack() {
-            pack = mc.resourcePackRepository.repositoryEntries.getOrNull(if (ignoreOverlay) 0 else mc.resourcePackRepository.repositoryEntries.size - 1)
+        fun getPack(): ResourcePackRepository.Entry? { 
+            return mc.resourcePackRepository.repositoryEntries.getOrNull(if (ignoreOverlay) 0 else mc.resourcePackRepository.repositoryEntries.size - 1)
         }
 
     }
