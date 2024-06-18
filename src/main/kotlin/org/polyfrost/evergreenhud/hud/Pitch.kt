@@ -29,6 +29,7 @@ class Pitch: HudConfig("Pitch", "evergreenhud/pitch.json", false) {
         var trailingZeros = true
 
         override fun getText(example: Boolean): String {
+            // see comments in DecimalFontCache
             return decimalFormat(accuracy, trailingZeros).format(mc.thePlayer?.rotationPitch ?: 0f )
         }
 

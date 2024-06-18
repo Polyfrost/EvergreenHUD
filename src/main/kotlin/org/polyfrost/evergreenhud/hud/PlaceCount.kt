@@ -36,6 +36,7 @@ class PlaceCount: HudConfig("Block Place Count", "evergreenhud/placecount.json",
             if (event.stage == Stage.START) {
                 val currentTime = System.currentTimeMillis()
                 if (!blockCount.isEmpty()) {
+                    // see CPS notes plus if you are using tick accuracy just store 20 ticks for each one and dec until 0
                     while ((currentTime - blockCount.first()) > interval) {
                         blockCount.removeFirst()
                         if (blockCount.isEmpty()) break

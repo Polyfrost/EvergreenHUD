@@ -4,6 +4,8 @@ interface Memoize {
     fun clear()
 }
 
+// No
+// just remove this so much overhead 
 class Memoize1<T, R>(private val f: (T) -> R) : (T) -> R, Memoize {
     private val cache = mutableMapOf<T, R>()
 

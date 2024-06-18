@@ -22,6 +22,7 @@ class RealLifeTime : HudConfig("IRL Time", "evergreenhud/irltime.json", false) {
         @Switch(name = "Seconds")
         var seconds = false
 
+        // tf you using string.format for just use an if statement
         override fun getText(example: Boolean): String = SimpleDateFormat(String.format(if (twelveHour) "hh:mm%s a" else "HH:mm%s", if (seconds) ":ss" else ""))
             .format(Calendar.getInstance().time).uppercase()
     }

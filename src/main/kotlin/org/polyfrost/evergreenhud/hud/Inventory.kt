@@ -110,6 +110,8 @@ class Inventory : HudConfig("Inventory", "evergreenhud/inventory.json", false) {
         abstract fun getItem(index: Int): ItemStack?
 
         private fun getRowAreShownList() =
+            // what the functional ahh fuck am i reading
+            // this entire method is silly
             (0..2).map { row ->
                 (0..8).any { column ->
                     getItem(row * 9 + column) != null
@@ -153,6 +155,7 @@ class Inventory : HudConfig("Inventory", "evergreenhud/inventory.json", false) {
 
         @Subscribe
         fun onOpenContainer(e: ScreenOpenEvent) {
+            // i read this code somewhere else, remove the duplicate 
             if (e.screen !is GuiChest) return
             val chestGUI = e.screen as GuiChest?
             val chestContainer = chestGUI!!.inventorySlots as ContainerChest
@@ -170,6 +173,8 @@ class Inventory : HudConfig("Inventory", "evergreenhud/inventory.json", false) {
                     net.minecraft.network.play.server.S01PacketJoinGame
             //#endif
             ) return
+            // this again probably fixes a bug 
+            // use worldload event if needed
             enderChest = null
         }
 

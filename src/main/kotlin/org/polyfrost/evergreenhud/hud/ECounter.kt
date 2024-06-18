@@ -23,6 +23,7 @@ class ECounter: HudConfig("E Counter", "evergreenhud/ecounter.json", false) {
         override fun getText(example: Boolean): String {
             if (mc.thePlayer == null) return "Unknown"
 
+            // just read the field directly with a mixin like in CCounter
             val delimiter = if (simplified) '/' else ','
             return mc.renderGlobal.debugInfoEntities.substringAfter("E: ").substringBefore(delimiter)
         }

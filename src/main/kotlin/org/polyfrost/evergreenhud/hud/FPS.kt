@@ -87,6 +87,7 @@ class FPS : HudConfig("FPS", "evergreenhud/fps.json", false) {
         )
         var averageMethod = 0
 
+        // as this uses the same method above why not just share the result so you dont have to potentially do it twice
         private fun average(list: List<Double>): Double = when (averageMethod) {
             0 -> list.average()
             1 -> percentile(list, 0.5)
@@ -97,6 +98,7 @@ class FPS : HudConfig("FPS", "evergreenhud/fps.json", false) {
 
         private fun percentile(list: List<Double>, percentile: Double): Double {
             val index = ceil(list.size * percentile).toInt() - 1
+            // try make the list sorted when they are added
             return list.sorted()[index]
         }
 

@@ -2,6 +2,9 @@ package org.polyfrost.evergreenhud.utils
 
 import java.text.DecimalFormat
 
+// very silly 
+// there is a lot of overhead here
+// just use property listeners for configs and store it individually in each one
 private val decimalFormat: (Int, Boolean, Boolean) -> DecimalFormat = { places: Int, trailingZeroes: Boolean, percentage: Boolean ->
     var pattern = "0"
     if (places > 0)

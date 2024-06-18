@@ -56,7 +56,9 @@ class HeldItemLore : HudConfig("Held Item Lore", "evergreenhud/helditemlore.json
         )
 
         override fun drawLine(line: String?, x: Float, y: Float, scale: Float) {
+            // maybe not make this here? save it somewhere?
             val color = OneColor(
+                // this is also just fucking useless you shl the opacity in anyway lol
                 ColorUtils.setAlpha(
                     this.color.rgb,
                     min(this.color.alpha.toDouble(), opacity.toDouble()).toInt()
@@ -70,6 +72,7 @@ class HeldItemLore : HudConfig("Held Item Lore", "evergreenhud/helditemlore.json
         override fun drawBackground(x: Float, y: Float, width: Float, height: Float, scale: Float) {
             val nanoVGHelper = NanoVGHelper.INSTANCE
             nanoVGHelper.setupAndDraw(true) { vg: Long ->
+                // fuck me
                 val bgColor =
                     ColorUtils.setAlpha(
                         bgColor.rgb,
@@ -124,6 +127,7 @@ class HeldItemLore : HudConfig("Held Item Lore", "evergreenhud/helditemlore.json
 
             // val ticksPerSecond = 20
             // val extraTicks = (extraSeconds * ticksPerSecond)
+            // there is this wonderful thing called globalAlpha for this purpose.
             val remainingTicks = inGameGUI.getRemainingHighlightTicks() // + extraTicks
             var o: Int =
                 if (fadeOut) (remainingTicks * 256 / 10)
@@ -135,6 +139,7 @@ class HeldItemLore : HudConfig("Held Item Lore", "evergreenhud/helditemlore.json
 
         override fun getLines(lines: MutableList<String>, example: Boolean) {
             if (
+                // use universalcraft getplayer lol
             //#if MC>=11202
             //$$ mc.player
             //#else
@@ -161,6 +166,8 @@ class HeldItemLore : HudConfig("Held Item Lore", "evergreenhud/helditemlore.json
                 //#endif
             ?: return
             val itemName = theHeldItem.displayName
+            // see comments in itemstackutils
+            // also having it in a completely seperate place is a bit silly 
             val itemLore = theHeldItem.getLore()
             if (itemName.isNotEmpty() && !skipItemName) lines.add("§r$itemName§r") // §r to avoid coloring either the inventory or enderchest huds
             if (itemLore.isNotEmpty()) {
@@ -168,6 +175,7 @@ class HeldItemLore : HudConfig("Held Item Lore", "evergreenhud/helditemlore.json
             }
         }
 
+        // why is this a separate method
         private fun addTextToHUD(theListToAdd: List<String>, lines: MutableList<String>) {
             var index = 0
             for (line in theListToAdd) {

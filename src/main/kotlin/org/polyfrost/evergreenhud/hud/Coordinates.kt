@@ -66,16 +66,20 @@ class Coordinates: HudConfig("Coordinates", "evergreenhud/coordinates.json", tru
                 return
             }
 
+            // store this
             val df = decimalFormat(accuracy, trailingZeros)
 
+            // and this
             val sb = StringBuilder()
             val facing = Facing.parseExact(mc.thePlayer!!.rotationYaw)
             if (showX) {
+                // if(showAxis) sb.append("X: ") ?
                 sb.append(if (showAxis) "X: " else "")
                 sb.append(df.format(mc.thePlayer.posX))
                 if (showDirection) {
                     sb.append(" (")
 
+                    // add char facing.directionX/Y property or something and use that instead
                     sb.append(when (facing) {
                         Facing.EAST, Facing.NORTH_EAST, Facing.SOUTH_EAST -> "+"
                         Facing.WEST, Facing.NORTH_WEST, Facing.SOUTH_WEST -> "-"

@@ -46,6 +46,7 @@ class BlockAbove: HudConfig("Block Above", "evergreenhud/blockabove.json", false
             if (mc.theWorld == null || mc.thePlayer == null) return "0"
 
             var above = 0
+            // you could like probably change this to do the calculation somewhere else instead of on every frame
             for (i in 1..checkHeight) {
                 val pos = BlockPos(mc.thePlayer.posX, mc.thePlayer.posY + 1 + i, mc.thePlayer.posZ)
                 if (pos.y > mc.theWorld!!.height) break

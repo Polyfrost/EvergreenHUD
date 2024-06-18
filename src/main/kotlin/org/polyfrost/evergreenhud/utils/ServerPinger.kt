@@ -23,6 +23,7 @@ import java.net.InetAddress
 import java.util.*
 
 object ServerPinger {
+    // i dont even know whats going on here but 
     val pingers = Collections.synchronizedList(mutableListOf<Pinger>())
 
     fun createListener(interval: () -> Int, serverGetter: () -> ServerData?): Pinger {
@@ -32,6 +33,7 @@ object ServerPinger {
     }
 
     @Exclude
+    // why are these functions not just values
     class Pinger(private val interval: () -> Int, private val serverGetter: () -> ServerData?) {
         var ping: Int? = null
         private set
@@ -51,6 +53,8 @@ object ServerPinger {
 
                 if (ticks % interval() == 0) {
                     Multithreading.runAsync {
+                        // so we **connect to the server every interval ticks**? why not just hold the connection?
+                        // this is probably why its so fucking slow or whatever
                         serverGetter()?.let(this::ping)
                     }
                 }
@@ -59,11 +63,13 @@ object ServerPinger {
 
         private fun ping(server: ServerData) {
             val serverAddress = ServerAddress.fromString(server.serverIP)
+            // this a good idea?
             val networkmanager = NetworkManager.createNetworkManagerAndConnect(
                 InetAddress.getByName(serverAddress.ip), serverAddress.port, false
             )
 
             networkmanager.netHandler = object : INetHandlerStatusClient {
+                // right
                 private var startTime = -1L
                 private var queried = false
                 private var received = false

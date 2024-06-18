@@ -35,6 +35,7 @@ class CPS: HudConfig("CPS", "evergreenhud/cps.json", false) {
         )
         var button = 2
 
+        // i dont particularly like this
         private val left = ArrayDeque<Long>()
         private var leftPressed = false
         private val right = ArrayDeque<Long>()
@@ -46,6 +47,8 @@ class CPS: HudConfig("CPS", "evergreenhud/cps.json", false) {
 
         @Subscribe
         private fun onRenderTick(event: RenderEvent) {
+            // render tick really???
+            // just mixin into the attack or use the mouse button event
             if (event.stage == Stage.END) {
                 var pressed = Mouse.isButtonDown(mc.gameSettings.keyBindAttack.keyCode + 100)
 
@@ -62,6 +65,8 @@ class CPS: HudConfig("CPS", "evergreenhud/cps.json", false) {
                 }
 
                 val currentTime = System.currentTimeMillis()
+                // fuck me.
+                // left.removeIf { }
                 if (!left.isEmpty()) {
                     while ((currentTime - left.first()) > 1000) {
                         left.removeFirst()
@@ -87,6 +92,7 @@ class CPS: HudConfig("CPS", "evergreenhud/cps.json", false) {
         }
 
         override fun getTextFrequent(example: Boolean): String? {
+            // if you do it in the event it will make this useless.
             return if (updateFast) {
                 getText(example)
             } else {

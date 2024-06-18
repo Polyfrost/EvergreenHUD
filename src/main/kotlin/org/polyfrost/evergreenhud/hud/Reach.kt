@@ -54,6 +54,7 @@ class Reach: HudConfig("Reach", "evergreenhud/reach.json", false) {
             if (event.attacker == mc.thePlayer) {
                 val hitResult = getReachDistanceFromEntity(event.target) ?: return
                 lastHit = System.currentTimeMillis()
+                // see comments in dfCache
                 reach = decimalFormat(accuracy, trailingZeros).format(hitResult)
             }
         }
@@ -63,7 +64,7 @@ class Reach: HudConfig("Reach", "evergreenhud/reach.json", false) {
             if (event.stage == Stage.START) {
                 if (System.currentTimeMillis() - lastHit > discardTime) {
                     lastHit = System.currentTimeMillis()
-                    reach = noHitMessage
+                    reach = null
                 }
             }
         }

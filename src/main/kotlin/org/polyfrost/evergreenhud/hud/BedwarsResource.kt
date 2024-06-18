@@ -142,6 +142,7 @@ class BedwarsResource : HudConfig("Bedwars Resource", "evergreenhud/bedwarsresou
             draw(x, y, scale, example)
         }
 
+        // allocs every get,  again do this with an array that is updated when the vars change
         private val shownItems: List<ItemStack>
             get() = arrayListOf<ItemStack>().apply {
                 if (showIron) add(IRON)
@@ -172,9 +173,11 @@ class BedwarsResource : HudConfig("Bedwars Resource", "evergreenhud/bedwarsresou
             get() = (0..26).map { index -> getStackInSlot(index) }
 
         private fun draw(x: Float, y: Float, scale: Float, example: Boolean) {
+            // this is just pointless allocs do it in the loop
             val itemAmountMap: Map<ItemStack, Int> = shownItems.associateWith { getItemAmount(it) }
             val iconSize = 16f
             val offset = iconSize + padding
+            // again nullable prims
             val longestWidth = itemAmountMap.maxOfOrNull { (_, amount) ->
                 mc.fontRendererObj.getStringWidth(amount.toString())
             } ?: 0
@@ -231,6 +234,7 @@ class BedwarsResource : HudConfig("Bedwars Resource", "evergreenhud/bedwarsresou
         override fun getHeight(scale: Float, example: Boolean): Float = actualHeight * scale
 
         override fun shouldShow(): Boolean = super.shouldShow()
+                // nice.
                 && (!hideZero || (shownItems.maxOfOrNull { getItemAmount(it) } ?: 0) > 0)
                 && HypixelUtils.INSTANCE.isHypixel
                 && LocrawUtil.INSTANCE.isInGame

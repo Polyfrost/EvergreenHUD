@@ -31,6 +31,7 @@ class Saturation: HudConfig("Saturation", "evergreenhud/saturation.json", false)
         var trailingZeros = true
 
         override fun getText(example: Boolean): String {
+            // decimal format again 
             return decimalFormat(accuracy, trailingZeros).format(mc.thePlayer?.foodStats?.saturationLevel ?: 20)
         }
     }

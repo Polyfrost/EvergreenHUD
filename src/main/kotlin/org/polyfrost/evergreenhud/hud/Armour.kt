@@ -126,6 +126,8 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
             draw(matrices, x, y, scale, getItems(example))
         }
 
+        // alloc an arraylist every FRAME?
+        // use a field array with nullable foreach, that is 5 elements long
         private fun getItems(example: Boolean) = if (example) {
             arrayListOf<ItemStack>().run {
                 if (showHelmet) add(diamondHelmet)
@@ -151,12 +153,13 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
                 @Suppress("UNNECESSARY_SAFE_CALL") // on 1.8 ItemStacks can be null
                 if (showMainHand) UMinecraft.getPlayer()!!.heldItem?.let { add(it) }
                 //#else
-                //$$ if (showHelmet) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.HEAD).let { if (!it.isEmpty) add(it) }
-                //$$ if (showChestplate) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.CHEST).let { if (!it.isEmpty) add(it) }
-                //$$ if (showLeggings) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.LEGS).let { if (!it.isEmpty) add(it) }
-                //$$ if (showBoots) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.FEET).let { if (!it.isEmpty) add(it) }
-                //$$ if (showMainHand) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.MAINHAND).let { if (!it.isEmpty) add(it) }
-                //$$ if (showOffhand) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.OFFHAND).let { if (!it.isEmpty) add(it) }
+                //$$ val player = UMinecraft.getPlayer() ?: return
+                //$$ if (showHelmet) player.getItemStackFromSlot(EntityEquipmentSlot.HEAD).let { if (!it.isEmpty) add(it) }
+                //$$ if (showChestplate) player.getItemStackFromSlot(EntityEquipmentSlot.CHEST).let { if (!it.isEmpty) add(it) }
+                //$$ if (showLeggings) player.getItemStackFromSlot(EntityEquipmentSlot.LEGS).let { if (!it.isEmpty) add(it) }
+                //$$ if (showBoots) player.getItemStackFromSlot(EntityEquipmentSlot.FEET).let { if (!it.isEmpty) add(it) }
+                //$$ if (showMainHand) player.getItemStackFromSlot(EntityEquipmentSlot.MAINHAND).let { if (!it.isEmpty) add(it) }
+                //$$ if (showOffhand) player.getItemStackFromSlot(EntityEquipmentSlot.OFFHAND).let { if (!it.isEmpty) add(it) }
                 //#endif
 
                 if (displayType) reverse()
@@ -168,6 +171,8 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
             val iconSize = 16f
             val offset = iconSize + padding
 
+            // allocate another array, this can be avoided
+            // just get the textwidth in the foreach or whatever
             val texts = items.map {
                 when (extraInfo) {
                     1 -> if (it.isItemStackDamageable) (it.maxDamage - it.itemDamage).toString() else ""
@@ -179,6 +184,8 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
                 }
             }
 
+            // nullable primitives are bad
+            // also swear you just calculated text with above here...
             val longestWidth = texts.maxOfOrNull { mc.fontRendererObj.getStringWidth(it.first) } ?: 0
 
             actualWidth = if (type) longestWidth + iconSize else (padding * (items.size - 1)).toFloat()
@@ -194,8 +201,10 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
             UGraphics.GL.translate(x / scale, y / scale, 0f)
             items.forEachIndexed { i: Int, stack: ItemStack ->
 
+                // what why not just iterate over texts instead i am so cunfused
                 val (text, textWidth) = texts[i]
-
+                // not gonna discuss this
+                // after getting textWidth out, we still go and grab it directly??
                 if (!type) actualWidth += texts[i].second + iconSize + if (textWidth > 0) iconPadding else 0
 
                 val width = if (type) actualWidth else textWidth + iconSize + iconPadding
@@ -212,6 +221,7 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
                     true -> iconSize + iconPadding
                 }
 
+                // yeah.
                 if (!type && i > 0) translation += offset + texts[i - 1].second + if (texts[i - 1].second > 0) iconPadding else 0
 
                 RenderHelper.enableGUIStandardItemLighting()
@@ -226,6 +236,7 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
                     textX + translation,
                     itemY.toFloat() + mc.fontRendererObj.FONT_HEIGHT / 2f,
                     textColor.rgb,
+                    // this allocs an array every call so like 4 times a frame
                     TextRenderer.TextType.toType(textType),
                     1f
                 )
