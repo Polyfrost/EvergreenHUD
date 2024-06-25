@@ -252,6 +252,7 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
                 if (!type && i > 0) translation += offset + texts[i - 1].second + if (texts[i - 1].second > 0) iconPadding else 0
 
                 val amount = if (stack.item is ItemBow && !getItemAmount(Items.arrow).toString().equals("0")) getItemAmount(Items.arrow).toString() else null
+
                 RenderHelper.enableGUIStandardItemLighting()
                 mc.renderItem.zLevel = 200f
                 mc.renderItem.renderItemAndEffectIntoGUI(stack, itemX.toInt() + translation.toInt(), itemY.toInt())
