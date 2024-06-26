@@ -5,20 +5,18 @@ import cc.polyfrost.oneconfig.config.core.OneColor
 import cc.polyfrost.oneconfig.hud.BasicHud
 import cc.polyfrost.oneconfig.libs.universal.UGraphics
 import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
+import cc.polyfrost.oneconfig.libs.universal.UMinecraft
 import cc.polyfrost.oneconfig.platform.Platform
 import cc.polyfrost.oneconfig.renderer.TextRenderer
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import net.minecraft.client.gui.FontRenderer
+import net.minecraft.client.gui.Gui
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.client.renderer.RenderHelper
-import net.minecraft.client.renderer.Tessellator
-import net.minecraft.client.renderer.WorldRenderer
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.init.Items
 import net.minecraft.item.Item
 import net.minecraft.item.ItemBow
 import net.minecraft.item.ItemStack
-import net.minecraft.util.EnumChatFormatting
 import org.polyfrost.evergreenhud.config.HudConfig
 import kotlin.math.ceil
 
@@ -26,7 +24,7 @@ import kotlin.math.ceil
 //$$ import net.minecraft.inventory.EntityEquipmentSlot
 //#endif
 
-class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
+class Armour : HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
     @HUD(name = "Main")
     var hud = ArmourHud()
 
@@ -135,10 +133,14 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
         )
         var alignment = true
 
-        @Transient private var actualWidth = 5F
-        @Transient private var actualHeight = 5F
-        @Transient private var translation = 0F
-        @Exclude private val COLORS = linkedMapOf(
+        @Transient
+        private var actualWidth = 5F
+        @Transient
+        private var actualHeight = 5F
+        @Transient
+        private var translation = 0F
+        @Exclude
+        private val COLORS = linkedMapOf(
             10 to "4",
             25 to "c",
             40 to "6",
@@ -168,13 +170,13 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
         } else {
             arrayListOf<ItemStack>().run {
                 //#if MC<10900
-                val inventory = mc.thePlayer!!.inventory
+                val inventory = UMinecraft.getPlayer()!!.inventory
                 if (showHelmet) inventory.armorInventory[3]?.let { add(it) }
                 if (showChestplate) inventory.armorInventory[2]?.let { add(it) }
                 if (showLeggings) inventory.armorInventory[1]?.let { add(it) }
                 if (showBoots) inventory.armorInventory[0]?.let { add(it) }
                 @Suppress("UNNECESSARY_SAFE_CALL") // on 1.8 ItemStacks can be null
-                if (showMainHand) mc.thePlayer!!.heldItem?.let { add(it) }
+                if (showMainHand) UMinecraft.getPlayer()!!.heldItem?.let { add(it) }
                 //#else
                 //$$ if (showHelmet) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.HEAD).let { if (!it.isEmpty) add(it) }
                 //$$ if (showChestplate) UMinecraft.getPlayer()!!.getItemStackFromSlot(EntityEquipmentSlot.CHEST).let { if (!it.isEmpty) add(it) }
@@ -194,7 +196,7 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
                 it?.item == item
             }.sumOf {
                 //#if MC>=11202
-                //$$ item.getCount()
+                //$$ it.getCount()
                 //#else
                 it.stackSize
                 //#endif
@@ -251,8 +253,9 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
 
                 if (!type && i > 0) translation += offset + texts[i - 1].second + if (texts[i - 1].second > 0) iconPadding else 0
 
-                val amount = if (stack.item is ItemBow && !getItemAmount(Items.arrow).toString().equals("0")) getItemAmount(Items.arrow).toString() else null
-
+                val amount = getItemAmount(Items.arrow).let {
+                    if (stack.item is ItemBow && it != 0) it.toString() else null
+                }
                 RenderHelper.enableGUIStandardItemLighting()
                 mc.renderItem.zLevel = 200f
                 mc.renderItem.renderItemAndEffectIntoGUI(stack, itemX.toInt() + translation.toInt(), itemY.toInt())
@@ -296,21 +299,28 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
                     GlStateManager.disableTexture2D()
                     GlStateManager.disableAlpha()
                     GlStateManager.disableBlend()
-                    val tessellator = Tessellator.getInstance()
-                    val worldrenderer = tessellator.worldRenderer
-                    this.draw(worldrenderer, xPosition + 2, yPosition + 13, 13, 2, 0, 0, 0, 255)
-                    this.draw(worldrenderer, xPosition + 2, yPosition + 13, 12, 1, (255 - i) / 4, 64, 0, 255)
-                    this.draw(worldrenderer, xPosition + 2, yPosition + 13, j, 1, 255 - i, i, 0, 255)
+                    val x = xPosition + 2
+                    val y = yPosition + 13
+                    Gui.drawRect(x, y, x + 13, y + 2, java.awt.Color(0, 0, 0).rgb)
+                    Gui.drawRect(x, y, x + 12, y + 1, java.awt.Color((255 - i) / 4, 64, 0).rgb)
+                    Gui.drawRect(x, y, x + j, y + 1, java.awt.Color(255 - i, i, 0, 255).rgb)
                     GlStateManager.enableAlpha()
                     GlStateManager.enableTexture2D()
                     GlStateManager.enableLighting()
                     GlStateManager.enableDepth()
                 }
 
-                if (itemAmount && (stack.stackSize != 1 || text != null)) {
-                    var s = text ?: stack.stackSize.toString()
-                    if (text == null && stack.stackSize < 1) {
-                        s = EnumChatFormatting.RED.toString() + stack.stackSize.toString()
+                val stackSize =
+                    //#if MC>=11202
+                    //$$ stack.getCount()
+                    //#else
+                    stack.stackSize
+                    //#endif
+
+                if (itemAmount && (stackSize != 1 || text != null)) {
+                    var s = text ?: stackSize.toString()
+                    if (text == null && stackSize < 1) {
+                        s = "§c$stackSize"
                     }
 
                     GlStateManager.disableLighting()
@@ -321,15 +331,6 @@ class Armour: HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
                     GlStateManager.enableDepth()
                 }
             }
-        }
-
-        private fun draw(renderer: WorldRenderer, x: Int, y: Int, width: Int, height: Int, red: Int, green: Int, blue: Int, alpha: Int) {
-            renderer.begin(7, DefaultVertexFormats.POSITION_COLOR)
-            renderer.pos((x + 0).toDouble(), (y + 0).toDouble(), 0.0).color(red, green, blue, alpha).endVertex()
-            renderer.pos((x + 0).toDouble(), (y + height).toDouble(), 0.0).color(red, green, blue, alpha).endVertex()
-            renderer.pos((x + width).toDouble(), (y + height).toDouble(), 0.0).color(red, green, blue, alpha).endVertex()
-            renderer.pos((x + width).toDouble(), (y + 0).toDouble(), 0.0).color(red, green, blue, alpha).endVertex()
-            Tessellator.getInstance().draw()
         }
 
         override fun getWidth(scale: Float, example: Boolean): Float = actualWidth * scale
