@@ -191,9 +191,9 @@ class Armour : HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
             }
         }
 
-        private fun getItemAmount(item: Item): Int {
+        private fun getItemAmount(item: ItemStack): Int {
             return mc.thePlayer.inventory.mainInventory.toMutableList().filter {
-                it?.item == item
+                it?.item == item.item && it.metadata == item.metadata
             }.sumOf {
                 //#if MC>=11202
                 //$$ it.getCount()
@@ -253,7 +253,7 @@ class Armour : HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
 
                 if (!type && i > 0) translation += offset + texts[i - 1].second + if (texts[i - 1].second > 0) iconPadding else 0
 
-                val amount = getItemAmount(if (stack.item is ItemBow) Items.arrow else stack.item).let {
+                val amount = getItemAmount(if (stack.item is ItemBow) ItemStack(Items.arrow) else stack).let {
                     if (it != 0) it.toString() else null
                 }
                 RenderHelper.enableGUIStandardItemLighting()
