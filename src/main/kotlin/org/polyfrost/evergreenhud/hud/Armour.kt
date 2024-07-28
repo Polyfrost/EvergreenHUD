@@ -15,8 +15,17 @@ import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.init.Items
 import net.minecraft.item.Item
+import net.minecraft.item.ItemAxe
 import net.minecraft.item.ItemBow
+import net.minecraft.item.ItemFishingRod
+import net.minecraft.item.ItemFlintAndSteel
+import net.minecraft.item.ItemHoe
+import net.minecraft.item.ItemPickaxe
+import net.minecraft.item.ItemShears
+import net.minecraft.item.ItemSpade
 import net.minecraft.item.ItemStack
+import net.minecraft.item.ItemSword
+import net.minecraft.item.ItemTool
 import org.polyfrost.evergreenhud.config.HudConfig
 import kotlin.math.ceil
 
@@ -255,7 +264,16 @@ class Armour : HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
 
                 val amount = getItemAmount(if (stack.item is ItemBow) Items.arrow else stack.item).let {
 
-                    if (it != 0 && it != 1) it.toString()
+                    if (it != 0 && it != 1 &&
+                        !(stack.item is ItemHoe) &&
+                        !(stack.item is ItemPickaxe) &&
+                        !(stack.item is ItemShears) &&
+                        !(stack.item is ItemSword) &&
+                        !(stack.item is ItemAxe) &&
+                        !(stack.item is ItemFishingRod) &&
+                        !(stack.item is ItemFlintAndSteel) &&
+                        !(stack.item is ItemSpade))
+                        it.toString()
                     else null
                 }
                 
