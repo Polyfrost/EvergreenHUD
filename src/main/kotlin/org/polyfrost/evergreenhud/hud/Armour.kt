@@ -200,9 +200,9 @@ class Armour : HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
             }
         }
 
-        private fun getItemAmount(item: Item): Int {
+        private fun getItemAmount(item: ItemStack): Int {
             return mc.thePlayer.inventory.mainInventory.toMutableList().filter {
-                it?.item == item
+                it?.item == item.item && it.metadata == item.metadata
             }.sumOf {
                 //#if MC>=11202
                 //$$ it.getCount()

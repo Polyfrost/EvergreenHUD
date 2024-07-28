@@ -63,16 +63,10 @@ class CPS: HudConfig("CPS", "evergreenhud/cps.json", false) {
 
                 val currentTime = System.currentTimeMillis()
                 if (!left.isEmpty()) {
-                    while ((currentTime - left.first()) > 1000) {
-                        left.removeFirst()
-                        if (left.isEmpty()) break
-                    }
+                    left.removeIf { (currentTime - it) > 1000 }
                 }
                 if (!right.isEmpty()) {
-                    while ((currentTime - right.first()) > 1000) {
-                        right.removeFirst()
-                        if (right.isEmpty()) break
-                    }
+                    right.removeIf { (currentTime - it) > 1000 }
                 }
             }
         }
