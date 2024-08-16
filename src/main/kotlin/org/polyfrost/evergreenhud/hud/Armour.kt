@@ -15,8 +15,17 @@ import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.client.renderer.RenderHelper
 import net.minecraft.init.Items
 import net.minecraft.item.Item
+import net.minecraft.item.ItemAxe
 import net.minecraft.item.ItemBow
+import net.minecraft.item.ItemFishingRod
+import net.minecraft.item.ItemFlintAndSteel
+import net.minecraft.item.ItemHoe
+import net.minecraft.item.ItemPickaxe
+import net.minecraft.item.ItemShears
+import net.minecraft.item.ItemSpade
 import net.minecraft.item.ItemStack
+import net.minecraft.item.ItemSword
+import net.minecraft.item.ItemTool
 import org.polyfrost.evergreenhud.config.HudConfig
 import kotlin.math.ceil
 
@@ -145,7 +154,7 @@ class Armour : HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
             25 to "c",
             40 to "6",
             60 to "e",
-            80 to "7",
+            80 to "a",
             100 to "f"
         )
 
@@ -254,8 +263,20 @@ class Armour : HudConfig("ArmourHud", "evergreenhud/armour.json", false) {
                 if (!type && i > 0) translation += offset + texts[i - 1].second + if (texts[i - 1].second > 0) iconPadding else 0
 
                 val amount = getItemAmount(if (stack.item is ItemBow) ItemStack(Items.arrow) else stack).let {
-                    if (it != 0) it.toString() else null
+
+                    if (it != 0 && it != 1 &&
+                        !(stack.item is ItemHoe) &&
+                        !(stack.item is ItemPickaxe) &&
+                        !(stack.item is ItemShears) &&
+                        !(stack.item is ItemSword) &&
+                        !(stack.item is ItemAxe) &&
+                        !(stack.item is ItemFishingRod) &&
+                        !(stack.item is ItemFlintAndSteel) &&
+                        !(stack.item is ItemSpade))
+                        it.toString()
+                    else null
                 }
+                
                 RenderHelper.enableGUIStandardItemLighting()
                 mc.renderItem.zLevel = 200f
                 mc.renderItem.renderItemAndEffectIntoGUI(stack, itemX.toInt() + translation.toInt(), itemY.toInt())
