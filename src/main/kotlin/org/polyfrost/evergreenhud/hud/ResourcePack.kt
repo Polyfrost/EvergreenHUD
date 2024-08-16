@@ -59,12 +59,26 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
         )
         var iconSize = 24
 
-
         @Slider(
             name = "Icon Padding",
             min = 0f, max = 10f
         )
         var iconPadding = 5
+
+        @Switch(
+            name = "Remove \"!    \" from beginning of pack name"
+        )
+        var trimFront = false
+
+        @Switch(
+            name = "Remove \".zip\" from end of pack name"
+        )
+        var trimZip = false
+
+        @Switch(
+            name = "Hide pack icon"
+        )
+        var hideIcon = false;
 
         @Exclude
         var pack: ResourcePackRepository.Entry? = getResourcePack()
@@ -79,21 +93,37 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
             GlStateManager.enableBlend()
             GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0)
             GL11.glColor4f(1f, 1f, 1f, 1f)
-            pack?.bindTexturePackIcon(mc.textureManager) ?: mc.textureManager.bindTexture(defaultIcon)
-            Gui.drawScaledCustomSizeModalRect(0, 0, 0f, 0f, 64, 64, iconSize, iconSize, 64f, 64f)
-            TextRenderer.drawScaledString(pack?.resourcePackName ?: "Default", (iconSize + iconPadding).toFloat(), (iconSize - 8) / 2f, color.rgb, TextRenderer.TextType.toType(textType), 1f)
+            if(!hideIcon) {
+                pack?.bindTexturePackIcon(mc.textureManager) ?: mc.textureManager.bindTexture(defaultIcon)
+                Gui.drawScaledCustomSizeModalRect(0, 0, 0f, 0f, 64, 64, iconSize, iconSize, 64f, 64f)
+            }
+            TextRenderer.drawScaledString(getResourcePackName(), if (!hideIcon) (iconSize + iconPadding).toFloat() else 0f, if(!hideIcon) (iconSize - 8) / 2f else 0f, color.rgb, TextRenderer.TextType.toType(textType), 1f)
             GlStateManager.disableBlend()
             GlStateManager.popMatrix()
         }
 
         override fun getWidth(scale: Float, example: Boolean): Float {
-            return (iconSize + iconPadding + mc.fontRendererObj.getStringWidth(pack?.resourcePackName ?: "Default")) * scale
+            if(hideIcon) return mc.fontRendererObj.getStringWidth(getResourcePackName()) * scale
+            return (iconSize + iconPadding + mc.fontRendererObj.getStringWidth(getResourcePackName())) * scale
         }
 
-        override fun getHeight(scale: Float, example: Boolean): Float = iconSize * scale
+        override fun getHeight(scale: Float, example: Boolean): Float {
+            // https://github.com/Polyfrost/OneConfig/blob/f9a98fef234ed9c31e9be51344447d2ab87fcee7/src/main/java/cc/polyfrost/oneconfig/hud/TextHud.java#L137
+            // Height of 1 line TextHud
+            // return lines == null ? 0 : (lines.size() * 12 - 4) * scale;
+            if(hideIcon) return 8f * scale
+            return iconSize * scale
+        }
 
         fun getResourcePack(): ResourcePackRepository.Entry? {
             return mc.resourcePackRepository.repositoryEntries.getOrNull(if (ignoreOverlay) 0 else mc.resourcePackRepository.repositoryEntries.size - 1)
+        }
+
+        private fun getResourcePackName(): String {
+            var resourcePackName = pack?.resourcePackName ?: "Default";
+            if(trimFront) resourcePackName = resourcePackName.replace("^!\\s*".toRegex(), "")
+            if(trimZip && resourcePackName.endsWith(".zip")) resourcePackName = resourcePackName.substring(0, resourcePackName.length - 4)
+            return resourcePackName;
         }
 
     }
