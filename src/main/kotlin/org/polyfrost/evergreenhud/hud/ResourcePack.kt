@@ -121,7 +121,7 @@ class ResourcePack: HudConfig("Resource Pack", "evergreenhud/resourcepack.json",
 
         private fun getResourcePackName(): String {
             var resourcePackName = pack?.resourcePackName ?: "Default";
-            if(trimFront) resourcePackName = resourcePackName.replace("^!\\s*".toRegex(), "")
+            if(trimFront && resourcePackName.startsWith("!")) resourcePackName = resourcePackName.substring(1).trimStart()
             if(trimZip && resourcePackName.endsWith(".zip")) resourcePackName = resourcePackName.substring(0, resourcePackName.length - 4)
             return resourcePackName;
         }
