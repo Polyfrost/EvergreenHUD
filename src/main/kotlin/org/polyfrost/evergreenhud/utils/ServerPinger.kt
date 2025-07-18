@@ -50,7 +50,7 @@ object ServerPinger {
 
                 if (ticks % interval() == 0) {
                     Multithreading.runAsync {
-                        serverGetter()?.let(this::ping)
+                        serverGetter()?.let(this::ping) ?: run { ping = null }
                     }
                 }
             }
@@ -62,7 +62,7 @@ object ServerPinger {
                 ticks = 0 // just so that ticks doesn't count up infinitely
 
                 Multithreading.runAsync {
-                    serverGetter()?.let(this::ping)
+                    serverGetter()?.let(this::ping) ?: run { ping = null }
                 }
             }
         }
