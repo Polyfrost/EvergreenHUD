@@ -2,6 +2,7 @@ package org.polyfrost.evergreenhud.utils
 
 import cc.polyfrost.oneconfig.config.annotations.Exclude
 import cc.polyfrost.oneconfig.events.EventManager
+import cc.polyfrost.oneconfig.events.event.ReceivePacketEvent
 import cc.polyfrost.oneconfig.events.event.Stage
 import cc.polyfrost.oneconfig.events.event.TickEvent
 import cc.polyfrost.oneconfig.libs.eventbus.Subscribe
@@ -12,6 +13,7 @@ import net.minecraft.client.multiplayer.ServerData
 import net.minecraft.network.EnumConnectionState
 import net.minecraft.network.NetworkManager
 import net.minecraft.network.handshake.client.C00Handshake
+import net.minecraft.network.play.server.S01PacketJoinGame
 import net.minecraft.network.status.INetHandlerStatusClient
 import net.minecraft.network.status.client.C00PacketServerQuery
 import net.minecraft.network.status.client.C01PacketPing
@@ -39,9 +41,6 @@ object ServerPinger {
         private var ticks = 0
         init {
             EventManager.INSTANCE.register(this)
-            Multithreading.runAsync {
-                serverGetter()?.let(this::ping)
-            }
         }
 
         @Subscribe
@@ -53,6 +52,17 @@ object ServerPinger {
                     Multithreading.runAsync {
                         serverGetter()?.let(this::ping)
                     }
+                }
+            }
+        }
+
+        @Subscribe
+        fun onPacketReceive(event: ReceivePacketEvent) {
+            if (event.packet is S01PacketJoinGame) {
+                ticks = 0 // just so that ticks doesn't count up infinitely
+
+                Multithreading.runAsync {
+                    serverGetter()?.let(this::ping)
                 }
             }
         }
