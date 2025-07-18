@@ -7,7 +7,7 @@ import cc.polyfrost.oneconfig.libs.universal.UMatrixStack
 import cc.polyfrost.oneconfig.utils.dsl.mc
 import org.polyfrost.evergreenhud.config.HudConfig
 
-class Ping: HudConfig("Ping", "evergreenhud/ping.json", false) {
+class Ping: HudConfig("Ping", "evergreenhud/ping.json", true) {
     @HUD(name = "Main")
     var hud = PingHud()
 
