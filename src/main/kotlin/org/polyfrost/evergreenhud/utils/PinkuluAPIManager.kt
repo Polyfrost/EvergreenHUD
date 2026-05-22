@@ -16,7 +16,7 @@ object PinkuluAPIManager {
         EventManager.INSTANCE.register(this)
         Multithreading.runAsync {
             try {
-                rawJson = NetworkUtils.getJsonElement("https://maps.pinkulu.com/trans-rights-are-human-rights.json").asJsonArray // so true bestie
+                rawJson = NetworkUtils.getJsonElement("https://data.polyfrost.org/hlm/trans-rights-are-human-rights.json").asJsonArray // so true bestie
             } catch (e: Exception) {
                 e.printStackTrace()
             }
