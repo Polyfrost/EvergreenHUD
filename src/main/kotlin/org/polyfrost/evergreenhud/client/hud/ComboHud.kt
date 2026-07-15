@@ -13,7 +13,7 @@ import org.polyfrost.oneconfig.utils.v1.dsl.mc
 class ComboHud : CachedTextHud(
     title = "Combo",
     category = Category.COMBAT,
-    suffix = " hits",
+    suffix = "hits",
     defaultText = "0",
 ) {
     @Slider(title = "Discard Time", min = 1F, max = 10F, step = 1F)
