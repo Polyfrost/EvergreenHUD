@@ -13,6 +13,13 @@ loomx.loom_version = "1.17-SNAPSHOT"
 
 publish.modrinth = "1yIQcc2b"
 
+["1.8.9"]
+mod.mc_compat = "1.8.9"
+mod.mc_releases = ["1.8.9"]
+
+deps.feather_build = "2"
+deps.osl_version = "0.21.0"
+
 ["1.21.1"]
 mod.mc_compat = "1.21.1"
 mod.mc_releases = ["1.21.1"]

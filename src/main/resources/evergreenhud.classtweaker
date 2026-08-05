@@ -1,0 +1,5 @@
+classTweaker v1 named
+
+transitive-inject-interface net/minecraft/world/entity/Entity org/polyfrost/evergreenhud/client/compat/EntityCompat
+transitive-inject-interface net/minecraft/world/item/ItemStack org/polyfrost/evergreenhud/client/compat/ItemStackCompat
+accessible field net/minecraft/network/Connection channel Lio/netty/channel/Channel;
