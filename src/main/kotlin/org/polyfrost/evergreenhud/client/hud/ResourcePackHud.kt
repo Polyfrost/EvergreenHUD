@@ -2,6 +2,7 @@ package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+//? if > 1.8.9 {
 //? if < 1.21.11
 //import net.minecraft.resources.ResourceLocation
 //? if >= 1.21.11
@@ -11,6 +12,15 @@ import net.minecraft.network.chat.contents.TranslatableContents
 import net.minecraft.server.packs.PackType
 import net.minecraft.server.packs.repository.BuiltInPackSource
 import net.minecraft.server.packs.repository.Pack
+//?} else {
+/*import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
+import net.ornithemc.osl.resource.loader.api.resource.ResourceType
+import net.ornithemc.osl.resource.loader.api.resource.manager.ResourceManager
+import net.ornithemc.osl.resource.loader.api.resource.pack.ResourcePack
+import net.ornithemc.osl.resource.loader.api.resource.repository.ClientPackSource
+import net.ornithemc.osl.resource.loader.api.resource.repository.ResourcePackRepository
+import net.ornithemc.osl.resource.loader.api.resource.repository.ResourcePackSummary as Pack
+*///?}
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.Paint
 import org.polyfrost.compose.composables.PolyBox
@@ -52,7 +62,10 @@ class ResourcePackHud : Hud(
 
         private const val FABRIC_SOURCE_KEY = "pack.source.fabricmod"
 
+        //? if > 1.8.9 {
         private val DEFAULT_ICON = ResourceLocation.withDefaultNamespace("textures/misc/unknown_pack.png")
+        //?} else
+        //private val DEFAULT_ICON = NamespacedIdentifiers.from("minecraft", "textures/misc/unknown_pack.png")
 
         private val iconPaint = Paint()
         private val iconCache = HashMap<String, Image>()
@@ -70,6 +83,7 @@ class ResourcePackHud : Hud(
             texturedCache.clear()
         }
 
+        //? if > 1.8.9 {
         fun isModProvided(pack: Pack): Boolean =
             mentionsKey(pack.packSource.decorate(Component.empty()), FABRIC_SOURCE_KEY)
 
@@ -81,7 +95,10 @@ class ResourcePackHud : Hud(
             }
             return component.siblings.any { mentionsKey(it, key) }
         }
+        //?} else
+        //fun isModProvided(pack: Pack): Boolean = pack.isRequired && !pack.isFixedPosition && pack.id != ClientPackSource.DEFAULT_PACK_ID
 
+        //? if > 1.8.9 {
         private fun openResources(pack: Pack) =
             //? if >= 26.3 {
             pack.open().toList()
@@ -95,9 +112,11 @@ class ResourcePackHud : Hud(
             //? } else {
             /*pack.open()
             *///? }
+        //?}
 
         fun hasTextures(pack: Pack): Boolean = texturedCache.getOrPut(pack.id) {
             try {
+                //? if > 1.8.9 {
                 for (layer in openResources(pack)) layer.use { resources ->
                     for (namespace in resources.getNamespaces(PackType.CLIENT_RESOURCES)) {
                         try {
@@ -107,6 +126,18 @@ class ResourcePackHud : Hud(
                         }
                     }
                 }
+                //?} else {
+                /*val resources = pack.open()
+                for (namespace in resources.getNamespaces(ResourceType.CLIENT_ASSETS)) {
+                    try {
+                        resources.findResources(ResourceType.CLIENT_ASSETS, namespace, "textures") { _, _ ->
+                            throw FoundTexture
+                        }
+                    } catch (_: FoundTexture) {
+                        return@getOrPut true
+                    }
+                }
+                *///?}
                 false
             } catch (e: Exception) {
                 LOGGER.warn("Failed to inspect pack {} for textures, assuming it has some", pack.id, e)
@@ -126,6 +157,7 @@ class ResourcePackHud : Hud(
             if (defaultIconLoaded) return defaultIcon
             defaultIconLoaded = true
             defaultIcon = try {
+                //~ if = 1.8.9 'mc.resourceManager' -> 'ResourceManager.client()'
                 mc.resourceManager.getResource(DEFAULT_ICON).orElse(null)
                     ?.open()?.use { ImageLoader.fromBytes(it.readAllBytes()) }
             } catch (e: Exception) {
@@ -136,12 +168,16 @@ class ResourcePackHud : Hud(
         }
 
         private fun loadIcon(id: String): Image? {
+            //~ if = 1.8.9 'mc.resourcePackRepository' -> 'ResourcePackRepository.client()'
             val pack = mc.resourcePackRepository.getPack(id) ?: return null
             return try {
+                //? if > 1.8.9 {
                 openMetadata(pack).use { resources ->
                     val supplier = resources.getRootResource("pack.png") ?: return null
                     supplier.get().use { ImageLoader.fromBytes(it.readAllBytes()) }
                 }
+                //?} else
+                //pack.open().getResource(ResourcePack.ICON_FILE).use { ImageLoader.fromBytes(it.readBytes()) }
             } catch (e: Exception) {
                 LOGGER.warn("Failed to load icon from pack {}", id, e)
                 null
@@ -201,20 +237,29 @@ class ResourcePackHud : Hud(
     }
 
     override fun update(): Boolean {
+        //~ if = 1.8.9 'mc.resourcePackRepository' -> 'ResourcePackRepository.client()'
         val selected = mc.resourcePackRepository.selectedPacks
         syncCaches(selected.map { it.id })
 
         val candidates = selected.filter {
+            //~ if = 1.8.9 'BuiltInPackSource.VANILLA_ID' -> 'ClientPackSource.DEFAULT_PACK_ID'
             it.id != BuiltInPackSource.VANILLA_ID && !isModProvided(it) && hasTextures(it)
         }
+        //? if > 1.8.9 {
         val pack = (if (ignoreOverlay) candidates.firstOrNull() else candidates.lastOrNull())
             ?: mc.resourcePackRepository.getPack(BuiltInPackSource.VANILLA_ID)
+        //?} else {
+        /*val pack = (if (ignoreOverlay) candidates.firstOrNull() else candidates.lastOrNull())
+            ?: ResourcePackRepository.client().getPack(ClientPackSource.DEFAULT_PACK_ID)
+        *///?}
         if (pack?.id == lastPackId && ignoreOverlay == lastIgnoreOverlay) return false
         lastPackId = pack?.id
         lastIgnoreOverlay = ignoreOverlay
 
+        //~ if = 1.8.9 '?.string' -> '?.buildString()' {
         packTitle.value = pack?.title?.string ?: DEFAULT_TITLE
         packDescription.value = pack?.description?.string ?: DEFAULT_DESCRIPTION
+        //~}
         packIcon.value = iconFor(pack?.id)
         return true
     }

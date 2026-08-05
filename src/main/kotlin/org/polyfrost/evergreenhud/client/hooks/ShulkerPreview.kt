@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hooks
 
+//? if > 1.8.9 {
 import net.minecraft.core.NonNullList
 import net.minecraft.core.component.DataComponents
 import net.minecraft.world.entity.player.Player
@@ -48,3 +49,4 @@ object ShulkerPreview {
         }?.stack
     }
 }
+//?}

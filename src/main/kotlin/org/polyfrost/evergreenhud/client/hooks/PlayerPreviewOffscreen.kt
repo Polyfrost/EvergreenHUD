@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hooks
 
+//? if > 1.8.9 {
 //? if >= 1.21.4 {
 import com.mojang.blaze3d.ProjectionType
 //?} else
@@ -8,6 +9,14 @@ import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.platform.Lighting
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
+//?} else {
+/*import net.minecraft.client.render.pipeline.RenderTarget
+import net.minecraft.client.render.platform.GLX
+import net.minecraft.client.render.platform.GlStateManager
+import net.minecraft.client.render.platform.Lighting
+import net.minecraft.util.math.MathHelper
+import org.lwjgl.opengl.GL11
+*///?}
 import net.minecraft.client.Minecraft
 //? if >= 26.1 {
 import net.minecraft.client.renderer.ProjectionMatrixBuffer
@@ -26,7 +35,7 @@ import net.minecraft.client.renderer.feature.FeatureRenderDispatcher
 import java.util.Optional
 import java.util.OptionalDouble
 //? }
-//? if < 1.21.10
+//? if > 1.8.9 && < 1.21.10
 //import net.minecraft.util.Mth
 import net.minecraft.world.entity.player.Player
 //? if >= 1.21.10
@@ -35,10 +44,12 @@ import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.ContentChangeMode
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.Rect
+//? if > 1.8.9 {
 import org.joml.Matrix4f
 import org.joml.Quaternionf
+//?}
 import org.polyfrost.oneconfig.internal.ui.SkiaOffscreenTarget
-//? if < 1.21.8
+//? if > 1.8.9 && < 1.21.8
 //import org.polyfrost.oneconfig.internal.ui.hud.GuiTargetRedirect
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.WorldEvent
@@ -261,7 +272,7 @@ object PlayerPreviewOffscreen {
             if (hadScissor) RenderSystem.enableScissorForRenderTypeDraws(scissorX, scissorY, scissorW, scissorH)
         }
     }
-    //? } else {
+    //? } else if > 1.8.9 {
     /*private fun renderInto(slot: Slot, rt: RenderTarget, request: Request, player: Player, width: Int, height: Int, fit: Float) {
         slot.offscreen.clearTarget()
 
@@ -290,6 +301,36 @@ object PlayerPreviewOffscreen {
             //? if < 1.21.4
             //RenderSystem.applyModelViewMatrix()
             RenderSystem.restoreProjectionMatrix()
+        }
+    }
+    *///?} else {
+    /*private fun renderInto(slot: Slot, rt: RenderTarget, request: Request, player: Player, width: Int, height: Int, fit: Float) {
+        slot.offscreen.clearTarget()
+
+        val depthWasEnabled = GL11.glIsEnabled(GL11.GL_DEPTH_TEST)
+        rt.bindWrite(true)
+        GlStateManager.matrixMode(GL11.GL_PROJECTION)
+        GlStateManager.pushMatrix()
+        GlStateManager.loadIdentity()
+        GlStateManager.ortho(0.0, width.toDouble(), height.toDouble(), 0.0, 1000.0, 3000.0)
+        GlStateManager.matrixMode(GL11.GL_MODELVIEW)
+        GlStateManager.pushMatrix()
+        GlStateManager.loadIdentity()
+        GlStateManager.translatef(0f, 0f, -2000f)
+        GlStateManager.color4f(1f, 1f, 1f, 1f)
+        GlStateManager.enableDepthTest()
+        // the held item layer disables GL_RESCALE_NORMAL, which darkens every layer drawn after it at this scale
+        GL11.glEnable(GL11.GL_NORMALIZE)
+        try {
+            renderPlayer(slot, request, player, width, height, fit)
+        } finally {
+            GL11.glDisable(GL11.GL_NORMALIZE)
+            if (!depthWasEnabled) GlStateManager.disableDepthTest()
+            GlStateManager.matrixMode(GL11.GL_PROJECTION)
+            GlStateManager.popMatrix()
+            GlStateManager.matrixMode(GL11.GL_MODELVIEW)
+            GlStateManager.popMatrix()
+            client.renderTarget.bindWrite(true)
         }
     }
     *///?}
@@ -374,7 +415,7 @@ object PlayerPreviewOffscreen {
         client.renderBuffers().bufferSource().endBatch()
         *///? }
     }
-    //?} else {
+    //?} else if > 1.8.9 {
     /*private fun renderPlayer(slot: Slot, request: Request, player: Player, width: Int, height: Int, fit: Float) {
         val partialTick = request.partialTick
         val entityScale = player.scale.coerceAtLeast(0.0001f)
@@ -451,7 +492,77 @@ object PlayerPreviewOffscreen {
             playerPreviewNameTag = false
         }
     }
-    *///? }
+    *///?} else {
+    /*private fun renderPlayer(slot: Slot, request: Request, player: Player, width: Int, height: Int, fit: Float) {
+        val partialTick = request.partialTick
+        val liveBodyRot = player.lastBodyYaw + partialTick * MathHelper.wrapDegrees(player.bodyYaw - player.lastBodyYaw)
+        val liveHeadRot = player.lastHeadYaw + partialTick * MathHelper.wrapDegrees(player.headYaw - player.lastHeadYaw)
+        // requests use modern's yaw (180 faces the viewer), 1.8.9 faces the viewer at 0
+        val bodyRot = request.bodyRot - 180f
+        val headRot = bodyRot + (request.headRot ?: MathHelper.wrapDegrees(liveHeadRot - liveBodyRot))
+        val headPitch = request.headPitch ?: (player.lastPitch + partialTick * (player.xRot - player.lastPitch))
+
+        val anchor = smoothAnchorHeight(slot, player.height)
+        val size = request.sizePx * fit
+
+        val savedBodyRot = player.bodyYaw
+        val savedBodyRotO = player.lastBodyYaw
+        val savedHeadRot = player.headYaw
+        val savedHeadRotO = player.lastHeadYaw
+        val savedYRot = player.yRot
+        val savedYRotO = player.lastYaw
+        val savedXRot = player.xRot
+        val savedXRotO = player.lastPitch
+
+        val dispatcher = client.entityRenderDispatcher
+
+        playerPreviewPartialTick = partialTick
+        playerPreviewNameTag = request.nametag
+        player.bodyYaw = bodyRot
+        player.lastBodyYaw = bodyRot
+        player.headYaw = headRot
+        player.lastHeadYaw = headRot
+        player.yRot = headRot
+        player.lastYaw = headRot
+        player.xRot = headPitch
+        player.lastPitch = headPitch
+
+        GlStateManager.enableColorMaterial()
+        GlStateManager.pushMatrix()
+        try {
+            GlStateManager.translatef(width / 2f, height * request.verticalAnchor, 50f)
+            GlStateManager.scalef(-size, size, size)
+            GlStateManager.translatef(0f, anchor / 2f + OFFSET_Y, 0f)
+            GlStateManager.rotatef(180f, 0f, 0f, 1f)
+            if (request.modelTilt != 0f) GlStateManager.rotatef(request.modelTilt, 1f, 0f, 0f)
+            GlStateManager.rotatef(135f, 0f, 1f, 0f)
+            Lighting.turnOn()
+            GlStateManager.rotatef(-135f, 0f, 1f, 0f)
+            dispatcher.setCameraYaw(180f)
+            dispatcher.setRenderShadow(false)
+            // last argument skips the F3+B hitbox
+            dispatcher.render(player, 0.0, 0.0, 0.0, 0f, partialTick, true)
+        } finally {
+            dispatcher.setRenderShadow(true)
+            GlStateManager.popMatrix()
+            Lighting.turnOff()
+            GlStateManager.disableRescaleNormal()
+            GlStateManager.activeTexture(GLX.GL_TEXTURE1)
+            GlStateManager.disableTexture()
+            GlStateManager.activeTexture(GLX.GL_TEXTURE0)
+            player.bodyYaw = savedBodyRot
+            player.lastBodyYaw = savedBodyRotO
+            player.headYaw = savedHeadRot
+            player.lastHeadYaw = savedHeadRotO
+            player.yRot = savedYRot
+            player.lastYaw = savedYRotO
+            player.xRot = savedXRot
+            player.lastPitch = savedXRotO
+            playerPreviewPartialTick = -1f
+            playerPreviewNameTag = false
+        }
+    }
+    *///?}
 
     private fun smoothAnchorHeight(slot: Slot, target: Float): Float {
         val now = System.nanoTime()

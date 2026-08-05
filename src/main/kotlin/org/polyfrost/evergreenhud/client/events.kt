@@ -25,6 +25,7 @@ data class ClientPlaceBlockEvent(
 data class ServerChangedEvent(
     val ip: String?,
     val name: String?,
+    //~ if = 1.8.9 'Component' -> 'String'
     val motd: Component?
 ) : Event
 

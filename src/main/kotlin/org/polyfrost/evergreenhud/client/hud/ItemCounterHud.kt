@@ -2,11 +2,14 @@ package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+//? if > 1.8.9 {
 import net.minecraft.core.registries.BuiltInRegistries
 //? if < 1.21.11
 //import net.minecraft.resources.ResourceLocation
 //? if >= 1.21.11
 import net.minecraft.resources.Identifier as ResourceLocation
+//?} else
+//import net.minecraft.resource.Identifier
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -22,8 +25,10 @@ import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
+//? if > 1.8.9 {
 import org.polyfrost.evergreenhud.client.hooks.isShulkerBox
 import org.polyfrost.evergreenhud.client.hooks.shulkerContents
+//?}
 import org.polyfrost.evergreenhud.client.hud.item.ANY_POTION
 import org.polyfrost.evergreenhud.client.hud.item.ANY_POTION_LABEL
 import org.polyfrost.evergreenhud.client.hud.item.ITEM_SIZE
@@ -108,6 +113,7 @@ class ItemCounterHud : Hud(
     @Button(title = "Use Held Item", description = "Count whatever you are currently holding.")
     fun useHeldItem() {
         val held = mc.player?.mainHandItem?.takeIf { !it.isEmpty } ?: return
+        //~ if = 1.8.9 'BuiltInRegistries.ITEM' -> 'Item.REGISTRY'
         item = arrayOf(BuiltInRegistries.ITEM.getKey(held.item).toString())
         potion = potionIdOf(held)?.takeIf { potionVariant(it) != null } ?: ANY_POTION
     }
@@ -155,10 +161,17 @@ class ItemCounterHud : Hud(
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return null
 
+        //? if > 1.8.9 {
         val id = ResourceLocation.tryParse(
             if (trimmed.contains(':')) trimmed.lowercase() else "minecraft:${trimmed.lowercase().replace(' ', '_')}"
         ) ?: return null
         return BuiltInRegistries.ITEM.getOptional(id).orElse(null)?.takeIf { it != Items.AIR }
+        //?} else {
+        /*val id = Identifier(
+            if (trimmed.contains(':')) trimmed.lowercase() else "minecraft:${trimmed.lowercase().replace(' ', '_')}"
+        )
+        return Item.REGISTRY[id]
+        *///?}
     }
 
     private fun count(target: Item): Int {
@@ -169,16 +182,20 @@ class ItemCounterHud : Hud(
         return count
     }
 
+    //~ if = 1.8.9 'Iterable<ItemStack>' -> 'Iterable<ItemStack?>'
     private fun countIn(stacks: Iterable<ItemStack>, target: Item): Int {
         var count = 0
         for (slot in stacks) {
+            //~ if = 1.8.9 'slot.isEmpty' -> 'slot == null || slot.isEmpty'
             if (slot.isEmpty) continue
             if (matches(slot, target)) count += slot.count
+            //? if > 1.8.9 {
             if (countShulkers && slot.isShulkerBox) {
                 for (inner in slot.shulkerContents()) {
                     if (matches(inner, target)) count += inner.count
                 }
             }
+            //?}
         }
         return count
     }

@@ -2,6 +2,8 @@ package org.polyfrost.evergreenhud.client.hud.keystrokes
 
 import androidx.compose.runtime.Composable
 import com.mojang.blaze3d.platform.InputConstants
+//? if = 1.8.9
+//import org.polyfrost.oneconfig.internal.legacy.KeyCodes
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.client.KeyMapping
@@ -522,6 +524,7 @@ class KeystrokesHud : Hud(
         for (code in ARROW_CODES) {
             if (matchesKeyCode(code)) return arrowLabel(code) ?: break
         }
+        //~ if = 1.8.9 'translatedKeyMessage.string' -> 'KeyCodes.fromLegacy(keyCode).displayName.string'
         return translatedKeyMessage.string
     }
 

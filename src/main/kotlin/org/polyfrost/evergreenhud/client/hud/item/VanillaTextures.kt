@@ -1,6 +1,10 @@
 package org.polyfrost.evergreenhud.client.hud.item
 
-//? if < 1.21.11
+//? if = 1.8.9 {
+/*import net.ornithemc.osl.core.api.util.NamespacedIdentifier as ResourceLocation
+import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
+import net.ornithemc.osl.resource.loader.api.resource.manager.ResourceManager
+*///?} elif < 1.21.11
 //import net.minecraft.resources.ResourceLocation
 //? if >= 1.21.11
 import net.minecraft.resources.Identifier as ResourceLocation
@@ -123,9 +127,14 @@ fun containerHeight(rows: Int, titled: Boolean): Float =
 object VanillaTextures {
     private val LOGGER = LoggerFactory.getLogger("EvergreenHUD/Vanilla Textures")
 
+    //? if > 1.8.9 {
     private val HOTBAR = ResourceLocation.withDefaultNamespace("textures/gui/sprites/hud/hotbar.png")
     private val GENERIC_54 = ResourceLocation.withDefaultNamespace("textures/gui/container/generic_54.png")
     private val SHULKER_BOX = ResourceLocation.withDefaultNamespace("textures/gui/container/shulker_box.png")
+    //?} else {
+    /*private val HOTBAR = NamespacedIdentifiers.from("minecraft", "textures/gui/widgets.png")
+    private val GENERIC_54 = NamespacedIdentifiers.from("minecraft", "textures/gui/container/generic_54.png")
+    *///?}
 
     private val cache = ConcurrentHashMap<ResourceLocation, VanillaTexture>()
     private val missing = ConcurrentHashMap.newKeySet<ResourceLocation>()
@@ -138,18 +147,27 @@ object VanillaTextures {
     }
 
     fun hotbar(): VanillaTexture? =
+        //? if > 1.8.9 {
         load(HOTBAR, HOTBAR_TEXTURE_WIDTH, HOTBAR_TEXTURE_HEIGHT, HOTBAR_TEXTURE_HEIGHT)
+        //?} else
+        //load(HOTBAR, CONTAINER_TEXTURE_SIZE, CONTAINER_TEXTURE_SIZE, HOTBAR_TEXTURE_HEIGHT)
 
+    //? if > 1.8.9 {
     fun container(shulker: Boolean): VanillaTexture? = if (shulker) {
         load(SHULKER_BOX, CONTAINER_TEXTURE_SIZE, CONTAINER_TEXTURE_SIZE, SHULKER_BOX_GUI_HEIGHT)
     } else {
         load(GENERIC_54, CONTAINER_TEXTURE_SIZE, CONTAINER_TEXTURE_SIZE, GENERIC_54_GUI_HEIGHT)
     }
+    //?} else {
+    /*fun container(shulker: Boolean): VanillaTexture? =
+        load(GENERIC_54, CONTAINER_TEXTURE_SIZE, CONTAINER_TEXTURE_SIZE, GENERIC_54_GUI_HEIGHT)
+    *///?}
 
     private fun load(id: ResourceLocation, baseWidth: Float, baseHeight: Float, guiHeight: Float): VanillaTexture? {
         cache[id]?.let { return it }
         if (id in missing) return null
         val image = try {
+            //~ if = 1.8.9 'mc.resourceManager' -> 'ResourceManager.client()'
             mc.resourceManager.getResource(id).orElse(null)
                 ?.open()?.use { ImageLoader.fromBytes(it.readAllBytes()) }
         } catch (e: Exception) {
