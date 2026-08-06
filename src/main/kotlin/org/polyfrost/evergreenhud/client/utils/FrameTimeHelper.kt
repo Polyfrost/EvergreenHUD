@@ -1,14 +1,9 @@
 package org.polyfrost.evergreenhud.client.utils
 
-//? if >= 26
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents as WorldRenderEvents
-//? if >= 1.21.10 && < 26
-//import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents
-//? if < 1.21.10
-//import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents
 import org.polyfrost.oneconfig.api.event.v1.EventManager
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.Event
+import org.polyfrost.oneconfig.api.event.v1.events.FramebufferRenderEvent
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
 
 object FrameTimeHelper {
@@ -25,10 +20,7 @@ object FrameTimeHelper {
         private set
 
     fun initialize() {
-        //? if >= 1.21.10
-        WorldRenderEvents.END_MAIN.register {
-        //? if < 1.21.10
-        //WorldRenderEvents.END.register {
+        eventHandler { _: FramebufferRenderEvent.End ->
             val now = System.nanoTime()
             val frameTime = now - lastTime
             lastTime = now
