@@ -153,6 +153,7 @@ class KeystrokesHud : Hud(
                 addCallback(option) { keys.rev.value++ }
             }
             addCallback("unpressedBg") { pushToDesigner() }
+            addCallback("unpressedText") { pushToDesigner() }
             pushToDesigner()
             handlers.add(eventHandler { (btn, state): MouseInputEvent ->
                 if (state == 1) onClick { it.matchesMouseButton(btn) }
@@ -174,6 +175,9 @@ class KeystrokesHud : Hud(
         bgColor = unpressedBg.rawArgb
         bgChroma = unpressedBg.chroma
         bgChromaSpeed = unpressedBg.chromaSpeed
+        textColor = unpressedText.rawArgb
+        textChroma = unpressedText.chroma
+        textChromaSpeed = unpressedText.chromaSpeed
     }
 
     private fun pullFromDesigner(): Boolean {
@@ -181,6 +185,10 @@ class KeystrokesHud : Hud(
         if (bgColor != unpressedBg.rawArgb || bgChroma != unpressedBg.chroma || bgChromaSpeed != unpressedBg.chromaSpeed) {
             unpressedBg = PolyColor(bgColor, bgChroma, bgChromaSpeed)
             pulled = true
+        }
+            if (textColor != unpressedText.rawArgb || textChroma != unpressedText.chroma || textChromaSpeed != unpressedText.chromaSpeed) {
+        unpressedText = PolyColor(textColor, textChroma, textChromaSpeed)
+        pulled = true
         }
         if (pulled) keys.rev.value++
         return pulled
