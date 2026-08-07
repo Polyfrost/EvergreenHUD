@@ -59,6 +59,7 @@ object EvergreenHudClient : ClientModInitializer {
 
         registerIfSupported(Battery.isSupported(), ::BatteryHud)
 
+        BlockChangeEvent()
         BlockPositionChangedEvent()
         ServerDamageEntityEvent()
     }
