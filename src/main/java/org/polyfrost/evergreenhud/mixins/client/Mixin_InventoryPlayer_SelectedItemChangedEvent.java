@@ -15,7 +15,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class Mixin_InventoryPlayer_SelectedItemChangedEvent {
     @Inject(
             method = {
-                    "swapPaint", "setSelectedSlot", "setSelectedHotbarSlot",
+                    //? if >= 1.21.5 {
+                    "setSelectedSlot",
+                    //?} elif >= 1.21.4 {
+                    /*"setSelectedHotbarSlot",
+                    *///?} else
+                    //"swapPaint",
                     "pickSlot", "replaceWith"
             },
             at = @At(
@@ -23,8 +28,7 @@ public abstract class Mixin_InventoryPlayer_SelectedItemChangedEvent {
                     opcode = Opcodes.PUTFIELD,
                     target = "Lnet/minecraft/world/entity/player/Inventory;selected:I",
                     shift = At.Shift.AFTER
-            ),
-            require = 0
+            )
     )
     private void selectedItemChangeCallback(CallbackInfo ci) {
         LocalPlayer player = Minecraft.getInstance().player;

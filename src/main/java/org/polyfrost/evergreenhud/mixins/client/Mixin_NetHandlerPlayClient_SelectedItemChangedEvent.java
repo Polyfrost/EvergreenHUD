@@ -14,7 +14,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ClientPacketListener.class)
 public class Mixin_NetHandlerPlayClient_SelectedItemChangedEvent {
     @Inject(
-            method = { "handleSetHeldSlot", "handleSetCarriedItem" },
+            //~ if < 1.21.2 'handleSetHeldSlot' -> 'handleSetCarriedItem'
+            method = "handleSetHeldSlot",
             at = @At(
                     //? if <= 1.21.4 {
                     /*value = "FIELD",
@@ -25,8 +26,7 @@ public class Mixin_NetHandlerPlayClient_SelectedItemChangedEvent {
                     target = "Lnet/minecraft/world/entity/player/Inventory;setSelectedSlot(I)V",
                     //?}
                     shift = At.Shift.AFTER
-            ),
-            require = 0
+            )
     )
     private void selectedItemChangeCallback(CallbackInfo ci) {
         LocalPlayer player = Minecraft.getInstance().player;
