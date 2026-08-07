@@ -151,7 +151,7 @@ class PotionEffectsHud : Hud(
             SORT_BAD_EFFECTS
         ]
     )
-    var sorting = arrayOf(SORT_BAD_EFFECTS, SORT_DURATION)
+    var sorting = emptyArray<String>()
 
     @Switch(title = "Reversed")
     var reversed = false
@@ -193,12 +193,7 @@ class PotionEffectsHud : Hud(
         return ordered.map { row(it) }
     }
 
-    private fun sortEffects(
-        effects: List<MobEffectInstance>,
-        sortingStack: Array<String>,
-        reversed: Boolean
-    ): List<MobEffectInstance> {
-
+    private fun sortEffects(effects: List<MobEffectInstance>, sortingStack: Array<String>, reversed: Boolean): List<MobEffectInstance> {
         var sorted = effects
 
         // Sorting is reversed because the last rule in the list is the highest priority.
@@ -209,10 +204,7 @@ class PotionEffectsHud : Hud(
         return if (reversed) sorted.asReversed() else sorted
     }
 
-    private fun sortByRule(
-        effects: List<MobEffectInstance>,
-        rule: String
-    ): List<MobEffectInstance> {
+    private fun sortByRule(effects: List<MobEffectInstance>, rule: String): List<MobEffectInstance> {
         return when (rule) {
             SORT_NAME -> effects.sortedBy { it.effect.value().displayName.string }
             SORT_DURATION -> effects.sortedBy { if (it.isInfiniteDuration) Int.MAX_VALUE else it.duration }
