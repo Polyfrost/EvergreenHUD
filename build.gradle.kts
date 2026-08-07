@@ -184,6 +184,5 @@ publishMods {
         minecraftVersions.addAll(compatibleVersions)
 
         requires("oneconfig")
-        requires("fabric-api")
     }
 }

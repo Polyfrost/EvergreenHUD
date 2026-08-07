@@ -22,7 +22,6 @@
     "depends": {
         "minecraft": "${minecraft}",
         "fabricloader": ">=0.15.11",
-        "oneconfigv1": ">=1.1.3",
-        "fabric-api": "*"
+        "oneconfigv1": ">=1.1.3"
     }
 }
