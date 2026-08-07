@@ -23,7 +23,7 @@ import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyColor
-import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
+import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
@@ -42,10 +42,11 @@ private const val FONT_SIZE = 8f
 
 private const val ROMAN = 0
 
-private const val VANILLA = 0
-private const val NAME = 1
-private const val DURATION = 2
-private const val AMPLIFIER = 3
+private const val SORT_NAME = "Name"
+private const val SORT_DURATION = "Duration"
+private const val SORT_AMPLIFIER = "Amplifier"
+private const val SORT_AMBIENT = "Ambient Effects"
+private const val SORT_BAD_EFFECTS = "Bad Effects"
 
 private const val INFINITE = "**:**"
 
@@ -138,8 +139,19 @@ class PotionEffectsHud : Hud(
     @Switch(title = "Ambient Effects", description = "Show effects coming from beacons and conduits.")
     var showAmbient = true
 
-    @Dropdown(title = "Sorting", options = ["Vanilla", "Name", "Duration", "Amplifier"])
-    var sorting = VANILLA
+    @DraggableList(
+        title = "Sorting",
+        description = "Which sorting rules to apply, by priority.",
+        checkable = true,
+        options = [
+            SORT_NAME,
+            SORT_DURATION,
+            SORT_AMPLIFIER,
+            SORT_AMBIENT,
+            SORT_BAD_EFFECTS
+        ]
+    )
+    var sorting = arrayOf(SORT_BAD_EFFECTS, SORT_DURATION)
 
     @Switch(title = "Reversed")
     var reversed = false
@@ -177,14 +189,38 @@ class PotionEffectsHud : Hud(
             else emptyList()
         }
 
-        val sorted = when (sorting) {
-            NAME -> effects.sortedBy { it.effect.value().displayName.string }
-            DURATION -> effects.sortedBy { if (it.isInfiniteDuration) Int.MAX_VALUE else it.duration }
-            AMPLIFIER -> effects.sortedByDescending { it.amplifier }
+        val ordered = sortEffects(effects, sorting, reversed)
+        return ordered.map { row(it) }
+    }
+
+    private fun sortEffects(
+        effects: List<MobEffectInstance>,
+        sortingStack: Array<String>,
+        reversed: Boolean
+    ): List<MobEffectInstance> {
+
+        var sorted = effects
+
+        // Sorting is reversed because the last rule in the list is the highest priority.
+        for (rule in sortingStack.reversed()) {
+            sorted = sortByRule(sorted, rule)
+        }
+
+        return if (reversed) sorted.asReversed() else sorted
+    }
+
+    private fun sortByRule(
+        effects: List<MobEffectInstance>,
+        rule: String
+    ): List<MobEffectInstance> {
+        return when (rule) {
+            SORT_NAME -> effects.sortedBy { it.effect.value().displayName.string }
+            SORT_DURATION -> effects.sortedBy { if (it.isInfiniteDuration) Int.MAX_VALUE else it.duration }
+            SORT_AMPLIFIER -> effects.sortedByDescending { it.amplifier }
+            SORT_AMBIENT -> effects.sortedBy { it.isAmbient }
+            SORT_BAD_EFFECTS -> effects.sortedBy { it.effect.value().isBeneficial }
             else -> effects
         }
-        val ordered = if (reversed) sorted.asReversed() else sorted
-        return ordered.map { row(it) }
     }
 
     private fun currentEffects(): List<MobEffectInstance> {
