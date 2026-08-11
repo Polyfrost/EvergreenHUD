@@ -40,6 +40,7 @@ repositories {
         filter { groups.forEach(::includeGroup) }
     }
 
+    mavenLocal()
     mavenCentral()
     google()
     maven("https://repo.polyfrost.org/releases") { name = "Polyfrost Releases" }
