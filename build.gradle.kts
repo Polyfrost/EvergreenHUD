@@ -40,6 +40,7 @@ repositories {
         filter { groups.forEach(::includeGroup) }
     }
 
+    mavenLocal()
     mavenCentral()
     google()
     maven("https://repo.polyfrost.org/releases") { name = "Polyfrost Releases" }
@@ -91,6 +92,8 @@ loom {
         generateRunConfig = true
         runDirectory = rootProject.file("run")
         jvmArguments.add("-Dmixin.debug.export=true")
+        // pass through so DevAuth can be turned off for offline runs
+        providers.systemProperty("devauth.enabled").orNull?.let { jvmArguments.add("-Ddevauth.enabled=$it") }
     }
 
     runConfigs.remove(runConfigs["server"])

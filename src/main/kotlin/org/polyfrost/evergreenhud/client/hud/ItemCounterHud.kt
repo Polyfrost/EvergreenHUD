@@ -19,13 +19,20 @@ import org.polyfrost.compose.composables.align
 import org.polyfrost.compose.composables.margin
 import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.layout.PolyAlign
-import org.polyfrost.compose.mc.McFontQueue
 import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
 import org.polyfrost.evergreenhud.client.hooks.isShulkerBox
 import org.polyfrost.evergreenhud.client.hooks.shulkerContents
+import org.polyfrost.evergreenhud.client.hud.item.ANY_POTION
+import org.polyfrost.evergreenhud.client.hud.item.ANY_POTION_LABEL
 import org.polyfrost.evergreenhud.client.hud.item.ITEM_SIZE
 import org.polyfrost.evergreenhud.client.hud.item.ItemIcon
+import org.polyfrost.evergreenhud.client.hud.item.hasPotionContents
+import org.polyfrost.evergreenhud.client.hud.item.potionIdOf
+import org.polyfrost.evergreenhud.client.hud.item.potionStack
+import org.polyfrost.evergreenhud.client.hud.item.potionVariant
+import org.polyfrost.evergreenhud.client.hud.item.potionVariants
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
 import org.polyfrost.oneconfig.api.config.v1.annotations.Button
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
@@ -63,6 +70,9 @@ class ItemCounterHud : Hud(
     )
     var item = arrayOf("minecraft:diamond")
 
+    @Dropdown(title = "Potion", description = "Which potion variant to count.", options = [ANY_POTION_LABEL])
+    var potion = ANY_POTION
+
     @Switch(title = "Show Icon")
     var showIcon = true
 
@@ -72,8 +82,14 @@ class ItemCounterHud : Hud(
     @Dropdown(title = "Count Format", options = ["Total", "Stacks + Remainder"])
     var format = TOTAL
 
-    @Switch(title = "Count Shulker Contents", description = "Also count matching items inside shulker boxes you carry.")
+    @Switch(title = "Count Shulker Contents", description = "Also count matching items inside shulker boxes.")
     var countShulkers = false
+
+    @Switch(
+        title = "Count Ender Chest",
+        description = "Also count matching items in your ender chest, as of the last time you opened it.",
+    )
+    var countEnderChest = false
 
     @Switch(title = "Hide When Empty", description = "Hide the HUD while you carry none of the item.")
     var hideWhenEmpty = false
@@ -89,10 +105,34 @@ class ItemCounterHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
+    // the icon comes from the offscreen target, which is only filled while the HUD keeps asking for it
+    override val alwaysRedraw: Boolean
+        get() = super.alwaysRedraw || (isReal && showIcon && display.value != null)
+
     @Button(title = "Use Held Item", description = "Count whatever you are currently holding.")
     fun useHeldItem() {
         val held = mc.player?.mainHandItem?.takeIf { !it.isEmpty } ?: return
-        item = arrayOf(BuiltInRegistries.ITEM.getKey(held.item)?.toString() ?: return)
+        item = arrayOf(BuiltInRegistries.ITEM.getKey(held.item).toString())
+        potion = potionIdOf(held)?.takeIf { potionVariant(it) != null } ?: ANY_POTION
+    }
+
+    override fun setup() {
+        super.setup()
+        if (!isReal) return
+
+        applyPotionOptions()
+        updateWhenChanged("item")
+        updateWhenChanged("potion")
+        hideIf("potion") { currentItem()?.hasPotionContents != true }
+    }
+
+    private fun applyPotionOptions() {
+        val variants = potionVariants()
+        if (variants.isEmpty()) return
+        val property = tree?.getProp("potion") ?: return
+        property.addMetadata("options", listOf(ANY_POTION_LABEL) + variants.map { it.label })
+        property.addMetadata("optionValues", listOf(ANY_POTION) + variants.map { it.id })
+        property.removeMetadata("optionsKey")
     }
 
     override fun update(): Boolean {
@@ -128,19 +168,33 @@ class ItemCounterHud : Hud(
     private fun count(target: Item): Int {
         if (!isReal) return EXAMPLE_COUNT
         val inventory = mc.player?.inventory ?: return 0
+        var count = countIn((0 until inventory.containerSize).map(inventory::getItem), target)
+        if (countEnderChest) count += countIn(EnderChestTracker.contents().orEmpty(), target)
+        return count
+    }
+
+    private fun countIn(stacks: Iterable<ItemStack>, target: Item): Int {
         var count = 0
-        for (i in 0 until inventory.containerSize) {
-            val slot = inventory.getItem(i)
+        for (slot in stacks) {
             if (slot.isEmpty) continue
-            if (slot.item == target) count += slot.count
+            if (matches(slot, target)) count += slot.count
             if (countShulkers && slot.isShulkerBox) {
                 for (inner in slot.shulkerContents()) {
-                    if (inner.item == target) count += inner.count
+                    if (matches(inner, target)) count += inner.count
                 }
             }
         }
         return count
     }
+
+    private fun matches(stack: ItemStack, target: Item): Boolean {
+        if (stack.item != target) return false
+        val wanted = potionFilter(target) ?: return true
+        return potionIdOf(stack) == wanted
+    }
+
+    private fun potionFilter(target: Item): String? =
+        potion.takeIf { target.hasPotionContents && potionVariant(it) != null }
 
     private fun countText(count: Int, target: Item): String {
         if (format == TOTAL) return count.toString()
@@ -158,9 +212,10 @@ class ItemCounterHud : Hud(
         val count = count(target)
         if (!editing && hideWhenEmpty && count <= 0) return null
 
-        val stack = ItemStack(target)
+        val variant = potionFilter(target)?.let(::potionVariant)
+        val stack = if (variant == null) ItemStack(target) else potionStack(target, variant.id)
         val text = buildString {
-            if (showName) append(stack.hoverName.string).append(": ")
+            if (showName) append(stack.hoverName.string).append(variant?.suffix.orEmpty()).append(": ")
             append(countText(count, target))
         }
         return Display(stack, text)
@@ -184,6 +239,7 @@ class ItemCounterHud : Hud(
             PolyRow(gap = if (showIcon) TEXT_GAP * scale else 0f) {
                 if (showIcon) {
                     ItemIcon(
+                        this@ItemCounterHud,
                         current.stack,
                         size = iconSize,
                         modifier = PolyModifier.align(PolyAlign.Center),
@@ -224,6 +280,7 @@ class ItemCounterHud : Hud(
         ((rowHeight - inkHeight) / 2f - inkTop).coerceAtLeast(0f)
 
     override fun clone(): Hud = (super.clone() as ItemCounterHud).also {
+        it.item = item.copyOf()
         it.display = mutableStateOf(null)
     }
 }

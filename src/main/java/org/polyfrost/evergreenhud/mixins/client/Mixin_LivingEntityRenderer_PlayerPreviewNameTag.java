@@ -27,7 +27,7 @@ public class Mixin_LivingEntityRenderer_PlayerPreviewNameTag {
             CallbackInfoReturnable<Boolean> cir
     ) {
         if (PlayerPreviewPartialTick.getPlayerPreviewPartialTick() >= 0.0F) {
-            cir.setReturnValue(false);
+            cir.setReturnValue(PlayerPreviewPartialTick.getPlayerPreviewNameTag());
         }
     }
 

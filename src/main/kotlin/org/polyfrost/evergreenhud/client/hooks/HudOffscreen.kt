@@ -16,10 +16,12 @@ import net.minecraft.client.renderer.state.gui.GuiRenderState
 //? } else if >= 1.21.8 {
 /*import net.minecraft.client.gui.render.state.GuiRenderState
 *///? }
+import net.minecraft.world.item.ItemStack
 import org.jetbrains.skia.BackendRenderTarget
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.ContentChangeMode
 import org.jetbrains.skia.Paint
+import org.jetbrains.skia.Rect
 import org.jetbrains.skia.Surface
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.ResizeEvent
@@ -47,15 +49,18 @@ object HudOffscreen {
     private var lastHeight = -1
 
     private val pending = ArrayList<(GuiGraphics) -> Unit>()
-    private var hasContent = false
+
+    var hasContent = false
+        private set
     private var failed = false
     private var layoutIsGeneral = false
 
-    var surfaceRatio = 1f
-        private set
+    private var pixelsPerGuiUnit = 1f
 
     private var loggedFirstFrame = false
     private var loggedNotReady = false
+
+    val isUsable: Boolean get() = !failed
 
     fun initialize() {
         eventHandler { _: ResizeEvent -> invalidate() }
@@ -63,6 +68,37 @@ object HudOffscreen {
 
     fun submit(draw: (GuiGraphics) -> Unit) {
         pending.add(draw)
+    }
+
+    fun submitItem(
+        stack: ItemStack,
+        guiX: Float,
+        guiY: Float,
+        scale: Float,
+        decorations: Boolean = false,
+        countOverride: String? = null,
+    ) = submit { graphics ->
+        transformed(graphics, guiX, guiY, scale) {
+            //? if >= 26 {
+            graphics.item(stack, 0, 0)
+            if (decorations) {
+                if (countOverride != null) {
+                    graphics.itemDecorations(client.font, stack, 0, 0, countOverride)
+                } else {
+                    graphics.itemDecorations(client.font, stack, 0, 0)
+                }
+            }
+            //? } else {
+            /*graphics.renderItem(stack, 0, 0)
+            if (decorations) {
+                if (countOverride != null) {
+                    graphics.renderItemDecorations(client.font, stack, 0, 0, countOverride)
+                } else {
+                    graphics.renderItemDecorations(client.font, stack, 0, 0)
+                }
+            }
+            *///? }
+        }
     }
 
     @JvmStatic
@@ -84,7 +120,7 @@ object HudOffscreen {
         val guiWidth = Platform.screen().guiWidth()
         val guiHeight = Platform.screen().guiHeight()
         if (width <= 0 || height <= 0 || guiWidth <= 0 || guiHeight <= 0) return
-        surfaceRatio = Platform.screen().surfaceRatio().coerceAtLeast(0.0001f)
+        pixelsPerGuiUnit = (width.toFloat() / guiWidth).coerceAtLeast(0.0001f)
 
         try {
             if (!resolveTarget(width, height)) return
@@ -108,14 +144,23 @@ object HudOffscreen {
         }
     }
 
-    fun drawInto(canvas: Canvas, hudX: Float, hudY: Float, hudScale: Float, width: Float, height: Float) {
+    fun drawInto(
+        canvas: Canvas,
+        hudX: Float,
+        hudY: Float,
+        hudScale: Float,
+        width: Float,
+        height: Float,
+        clipX: Float = 0f,
+        clipY: Float = 0f,
+    ) {
         if (!hasContent) return
         val s = surface ?: return
-        val scale = 1f / (surfaceRatio * hudScale).coerceAtLeast(0.0001f)
+        val scale = 1f / (pixelsPerGuiUnit * hudScale).coerceAtLeast(0.0001f)
         try {
             s.notifyContentWillChange(ContentChangeMode.RETAIN)
             canvas.save()
-            canvas.clipRect(org.jetbrains.skia.Rect.makeXYWH(0f, 0f, width, height))
+            canvas.clipRect(Rect.makeXYWH(clipX, clipY, width, height))
             canvas.translate(-hudX / hudScale, -hudY / hudScale)
             canvas.scale(scale, scale)
             s.draw(canvas, 0, 0, blitPaint)
@@ -178,7 +223,7 @@ object HudOffscreen {
         //? if >= 26.2 {
         val encoder = RenderSystem.getDevice().createCommandEncoder()
         rt.colorTexture?.let { encoder.clearColorTexture(it, org.joml.Vector4f(0f, 0f, 0f, 0f)) }
-        rt.depthTexture?.let { encoder.clearDepthTexture(it, 1.0) }
+        rt.depthTexture?.let { encoder.clearDepthTexture(it, 0.0) }
         //? } else if >= 1.21.5 {
         /*val encoder = RenderSystem.getDevice().createCommandEncoder()
         rt.colorTexture?.let { encoder.clearColorTexture(it, 0) }

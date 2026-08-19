@@ -27,6 +27,7 @@ import java.util.UUID
 import kotlin.math.min
 
 private const val DEFAULT_SIDE = 8f
+private const val MAX_SIDE = 32f
 
 class PlayerHeadHud : Hud(
     id = "player_head.json",
@@ -34,10 +35,14 @@ class PlayerHeadHud : Hud(
     category = Category.PLAYER,
 ) {
     private var _staticW = mutableStateOf(DEFAULT_SIDE)
-    override var staticW: Float get() = _staticW.value; set(v) { _staticW.value = v }
+    override var staticW: Float
+        get() = _staticW.value
+        set(v) { _staticW.value = v.coerceIn(DEFAULT_SIDE, MAX_SIDE) }
 
     private var _staticH = mutableStateOf(DEFAULT_SIDE)
-    override var staticH: Float get() = _staticH.value; set(v) { _staticH.value = v }
+    override var staticH: Float
+        get() = _staticH.value
+        set(v) { _staticH.value = v.coerceIn(DEFAULT_SIDE, MAX_SIDE) }
 
     init {
         showBackground = false
@@ -149,11 +154,12 @@ private object PlayerHeadTexture {
     }
 
     private fun pixel(image: NativeImage, x: Int, y: Int): Int {
-        //? if >= 1.21.4
-        val abgr = image.getPixel(x, y)
-        //? if < 1.21.4
-        //val abgr = image.getPixelRGBA(x, y)
+        //? if >= 1.21.4 {
+        return image.getPixel(x, y)
+        //?} else {
+        /*val abgr = image.getPixelRGBA(x, y)
         return (abgr and 0xFF00FF00.toInt()) or ((abgr shr 16) and 0xFF) or ((abgr and 0xFF) shl 16)
+        *///?}
     }
 
     private fun composite(src: Int, dst: Int): Int {

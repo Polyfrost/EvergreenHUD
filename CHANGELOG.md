@@ -1,2 +1,11 @@
-## 3.5.1
-- Old configs still on a default are migrated to the new defaults.
+## 3.8.0
+- Added Custom Text HUD, showing any text you type
+- Added Custom Image HUD, showing an image from your computer
+- Added Social Media Stats HUD, showing your YouTube or Twitch counts
+- Added a nametag option to Player Preview HUD
+- Added Above and Below text positions to Armor HUD
+- Added resizing to Inventory HUD
+- Fixed item counts, durability bars and cooldowns being cut off at the item edge
+- Fixed Armor HUD and Item Tracker HUD not redrawing when you change their options
+- Fixed Player Head HUD colors
+- Fixed Player Preview HUD ignoring HUD scale

@@ -48,14 +48,15 @@ object EvergreenHudClient : ClientModInitializer {
             ArmorHud(),
             BiomeHud(), BlockAboveHud(),
             ClockHud(), DigitalClockHud(), ComboHud(), CpsHud(),
+            CustomImageHud(), CustomTextHud(),
             DayHud(), DirectionHud(), EntityCounterHud(), FacingHud(), FpsHud(),
-            InGameTimeHud(), InventoryHud(), ItemCounterHud(),
+            InGameTimeHud(), InventoryHud(), ItemCounterHud(), ItemTrackerHud(),
             KeystrokesHud(),
             LoreHud(), MemoryHud(), MouseStrokesHud(),
             PingHud(), PlaceCountHud(), PlayerHeadHud(), PlayerPreviewHud(),
             PlayTimeHud(), PositionHud(), PotionEffectsHud(), ReachHud(),
             ResourcePackHud(), SaturationHud(), ServerAddressHud(),
-            ShapeHud(), SpeedHud(), TpsHud(), WeatherHud(),
+            ShapeHud(), SocialStatsHud(), SpeedHud(), TpsHud(), WeatherHud(),
         )
 
         huds.forEach(::register)

@@ -2,6 +2,7 @@ package org.polyfrost.evergreenhud.client.hud
 
 import org.polyfrost.evergreenhud.client.utils.CachedTextHud
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
+import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Duration.Companion.seconds
 
 class PlayTimeHud : CachedTextHud(
@@ -9,7 +10,7 @@ class PlayTimeHud : CachedTextHud(
     category = Category.INFO,
     prefix = "Time Played: ",
 ) {
-    private var time: Long = 0L
+    private val start = System.nanoTime()
 
     @Switch(title = "Show Seconds")
     var seconds = true
@@ -23,8 +24,7 @@ class PlayTimeHud : CachedTextHud(
     }
 
     override fun getText(): String {
-        time++
-        val time = time.seconds
+        val time = (System.nanoTime() - start).nanoseconds
         return time.toComponents { hours: Long, minutes: Int, seconds: Int, _: Int ->
             buildString {
                 fun addNumber(number: Number) {
@@ -37,8 +37,6 @@ class PlayTimeHud : CachedTextHud(
             }
         }
     }
-
-
 
     override fun updateFrequency(): Long {
         return 1.seconds.inWholeNanoseconds

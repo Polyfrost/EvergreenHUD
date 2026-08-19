@@ -66,6 +66,7 @@ object PlayerPreviewOffscreen {
         val modelTilt: Float,
         val partialTick: Float,
         val verticalAnchor: Float,
+        val nametag: Boolean,
     )
 
     private class Slot {
@@ -128,14 +129,17 @@ object PlayerPreviewOffscreen {
     }
 
     private fun renderSlot(slot: Slot, request: Request, player: Player) {
-        val width = request.widthPx.coerceIn(1, MAX_DIM)
-        val height = request.heightPx.coerceIn(1, MAX_DIM)
+        val requestedWidth = request.widthPx.coerceAtLeast(1)
+        val requestedHeight = request.heightPx.coerceAtLeast(1)
+        val fit = minOf(1f, MAX_DIM.toFloat() / requestedWidth, MAX_DIM.toFloat() / requestedHeight)
+        val width = (requestedWidth * fit).toInt().coerceIn(1, MAX_DIM)
+        val height = (requestedHeight * fit).toInt().coerceIn(1, MAX_DIM)
 
         try {
             if (!resolveTarget(slot, width, height)) return
             val rt = slot.target ?: return
             if (slot.layoutIsGeneral) SkiaOffscreen.beginRender(rt)
-            renderInto(slot, rt, request, player, width, height)
+            renderInto(slot, rt, request, player, width, height, fit)
             SkiaOffscreen.endRender(rt)
             slot.layoutIsGeneral = true
             SkiaOffscreen.resetContext()
@@ -180,7 +184,7 @@ object PlayerPreviewOffscreen {
         }
     }
 
-    private fun renderInto(slot: Slot, rt: TextureTarget, request: Request, player: Player, width: Int, height: Int) {
+    private fun renderInto(slot: Slot, rt: TextureTarget, request: Request, player: Player, width: Int, height: Int, fit: Float) {
         val colorTexture = rt.colorTexture ?: return
         val depthTexture = rt.depthTexture ?: return
         val colorView = rt.colorTextureView ?: return
@@ -224,7 +228,7 @@ object PlayerPreviewOffscreen {
         modelView.identity()
         //? }
         try {
-            renderPlayer(slot, request, player, width, height)
+            renderPlayer(slot, request, player, width, height, fit)
         } finally {
             //? if >= 26.2 {
             RenderSystem.getModelViewStack().popMatrix()
@@ -240,15 +244,18 @@ object PlayerPreviewOffscreen {
         }
     }
 
-    private fun renderPlayer(slot: Slot, request: Request, player: Player, width: Int, height: Int) {
+    private fun renderPlayer(slot: Slot, request: Request, player: Player, width: Int, height: Int, fit: Float) {
         playerPreviewPartialTick = request.partialTick
+        playerPreviewNameTag = request.nametag
         val state = try {
             client.entityRenderDispatcher.extractEntity(player, request.partialTick) as? AvatarRenderState ?: return
         } finally {
             playerPreviewPartialTick = -1f
+            playerPreviewNameTag = false
         }
 
         state.lightCoords = FULL_BRIGHT
+        if (!request.nametag) state.nameTag = null
         state.bodyRot = request.bodyRot
         request.headRot?.let { state.yRot = it }
         request.headPitch?.let { state.xRot = it }
@@ -259,7 +266,7 @@ object PlayerPreviewOffscreen {
 
         val anchor = smoothAnchorHeight(slot, boxHeight)
 
-        val size = request.sizePx
+        val size = request.sizePx * fit
         val tilt = Math.toRadians(request.modelTilt.toDouble()).toFloat()
         val rotation = Quaternionf().rotateZ(Math.PI.toFloat())
         if (tilt != 0f) rotation.mul(Quaternionf().rotateX(tilt))
