@@ -4,10 +4,6 @@
 package org.polyfrost.evergreenhud.client.utils
 
 import net.minecraft.network.protocol.game.ClientboundDamageEventPacket
-import net.minecraft.tags.FluidTags
-import net.minecraft.world.Difficulty
-import net.minecraft.world.entity.LivingEntity
-import net.minecraft.world.entity.player.Player
 import net.minecraft.world.food.FoodData
 import net.minecraft.world.phys.Vec3
 import org.polyfrost.evergreenhud.client.SaturationChangedEvent
@@ -16,42 +12,15 @@ import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.PacketEvent
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
-import java.util.concurrent.ConcurrentLinkedQueue
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 object SaturationTracker {
-    private const val EXHAUSTION_PER_SATURATION = 4.0f
-    private const val MAX_EXHAUSTION = 40.0f
-
-    private const val FAST_REGEN_INTERVAL = 10
-    private const val SLOW_REGEN_INTERVAL = 80
-    private const val FAST_REGEN_MAX_EXHAUSTION = 6.0f
-    private const val SLOW_REGEN_EXHAUSTION = 6.0f
-
-    private const val SPRINT_EXHAUSTION_PER_CM = 0.1f
-    private const val SWIM_EXHAUSTION_PER_CM = 0.01f
-
-    private const val SPRINT_JUMP_EXHAUSTION = 0.2f
-    private const val JUMP_EXHAUSTION = 0.05f
-    private const val MINE_EXHAUSTION = 0.005f
-
     @Volatile
     var saturation = 0.0f
         private set
 
-    @Volatile
-    var exhaustion = 0.0f
-        private set
-
     private var foodLevel = 20
-    private var tickTimer = 0
     private var lastPosition: Vec3? = null
     private var lastPosted = Float.NaN
-
-    private val pendingExhaustion = ConcurrentLinkedQueue<Float>()
 
     fun initialize() {
         eventHandler { _: TickEvent.End -> tick() }
@@ -59,9 +28,7 @@ object SaturationTracker {
         eventHandler { (packet): PacketEvent.Receive ->
             if (packet !is ClientboundDamageEventPacket) return@eventHandler
             val player = mc.player ?: return@eventHandler
-            val level = mc.level ?: return@eventHandler
             if (packet.entityId() != player.id) return@eventHandler
-            pendingExhaustion.add(packet.getSource(level).foodExhaustion)
         }
     }
 
@@ -72,119 +39,19 @@ object SaturationTracker {
         post()
     }
 
-    fun onCauseFoodExhaustion(player: Player, amount: Float) {
-        if (player !== mc.player) return
-        addExhaustion(amount)
-    }
-
-    fun onJump(entity: LivingEntity) {
-        //? if 1.21.1
-        //if (true) return
-        val player = mc.player ?: return
-        if (entity !== player) return
-        addExhaustion(if (player.isSprinting) SPRINT_JUMP_EXHAUSTION else JUMP_EXHAUSTION)
-    }
-
-    fun onDestroyBlock() {
-        val gameMode = mc.gameMode ?: return
-        if (gameMode.playerMode.isCreative) return
-        addExhaustion(MINE_EXHAUSTION)
-    }
-
-    private fun addExhaustion(amount: Float) {
-        if (mc.player?.abilities?.invulnerable == true) return
-        exhaustion = min(exhaustion + amount, MAX_EXHAUSTION)
-    }
-
     private fun tick() {
         val player = mc.player
         if (player == null) {
             reset()
             return
         }
-
-        while (true) {
-            addExhaustion(pendingExhaustion.poll() ?: break)
-        }
-
-        trackMovement(player)
-        simulateFoodTick(player)
-        post()
     }
 
     private fun reset() {
-        pendingExhaustion.clear()
         saturation = 0.0f
-        exhaustion = 0.0f
         foodLevel = 20
-        tickTimer = 0
         lastPosition = null
         lastPosted = Float.NaN
-    }
-
-    private fun trackMovement(player: Player) {
-        val position = player.position()
-        val previous = lastPosition
-        lastPosition = position
-        if (previous == null || player.isPassenger) return
-
-        val dx = position.x - previous.x
-        val dy = position.y - previous.y
-        val dz = position.z - previous.z
-        if (dx == 0.0 && dy == 0.0 && dz == 0.0) return
-
-        when {
-            player.isSwimming || player.isEyeInFluid(FluidTags.WATER) -> {
-                val cm = centimetres(dx, dy, dz)
-                if (cm > 0) addExhaustion(SWIM_EXHAUSTION_PER_CM * cm * 0.01f)
-            }
-
-            player.isInWater -> {
-                val cm = centimetres(dx, 0.0, dz)
-                if (cm > 0) addExhaustion(SWIM_EXHAUSTION_PER_CM * cm * 0.01f)
-            }
-
-            player.onClimbable() -> {}
-
-            player.onGround() -> {
-                val cm = centimetres(dx, 0.0, dz)
-                if (cm > 0 && player.isSprinting) addExhaustion(SPRINT_EXHAUSTION_PER_CM * cm * 0.01f)
-            }
-        }
-    }
-
-    private fun centimetres(dx: Double, dy: Double, dz: Double): Int =
-        (sqrt(dx * dx + dy * dy + dz * dz).toFloat() * 100.0f).roundToInt()
-
-    private fun simulateFoodTick(player: Player) {
-        if (exhaustion > EXHAUSTION_PER_SATURATION) {
-            exhaustion -= EXHAUSTION_PER_SATURATION
-            if (saturation > 0.0f) {
-                saturation = max(saturation - 1.0f, 0.0f)
-            } else if (player.level().difficulty != Difficulty.PEACEFUL) {
-                foodLevel = max(foodLevel - 1, 0)
-            }
-        }
-
-        val hurt = player.isHurt
-        if (saturation > 0.0f && hurt && foodLevel >= 20) {
-            tickTimer++
-            if (tickTimer >= FAST_REGEN_INTERVAL) {
-                addExhaustion(min(saturation, FAST_REGEN_MAX_EXHAUSTION))
-                tickTimer = 0
-            }
-        } else if (hurt && foodLevel >= 18) {
-            tickTimer++
-            if (tickTimer >= SLOW_REGEN_INTERVAL) {
-                addExhaustion(SLOW_REGEN_EXHAUSTION)
-                tickTimer = 0
-            }
-        } else if (foodLevel <= 0) {
-            tickTimer++
-            if (tickTimer >= SLOW_REGEN_INTERVAL) tickTimer = 0
-        } else {
-            tickTimer = 0
-        }
     }
 
     private fun post() {
