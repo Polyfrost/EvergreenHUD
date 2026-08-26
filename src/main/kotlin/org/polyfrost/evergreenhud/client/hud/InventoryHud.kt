@@ -8,6 +8,7 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.minecraft.world.item.component.ItemContainerContents
 import org.polyfrost.compose.composables.PolyBox
+import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyMcText
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.PolyText
@@ -19,9 +20,13 @@ import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
 import org.polyfrost.evergreenhud.client.hooks.ShulkerPreview
 import org.polyfrost.evergreenhud.client.hooks.heldShulkerBox
 import org.polyfrost.evergreenhud.client.hooks.shulkerContents
+import org.polyfrost.evergreenhud.client.hud.item.CONTAINER_ITEM_INSET
 import org.polyfrost.evergreenhud.client.hud.item.ITEM_SIZE
 import org.polyfrost.evergreenhud.client.hud.item.ItemGrid
 import org.polyfrost.evergreenhud.client.hud.item.ItemGridSlot
+import org.polyfrost.evergreenhud.client.hud.item.VanillaTextures
+import org.polyfrost.evergreenhud.client.hud.item.containerHeight
+import org.polyfrost.evergreenhud.client.hud.item.containerTop
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Keybind
@@ -38,6 +43,9 @@ import org.polyfrost.oneconfig.utils.v1.dsl.mc
 private const val PLAYER = 0
 private const val ENDER_CHEST = 1
 private const val HELD_SHULKER = 2
+
+private const val CUSTOM = 0
+private const val VANILLA = 1
 
 private const val COLS = 9
 private const val ROWS = 3
@@ -99,6 +107,13 @@ class InventoryHud : Hud(
     @RadioButton(title = "Inventory", options = ["Player", "Ender Chest", "Held Shulker"])
     var type = PLAYER
 
+    @RadioButton(
+        title = "Style",
+        description = "Vanilla draws the container it would be shown in, taken from your resource pack.",
+        options = ["Custom", "Vanilla"],
+    )
+    var style = CUSTOM
+
     @Switch(title = "Show Title")
     var showTitle = true
 
@@ -125,6 +140,8 @@ class InventoryHud : Hud(
 
     private var grid = mutableStateOf<Grid?>(null)
 
+    private var rev = mutableStateOf(0)
+
     private var _staticW = mutableStateOf(WIDTH)
     override var staticW: Float
         get() = _staticW.value
@@ -145,6 +162,9 @@ class InventoryHud : Hud(
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
+    // the container is the background in the vanilla style, so OneConfig has none to draw or to fuse
+    override fun hasBackground(): Boolean = style != VANILLA
+
     override fun canMergeBackground(): Boolean = true
 
     override fun minimumSize(): Pair<Float, Float> = MIN_WIDTH to MIN_HEIGHT
@@ -158,10 +178,15 @@ class InventoryHud : Hud(
         tree?.getProp("staticW")?.addMetadata("default", WIDTH)
         tree?.getProp("staticH")?.addMetadata("default", naturalHeight())
         if (isReal) {
-            hideIf("slotBoundsColor") { !slotBounds }
-            hideIf("slotBoundsRadius") { !slotBounds }
+            hideIf("slotBounds") { style == VANILLA }
+            hideIf("slotBoundsColor") { style == VANILLA || !slotBounds }
+            hideIf("slotBoundsRadius") { style == VANILLA || !slotBounds }
             updateWhenChanged("type")
             updateWhenChanged("showTitle")
+            updateWhenChanged("style")
+            for (option in listOf("style", "slotBounds", "slotBoundsColor", "slotBoundsRadius")) {
+                addCallback(option) { rev.value++ }
+            }
         }
     }
 
@@ -206,9 +231,17 @@ class InventoryHud : Hud(
         ShulkerPreview.publishSlots(slots)
     }
 
-    private fun gridTop(): Float = if (showTitle) GRID_TOP_TITLED else GRID_TOP
+    private fun gridTop(): Float = when {
+        style == VANILLA -> containerTop(showTitle) + CONTAINER_ITEM_INSET
+        showTitle -> GRID_TOP_TITLED
+        else -> GRID_TOP
+    }
 
-    private fun naturalHeight(): Float = gridTop() + GRID_HEIGHT + GRID_BOTTOM
+    private fun naturalHeight(): Float = if (style == VANILLA) {
+        containerHeight(ROWS, showTitle)
+    } else {
+        gridTop() + GRID_HEIGHT + GRID_BOTTOM
+    }
 
     private val boxW: Float get() = if (staticWidth && staticW > 0f) staticW else WIDTH
 
@@ -256,6 +289,7 @@ class InventoryHud : Hud(
 
     @Composable
     override fun Content() {
+        rev.value
         val current = grid.value ?: return
         val top = gridTop()
         val content = contentScale
@@ -263,11 +297,18 @@ class InventoryHud : Hud(
         val originY = offsetY(content)
 
         PolyBox(modifier = hudBackground().size(boxW, boxH)) {
+            if (style == VANILLA) {
+                PolyCanvas(PolyModifier.absoluteAt(0f, 0f).size(boxW, boxH)) { x, y, _, _ ->
+                    VanillaTextures.container(type == HELD_SHULKER)
+                        ?.drawContainer(this, x + originX, y + originY, ROWS, showTitle, content)
+                }
+            }
+
             current.title?.let { Title(it, content, originX, originY) }
 
             val boundInset = (SLOT_BOUND_SIZE - ITEM_SIZE) / 2f
 
-            if (slotBounds) {
+            if (slotBounds && style != VANILLA) {
                 for (row in 0 until ROWS) {
                     for (col in 0 until COLS) {
                         PolyBox(
@@ -324,6 +365,7 @@ class InventoryHud : Hud(
 
     override fun clone(): Hud = (super.clone() as InventoryHud).also {
         it.grid = mutableStateOf(null)
+        it.rev = mutableStateOf(0)
         it._staticW = mutableStateOf(staticW)
         it._staticH = mutableStateOf(staticH)
         it.sizedForHeight = sizedForHeight
