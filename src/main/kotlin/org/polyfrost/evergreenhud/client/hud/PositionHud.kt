@@ -14,8 +14,6 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Checkbox
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
-import org.polyfrost.oneconfig.api.event.v1.eventHandler
-import org.polyfrost.oneconfig.api.event.v1.events.FramebufferRenderEvent
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
@@ -90,17 +88,6 @@ class PositionHud : GenericNumberHud(
 
     override fun setup() {
         super.setup()
-        eventHandler { _: FramebufferRenderEvent.Start ->
-            val player = mc.player ?: return@eventHandler
-            val camera = mc.cameraEntity ?: player
-            this.px = player.x
-            this.py = player.y
-            this.pz = player.z
-            this.yaw = Facing.wrapDegrees(camera.yRot).toDouble()
-            this.pitch = camera.xRot.toDouble()
-            updateAndRecalculate()
-        }
-
         if (isReal) {
             updateWhenChanged("showDirection")
             updateWhenChanged("alignDirection")
@@ -130,6 +117,14 @@ class PositionHud : GenericNumberHud(
         val entries = createEntries()
         currentText = entries.joinToString(separator) { it.plain }
         val result = super.update()
+
+        val player = mc.player ?: return result
+        val camera = mc.cameraEntity ?: player
+        this.px = player.x
+        this.py = player.y
+        this.pz = player.z
+        this.yaw = Facing.wrapDegrees(camera.yRot).toDouble()
+        this.pitch = camera.xRot.toDouble()
 
         linesState.value = buildLines(entries)
         alignState.value = alignDirection && showDirection && displayMode == 0
@@ -229,4 +224,6 @@ class PositionHud : GenericNumberHud(
     }
 
     override fun defaultPosition(): Pair<Float, Float> = 10f to 30f
+
+    override fun updateFrequency(): Long = 50L
 }
