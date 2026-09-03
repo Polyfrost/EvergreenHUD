@@ -29,7 +29,7 @@ class SpeedHud : GenericNumberHud(
     var speedUnit = 1
 
     @Switch(title = "Smooth Speed")
-    var smooth = false
+    var smooth = true
 
     @Slider(title = "Smoothing Factor", min = 0.01F, max = 1F, step = 0.01F)
     var smoothing = 0.2F
