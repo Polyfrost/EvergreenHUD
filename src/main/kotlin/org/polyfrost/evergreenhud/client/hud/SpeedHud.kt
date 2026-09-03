@@ -2,6 +2,7 @@ package org.polyfrost.evergreenhud.client.hud
 
 import org.polyfrost.evergreenhud.client.utils.GenericNumberHud
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
+import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.math.sqrt
@@ -26,6 +27,12 @@ class SpeedHud : GenericNumberHud(
         options = ["Meters per tick", "Meters per second", "Kilometers per hour", "Miles per hour"],
     )
     var speedUnit = 1
+
+    @Switch(title = "Smooth Speed")
+    var smooth = false
+
+    @Slider(title = "Smoothing Factor", min = 0.01F, max = 1F, step = 0.01F)
+    var smoothing = 0.2F
 
     override val legacySuffixes = mapOf(
         "m/s" to " m/s",
@@ -53,6 +60,8 @@ class SpeedHud : GenericNumberHud(
             updateWhenChanged("useX")
             updateWhenChanged("useY")
             updateWhenChanged("useZ")
+            updateWhenChanged("smooth")
+            updateWhenChanged("smoothing")
         }
     }
 
@@ -66,7 +75,8 @@ class SpeedHud : GenericNumberHud(
         val dx = if (useX) (player.x - player.xo).toFloat() else 0f
         val dy = if (useY) (player.y - player.yo).toFloat() else 0f
         val dz = if (useZ) (player.z - player.zo).toFloat() else 0f
-        value = convertSpeed(sqrt(dx * dx + dy * dy + dz * dz))
+        val raw = convertSpeed(sqrt(dx * dx + dy * dy + dz * dz))
+        value = if (smooth) value + (raw - value) * smoothing else raw
 
         return format(value)
     }
