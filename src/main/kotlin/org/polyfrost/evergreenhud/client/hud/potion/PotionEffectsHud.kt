@@ -24,7 +24,7 @@ import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.composables.width
 import org.polyfrost.compose.layout.PolyAlign
-import org.polyfrost.compose.mc.McFontQueue.measureWidth
+import org.polyfrost.compose.mc.McFontQueue
 import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
@@ -80,6 +80,17 @@ private const val DIRECTION_AUTO = 0
 private const val DIRECTION_VERTICAL = 1
 private const val DIRECTION_HORIZONTAL = 2
 
+internal fun formatPotionEffectMinecraftText(text: String, bold: Boolean, italic: Boolean): String {
+    if (!bold && !italic) return text
+
+    return buildString(text.length + 6) {
+        if (bold) append("§l")
+        if (italic) append("§o")
+        append(text)
+        append("§r")
+    }
+}
+
 class PotionEffectsHud : Hud(
     id = "potion_effects.json",
     title = "Potion Effects",
@@ -93,7 +104,7 @@ class PotionEffectsHud : Hud(
             arrayOf("M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I")
 
         private fun charWidth(scale: Float): Float =
-            measureWidth?.invoke(" ", scale) ?: (FONT_SIZE * scale * 0.5f)
+            McFontQueue.measureWidth?.invoke(" ", scale) ?: (FONT_SIZE * scale * 0.5f)
 
         private val EXAMPLES = listOf(
             Example("speed", "Speed", 1200, 1),
@@ -490,16 +501,26 @@ class PotionEffectsHud : Hud(
         val list = rows.value
         if (list.isEmpty()) return
         val scale = textScale.coerceAtLeast(0.01f)
+        val mode = layoutMode()
 
-        val maxRowWidth = remember(list, scale, font, layoutMode()) {
-            val mode = layoutMode()
+        val maxRowWidth = remember(list, scale, font, textBold, textItalic, mode) {
             val hasAnyIcon = list.any { it.icon != null }
             val iconWidth = ICON * scale
             val iconGap = ICON_GAP * scale
 
+            fun textWidth(text: String?): Float {
+                if (text == null) return 0f
+                val measuredText = if (font == Font.Minecraft) {
+                    formatPotionEffectMinecraftText(text, textBold, textItalic)
+                } else {
+                    text
+                }
+                return McFontQueue.measureWidth?.invoke(measuredText, scale) ?: 0f
+            }
+
             list.maxOf { row ->
-                val nameWidth = row.name?.let { measureWidth?.invoke(it, scale) ?: 0f } ?: 0f
-                val durationWidth = row.duration?.let { measureWidth?.invoke(it, scale) ?: 0f } ?: 0f
+                val nameWidth = textWidth(row.name)
+                val durationWidth = textWidth(row.duration)
                 when (mode) {
                     MODE_STACKED -> maxOf(if (row.icon != null) iconWidth else 0f, nameWidth, durationWidth)
                     MODE_SINGLE_LINE -> {
@@ -615,7 +636,31 @@ class PotionEffectsHud : Hud(
     @Composable
     private fun Line(text: String, scale: Float, fade: Float, color: PolyColor, modifier: PolyModifier = PolyModifier) {
         if (font == Font.Minecraft) {
-            PolyMcText(text, color, shadow = showShadow, scale = scale, modifier = modifier)
+            val formattedText = formatPotionEffectMinecraftText(text, textBold, textItalic)
+            if (!textItalic) {
+                PolyMcText(
+                    formattedText,
+                    color,
+                    shadow = showShadow,
+                    scale = scale,
+                    modifier = modifier,
+                )
+                return
+            }
+
+            val width = McFontQueue.measureTextWidth(formattedText, scale)
+            val height = McFontQueue.measureTextHeight(scale)
+
+            PolyCanvas(modifier.size(width, height)) { x, y, _, _ ->
+                val renderer = McFontQueue.renderer ?: return@PolyCanvas
+                save()
+                try {
+                    translate(x, y)
+                    renderer(canvas, formattedText, scale, 0f, color.argb, showShadow, scale)
+                } finally {
+                    restore()
+                }
+            }
         } else {
             PolyText(
                 text,
