@@ -1,6 +1,6 @@
-//? if >= 1.21.10 {
 package org.polyfrost.evergreenhud.client.hooks
 
+//? if >= 1.21.10 {
 import com.mojang.blaze3d.ProjectionType
 import com.mojang.blaze3d.pipeline.TextureTarget
 import com.mojang.blaze3d.platform.Lighting
@@ -9,15 +9,21 @@ import com.mojang.blaze3d.vertex.PoseStack
 import net.minecraft.client.Minecraft
 //? if >= 26.1 {
 import net.minecraft.client.renderer.ProjectionMatrixBuffer
-//? } else {
-/*import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
-*///? }
-import net.minecraft.client.renderer.entity.state.AvatarRenderState
-//? if >= 26.1 {
 import net.minecraft.client.renderer.state.level.CameraRenderState
 //? } else {
-/*import net.minecraft.client.renderer.state.CameraRenderState
+/*import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
+import net.minecraft.client.renderer.state.CameraRenderState
 *///? }
+import net.minecraft.client.renderer.entity.state.AvatarRenderState
+//? if >= 26.2 {
+import com.mojang.renderpearl.api.GpuFormat
+import net.minecraft.client.renderer.SubmitNodeStorage
+//?}
+//? if >= 26.3 {
+import net.minecraft.client.renderer.feature.FeatureRenderDispatcher
+import java.util.Optional
+import java.util.OptionalDouble
+//? }
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
 import org.jetbrains.skia.BackendRenderTarget
@@ -187,8 +193,10 @@ object PlayerPreviewOffscreen {
     private fun renderInto(slot: Slot, rt: TextureTarget, request: Request, player: Player, width: Int, height: Int, fit: Float) {
         val colorTexture = rt.colorTexture ?: return
         val depthTexture = rt.depthTexture ?: return
-        val colorView = rt.colorTextureView ?: return
+        //? if < 26.3 {
+        /*val colorView = rt.colorTextureView ?: return
         val depthView = rt.depthTextureView ?: return
+        *///? }
 
         val savedLights = RenderSystem.getShaderLights()
         val savedFog = RenderSystem.getShaderFog()
@@ -209,8 +217,10 @@ object PlayerPreviewOffscreen {
         *///? } else {
         /*RenderSystem.setProjectionMatrix(projection.getBuffer(width.toFloat(), height.toFloat()), ProjectionType.ORTHOGRAPHIC)
         *///? }
-        RenderSystem.outputColorTextureOverride = colorView
+        //? if < 26.3 {
+        /*RenderSystem.outputColorTextureOverride = colorView
         RenderSystem.outputDepthTextureOverride = depthView
+        *///? }
 
         //? if >= 26.1 {
         val scissor = RenderSystem.getScissorStateForRenderTypeDraws()
@@ -228,13 +238,15 @@ object PlayerPreviewOffscreen {
         modelView.identity()
         //? }
         try {
-            renderPlayer(slot, request, player, width, height, fit)
+            renderPlayer(slot, rt, request, player, width, height, fit)
         } finally {
             //? if >= 26.2 {
             RenderSystem.getModelViewStack().popMatrix()
             //? }
-            RenderSystem.outputColorTextureOverride = null
+            //? if < 26.3 {
+            /*RenderSystem.outputColorTextureOverride = null
             RenderSystem.outputDepthTextureOverride = null
+            *///? }
             RenderSystem.restoreProjectionMatrix()
             savedLights?.let { RenderSystem.setShaderLights(it) }
             savedFog?.let { RenderSystem.setShaderFog(it) }
@@ -244,7 +256,7 @@ object PlayerPreviewOffscreen {
         }
     }
 
-    private fun renderPlayer(slot: Slot, request: Request, player: Player, width: Int, height: Int, fit: Float) {
+    private fun renderPlayer(slot: Slot, rt: TextureTarget, request: Request, player: Player, width: Int, height: Int, fit: Float) {
         playerPreviewPartialTick = request.partialTick
         playerPreviewNameTag = request.nametag
         val state = try {
@@ -275,7 +287,11 @@ object PlayerPreviewOffscreen {
         pose.translate(width / 2f, height * request.verticalAnchor, 0f)
         pose.scale(size, size, -size)
         pose.translate(0f, anchor / 2f + OFFSET_Y, 0f)
-        pose.mulPose(rotation)
+        //? if >= 26.3 {
+        pose.rotate(rotation)
+        //? } else {
+        /*pose.mulPose(rotation)
+        *///? }
 
         //? if >= 26.2 {
         client.gameRenderer.lighting().setupFor(Lighting.Entry.ENTITY_IN_UI)
@@ -291,11 +307,28 @@ object PlayerPreviewOffscreen {
             *///? }
         }
 
-        //? if >= 26.2 {
-        val storage = net.minecraft.client.renderer.SubmitNodeStorage()
+        //? if >= 26.3 {
+        val colorView = rt.colorTextureView ?: return
+        val depthView = rt.depthTextureView ?: return
+        val storage = SubmitNodeStorage()
+        client.entityRenderDispatcher.submit(state, camera, 0.0, 0.0, 0.0, pose, storage)
+        client.gameRenderer.featureRenderDispatcher().prepareFrame(storage).use { frame ->
+            RenderSystem.getDevice().createCommandEncoder().createRenderPass(
+                { "evergreenhud_player_preview" },
+                colorView,
+                Optional.empty(),
+                depthView,
+                OptionalDouble.empty(),
+            ).use { pass ->
+                RenderSystem.bindDefaultUniforms(pass)
+                FeatureRenderDispatcher.renderAllFeatures(pass, frame)
+            }
+        }
+        //? } else if >= 26.2 {
+        /*val storage = SubmitNodeStorage()
         client.entityRenderDispatcher.submit(state, camera, 0.0, 0.0, 0.0, pose, storage)
         client.gameRenderer.featureRenderDispatcher().renderAllFeatures(storage)
-        //? } else {
+        *///? } else {
         /*val features = client.gameRenderer.featureRenderDispatcher
         client.entityRenderDispatcher.submit(state, camera, 0.0, 0.0, 0.0, pose, features.submitNodeStorage)
         features.renderAllFeatures()
@@ -331,9 +364,15 @@ object PlayerPreviewOffscreen {
         if (slot.target == null || slot.lastWidth != width || slot.lastHeight != height) {
             slot.invalidate()
 
-            //? if >= 26.2 {
-            val rt = TextureTarget("evergreenhud_player_preview", width, height, true, com.mojang.blaze3d.GpuFormat.RGBA8_UNORM)
-            //? } else {
+            //? if >= 26.3 {
+            val rt = TextureTarget(
+                "evergreenhud_player_preview", width, height,
+                GpuFormat.RGBA8_UNORM,
+                GpuFormat.D32_FLOAT,
+            )
+            //? } else if >= 26.2 {
+            /*val rt = TextureTarget("evergreenhud_player_preview", width, height, true, GpuFormat.RGBA8_UNORM)
+            *///? } else {
             /*val rt = TextureTarget("evergreenhud_player_preview", width, height, true)
             *///? }
             slot.target = rt

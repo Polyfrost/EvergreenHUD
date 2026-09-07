@@ -22,8 +22,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 *///? }
 public class Mixin_PlayerPreviewPresent {
 
-    //? if >= 26.2 {
+    //? if >= 26.3 {
     @Inject(
+            method = "renderFrame",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lcom/mojang/renderpearl/api/device/GpuSurface;blitFromTexture(Lcom/mojang/renderpearl/api/commands/CommandEncoder;Lcom/mojang/renderpearl/api/textures/GpuTextureView;)V"
+            )
+    )
+    private void evergreenhud$renderPlayerPreview(CallbackInfo ci) {
+        PlayerPreviewOffscreen.render();
+    }
+    //? } else if >= 26.2 {
+    /*@Inject(
             method = "renderFrame",
             at = @At(
                     value = "INVOKE",
@@ -33,7 +44,7 @@ public class Mixin_PlayerPreviewPresent {
     private void evergreenhud$renderPlayerPreview(CallbackInfo ci) {
         PlayerPreviewOffscreen.render();
     }
-    //? } else if >= 26.1 {
+    *///? } else if >= 26.1 {
     /*@Inject(method = "blitToScreen", at = @At("HEAD"))
     private void evergreenhud$renderPlayerPreview(CallbackInfo ci) {
         RenderTarget self = (RenderTarget) (Object) this;
