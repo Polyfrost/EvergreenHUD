@@ -54,7 +54,7 @@ class ResourcePackHud : Hud(
 
         private val DEFAULT_ICON = ResourceLocation.withDefaultNamespace("textures/misc/unknown_pack.png")
 
-        private val iconPaint = Paint()
+        private val iconPaint by lazy { Paint() }
         private val iconCache = HashMap<String, Image>()
         private val texturedCache = HashMap<String, Boolean>()
         private var cachedIds: List<String>? = null

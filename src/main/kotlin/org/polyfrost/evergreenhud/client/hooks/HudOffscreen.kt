@@ -40,7 +40,7 @@ object HudOffscreen {
     private val LOGGER = LoggerFactory.getLogger("EvergreenHUD/Hud Offscreen")
 
     private val client: Minecraft get() = mc
-    private val blitPaint = Paint()
+    private val blitPaint by lazy { Paint() }
 
     private var target: TextureTarget? = null
     private var brt: BackendRenderTarget? = null
@@ -60,7 +60,7 @@ object HudOffscreen {
     private var loggedFirstFrame = false
     private var loggedNotReady = false
 
-    val isUsable: Boolean get() = !failed
+    val isUsable: Boolean get() = SkiaOffscreen.isAvailable && !failed
 
     fun initialize() {
         eventHandler { _: ResizeEvent -> invalidate() }
@@ -106,7 +106,7 @@ object HudOffscreen {
         val requests = if (pending.isEmpty()) emptyList() else ArrayList(pending)
         pending.clear()
         hasContent = false
-        if (requests.isEmpty() || failed) return
+        if (requests.isEmpty() || !isUsable) return
         if (!SkiaCtx.isReady) {
             if (!loggedNotReady) {
                 loggedNotReady = true

@@ -34,7 +34,7 @@ private const val BAR_WIDTH = 13f
 private val BAR_BACKGROUND = PolyColor(0xFF000000.toInt())
 private val COOLDOWN_OVERLAY = PolyColor(0x7FFFFFFF)
 
-private val itemPaint = Paint()
+private val itemPaint by lazy { Paint() }
 
 private val requestedIcons: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap())
 

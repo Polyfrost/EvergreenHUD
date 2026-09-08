@@ -110,7 +110,7 @@ class PotionEffectsHud : Hud(
                 .map { it.name }
         }
 
-        private val iconPaint = Paint()
+        private val iconPaint by lazy { Paint() }
         private val iconCache = HashMap<ResourceLocation, Image?>()
         private var cachedPackIds: List<String>? = null
 

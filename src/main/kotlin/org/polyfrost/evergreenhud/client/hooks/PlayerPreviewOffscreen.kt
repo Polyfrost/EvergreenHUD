@@ -46,7 +46,7 @@ object PlayerPreviewOffscreen {
     private val LOGGER = LoggerFactory.getLogger("EvergreenHUD/Player Preview")
 
     private val client: Minecraft get() = mc
-    private val blitPaint = Paint()
+    private val blitPaint by lazy { Paint() }
 
     //? if >= 26.1 {
     private val projection by lazy { ProjectionMatrixBuffer("evergreenhud_player_preview") }
@@ -115,7 +115,7 @@ object PlayerPreviewOffscreen {
         val requests = if (pending.isEmpty()) emptyList() else pending.entries.map { it.key to it.value }
         pending.clear()
         for (slot in slots.values) slot.hasContent = false
-        if (failed || !SkiaCtx.isReady) return
+        if (failed || !SkiaOffscreen.isAvailable || !SkiaCtx.isReady) return
 
         val player = client.player ?: return
         val now = System.nanoTime()

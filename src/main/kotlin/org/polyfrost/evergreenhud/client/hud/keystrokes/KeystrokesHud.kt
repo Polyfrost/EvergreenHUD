@@ -78,10 +78,12 @@ private const val DOWN = "▼"
 private const val LEFT = "◀"
 private const val RIGHT = "▶"
 
-private val KEY_PAINT = Paint().apply { isAntiAlias = true }
-private val LINE_PAINT = Paint().apply {
-    isAntiAlias = false
-    mode = PaintMode.STROKE
+private val KEY_PAINT by lazy { Paint().apply { isAntiAlias = true } }
+private val LINE_PAINT by lazy {
+    Paint().apply {
+        isAntiAlias = false
+        mode = PaintMode.STROKE
+    }
 }
 
 private fun snapToPixels(canvas: Canvas, x: Float, y: Float, w: Float, h: Float): Rect {

@@ -84,7 +84,7 @@ class PlayerHeadHud : Hud(
     }
 }
 
-private val HEAD_PAINT = Paint()
+private val HEAD_PAINT by lazy { Paint() }
 
 private object PlayerHeadTexture {
     private val FALLBACK_UUID = UUID(0L, 0L)

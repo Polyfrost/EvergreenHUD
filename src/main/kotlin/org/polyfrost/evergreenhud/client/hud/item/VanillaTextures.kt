@@ -43,7 +43,7 @@ private const val CONTAINER_TEXTURE_SIZE = 256f
 private const val GENERIC_54_GUI_HEIGHT = 222f
 private const val SHULKER_BOX_GUI_HEIGHT = 166f
 
-private val paint = Paint()
+private val paint by lazy { Paint() }
 
 class VanillaTexture internal constructor(
     private val image: Image,

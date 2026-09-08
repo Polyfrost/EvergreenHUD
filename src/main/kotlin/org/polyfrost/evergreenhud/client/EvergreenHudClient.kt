@@ -10,6 +10,7 @@ import net.minecraft.world.entity.Entity
 import org.polyfrost.evergreenhud.client.config.GlobalConfig
 import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
 import org.polyfrost.evergreenhud.client.hooks.HudOffscreen
+import org.polyfrost.evergreenhud.client.hooks.SkiaOffscreen
 import org.polyfrost.evergreenhud.client.hud.*
 import org.polyfrost.evergreenhud.client.hud.item.VanillaTextures
 import org.polyfrost.evergreenhud.client.hud.battery.BatteryHud
@@ -40,6 +41,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 object EvergreenHudClient : ClientModInitializer {
     override fun onInitializeClient() {
         FrameTimeHelper.initialize()
+        SkiaOffscreen.initialize()
         HudOffscreen.initialize()
         VanillaTextures.initialize()
         EnderChestTracker.initialize()

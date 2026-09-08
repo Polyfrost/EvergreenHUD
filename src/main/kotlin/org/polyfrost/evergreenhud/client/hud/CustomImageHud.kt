@@ -70,8 +70,8 @@ class CustomImageHud : Hud(
     @Transient
     private var cachedStamp = 0L
 
-    @Transient
-    private val paint = Paint()
+    @delegate:Transient
+    private val paint by lazy { Paint() }
 
     init {
         showBackground = false
