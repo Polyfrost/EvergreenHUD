@@ -28,6 +28,7 @@ import org.polyfrost.compose.mc.McFontQueue.measureWidth
 import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
+import org.polyfrost.evergreenhud.client.utils.isGappleReEatWindow
 import org.polyfrost.oneconfig.api.config.v1.Node
 import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
@@ -220,6 +221,12 @@ class PotionEffectsHud : Hud(
     )
     var hideVanillaEffects = false
 
+    @Switch(
+        title = "Golden Apple Re-eat Cue",
+        description = "Makes Regeneration flash when there's only 1.5 seconds left, allowing you to gap without losing any regeneration. useful in UHC.",
+    )
+    var gapCue = false
+
     private var rows = mutableStateOf<List<Row>>(emptyList())
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
@@ -254,6 +261,8 @@ class PotionEffectsHud : Hud(
     }
 
     override fun canMergeBackground(): Boolean = true
+
+    override fun updateFrequency(): Long = 50L
 
     override fun update(): Boolean {
         syncIcons(mc.resourcePackRepository.selectedPacks.map { it.id })
@@ -376,6 +385,9 @@ class PotionEffectsHud : Hud(
             infinite -> INFINITE
             else -> formatDuration(ticks)
         }
+        val reEatColor = if (gapCue && isGappleReEatWindow(
+                id == ResourceLocation.withDefaultNamespace("regeneration"), ticks, infinite
+            )) PolyColor(0xFF55FF55.toInt()) else null
         return Row(
             icon = if (values.iconEnabled && id != null) iconFor(id) else null,
             name = title,
@@ -383,9 +395,9 @@ class PotionEffectsHud : Hud(
             fade = fade(ticks, infinite, values.blinkThreshold),
             iconBlink = values.iconBlink,
             nameBlink = values.nameBlink,
-            nameColor = values.nameColor,
+            nameColor = reEatColor ?: values.nameColor,
             durationBlink = values.durationBlink,
-            durationColor = values.durationColor,
+            durationColor = reEatColor ?: values.durationColor,
             dimmed = dimmed,
         )
     }
