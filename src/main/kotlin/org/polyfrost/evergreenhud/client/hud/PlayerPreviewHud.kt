@@ -65,8 +65,6 @@ class PlayerPreviewHud : Hud(
 
     override fun minimumSize(): Pair<Float, Float> = MIN_WIDTH to MIN_HEIGHT
 
-    override val alwaysRedraw: Boolean get() = true
-
     override fun setup() {
         super.setup()
         staticWidth = true
@@ -86,6 +84,24 @@ class PlayerPreviewHud : Hud(
     override fun update(): Boolean {
         if (!isReal) return false
         return queue(effectiveScale)
+    }
+
+    override fun contentHash(): Long = poseSignature().hashCode().toLong()
+
+    private fun poseSignature(): List<Any> {
+        val player = mc.player ?: return emptyList()
+        val partialTick = smuggledHudPartialTick
+        return listOf(
+            staticW, staticH, modelScale, verticalAnchor, rotation, pitch, paperDoll, nametag,
+            effectiveScale,
+            player.tickCount,
+            Mth.rotLerp(partialTick, player.yBodyRotO, player.yBodyRot),
+            Mth.rotLerp(partialTick, player.yHeadRotO, player.yHeadRot),
+            Mth.lerp(partialTick, player.xRotO, player.xRot),
+            player.walkAnimation.position(partialTick),
+            player.walkAnimation.speed(partialTick),
+            player.getAttackAnim(partialTick),
+        )
     }
 
     private fun queue(scale: Float): Boolean {
