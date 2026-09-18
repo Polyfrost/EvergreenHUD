@@ -105,10 +105,6 @@ class ItemCounterHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
-    // the icon comes from the offscreen target, which is only filled while the HUD keeps asking for it
-    override val alwaysRedraw: Boolean
-        get() = super.alwaysRedraw || (isReal && showIcon && display.value != null)
-
     @Button(title = "Use Held Item", description = "Count whatever you are currently holding.")
     fun useHeldItem() {
         val held = mc.player?.mainHandItem?.takeIf { !it.isEmpty } ?: return
@@ -239,7 +235,6 @@ class ItemCounterHud : Hud(
             PolyRow(gap = if (showIcon) TEXT_GAP * scale else 0f) {
                 if (showIcon) {
                     ItemIcon(
-                        this@ItemCounterHud,
                         current.stack,
                         size = iconSize,
                         modifier = PolyModifier.align(PolyAlign.Center),

@@ -16,7 +16,6 @@ import net.minecraft.client.renderer.state.gui.GuiRenderState
 //? } else if >= 1.21.8 {
 /*import net.minecraft.client.gui.render.state.GuiRenderState
 *///? }
-import net.minecraft.world.item.ItemStack
 import org.jetbrains.skia.BackendRenderTarget
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.ContentChangeMode
@@ -72,43 +71,13 @@ object HudOffscreen {
         pending.add(draw)
     }
 
-    fun submitItem(
-        stack: ItemStack,
-        guiX: Float,
-        guiY: Float,
-        scale: Float,
-        decorations: Boolean = false,
-        countOverride: String? = null,
-    ) = submit { graphics ->
-        transformed(graphics, guiX, guiY, scale) {
-            //? if >= 26 {
-            graphics.item(stack, 0, 0)
-            if (decorations) {
-                if (countOverride != null) {
-                    graphics.itemDecorations(client.font, stack, 0, 0, countOverride)
-                } else {
-                    graphics.itemDecorations(client.font, stack, 0, 0)
-                }
-            }
-            //? } else {
-            /*graphics.renderItem(stack, 0, 0)
-            if (decorations) {
-                if (countOverride != null) {
-                    graphics.renderItemDecorations(client.font, stack, 0, 0, countOverride)
-                } else {
-                    graphics.renderItemDecorations(client.font, stack, 0, 0)
-                }
-            }
-            *///? }
-        }
-    }
-
     @JvmStatic
     fun render() {
-        val requests = if (pending.isEmpty()) emptyList() else ArrayList(pending)
+        if (pending.isEmpty()) return
+        val requests = ArrayList(pending)
         pending.clear()
         hasContent = false
-        if (requests.isEmpty() || failed) return
+        if (failed) return
         if (!SkiaCtx.isReady) {
             if (!loggedNotReady) {
                 loggedNotReady = true
