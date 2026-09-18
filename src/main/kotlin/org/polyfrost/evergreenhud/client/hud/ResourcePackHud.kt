@@ -82,9 +82,23 @@ class ResourcePackHud : Hud(
             return component.siblings.any { mentionsKey(it, key) }
         }
 
+        private fun openResources(pack: Pack) =
+            //? if >= 26.3 {
+            pack.open().toList()
+            //? } else {
+            /*listOf(pack.open())
+            *///? }
+
+        private fun openMetadata(pack: Pack) =
+            //? if >= 26.3 {
+            pack.openMetadata()
+            //? } else {
+            /*pack.open()
+            *///? }
+
         fun hasTextures(pack: Pack): Boolean = texturedCache.getOrPut(pack.id) {
             try {
-                pack.open().use { resources ->
+                for (layer in openResources(pack)) layer.use { resources ->
                     for (namespace in resources.getNamespaces(PackType.CLIENT_RESOURCES)) {
                         try {
                             resources.listResources(PackType.CLIENT_RESOURCES, namespace, "textures") { _, _ -> throw FoundTexture }
@@ -124,7 +138,7 @@ class ResourcePackHud : Hud(
         private fun loadIcon(id: String): Image? {
             val pack = mc.resourcePackRepository.getPack(id) ?: return null
             return try {
-                pack.open().use { resources ->
+                openMetadata(pack).use { resources ->
                     val supplier = resources.getRootResource("pack.png") ?: return null
                     supplier.get().use { ImageLoader.fromBytes(it.readBytes()) }
                 }

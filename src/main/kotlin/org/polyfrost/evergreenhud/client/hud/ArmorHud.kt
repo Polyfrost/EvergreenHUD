@@ -3,20 +3,31 @@ package org.polyfrost.evergreenhud.client.hud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.world.entity.EquipmentSlot
+import net.minecraft.world.entity.HumanoidArm
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import org.polyfrost.compose.composables.PolyBox
+import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyColumn
 import org.polyfrost.compose.composables.PolyMcText
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.PolyRow
 import org.polyfrost.compose.composables.PolyText
+import org.polyfrost.compose.composables.absoluteAt
 import org.polyfrost.compose.composables.align
 import org.polyfrost.compose.composables.padding
+import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
+import org.polyfrost.compose.mc.McFontQueue
+import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.hud.item.HOTBAR_ITEM_INSET
+import org.polyfrost.evergreenhud.client.hud.item.HOTBAR_SLOT
+import org.polyfrost.evergreenhud.client.hud.item.HOTBAR_THICKNESS
 import org.polyfrost.evergreenhud.client.hud.item.ITEM_SIZE
 import org.polyfrost.evergreenhud.client.hud.item.ItemIcon
+import org.polyfrost.evergreenhud.client.hud.item.VanillaTextures
+import org.polyfrost.evergreenhud.client.hud.item.hotbarStripLength
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
@@ -34,6 +45,11 @@ private const val TEXT_GAP = 2f
 private const val FONT_SIZE = 8f
 
 private const val HORIZONTAL = 0
+
+private const val CUSTOM = 0
+private const val VANILLA = 1
+
+private val HOTBAR_WIDTH = hotbarStripLength(9)
 
 private const val DURABILITY = 1
 private const val DURABILITY_PERCENT = 2
@@ -57,6 +73,13 @@ class ArmorHud : Hud(
         private val exampleMainHand by lazy { ItemStack(Items.DIAMOND_SWORD) }
         private val exampleOffhand by lazy { ItemStack(Items.SHIELD) }
     }
+
+    @RadioButton(
+        title = "Style",
+        description = "Vanilla draws the items in a hotbar, taken from your resource pack.",
+        options = ["Custom", "Vanilla"],
+    )
+    var style = CUSTOM
 
     @Switch(title = "Helmet")
     var showHelmet = true
@@ -112,7 +135,32 @@ class ArmorHud : Hud(
 
     private var rev = mutableStateOf(0)
 
-    override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
+    override fun defaultPosition(): Pair<Float, Float> {
+        val (width, height) = defaultSize()
+        val hotbarLeft = (HudManager.guiScreenWidth - HOTBAR_WIDTH) / 2f
+        val x = if (mainHandOnRight()) hotbarLeft + HOTBAR_WIDTH else hotbarLeft - width
+        return x to HudManager.guiScreenHeight - height
+    }
+
+    private fun mainHandOnRight(): Boolean = mc.options?.mainHand()?.get() != HumanoidArm.LEFT
+
+    private fun defaultSize(): Pair<Float, Float> {
+        val scale = textScale.coerceAtLeast(0.01f)
+        val slots = enabledSlots()
+        val (along, across) = if (style == VANILLA) {
+            hotbarStripLength(slots) to HOTBAR_THICKNESS
+        } else {
+            (slots * ITEM_SIZE + (slots - 1).coerceAtLeast(0) * padding) to ITEM_SIZE
+        }
+        val (width, height) = if (direction == HORIZONTAL) along to across else across to along
+        return (width * scale + padLeft + padRight) * effectiveScale to
+            (height * scale + padTop + padBottom) * effectiveScale
+    }
+
+    private fun enabledSlots(): Int =
+        listOf(showHelmet, showChestplate, showLeggings, showBoots, showMainHand, showOffhand).count { it }
+
+    override fun hasBackground(): Boolean = style != VANILLA
 
     override fun canMergeBackground(): Boolean = true
 
@@ -123,7 +171,9 @@ class ArmorHud : Hud(
         if (isReal) {
             hideIf("fullDurabilityColor") { !dynamicColor }
             hideIf("emptyDurabilityColor") { !dynamicColor }
-            for (option in listOf("padding", "direction", "textPosition", "showDecorations")) {
+            // the hotbar spaces its own slots
+            hideIf("padding") { style == VANILLA }
+            for (option in listOf("style", "padding", "direction", "textPosition", "showDecorations")) {
                 addCallback(option) { rev.value++ }
             }
         }
@@ -228,6 +278,10 @@ class ArmorHud : Hud(
         val list = entries.value
         if (list.isEmpty()) return
         val scale = textScale.coerceAtLeast(0.01f)
+        if (style == VANILLA) {
+            VanillaContent(list, scale)
+            return
+        }
         val modifier = hudBackground().padding(padLeft, padTop, padRight, padBottom)
 
         PolyBox(modifier = modifier) {
@@ -246,6 +300,96 @@ class ArmorHud : Hud(
                 }
             }
         }
+    }
+
+    /**
+     * The items laid out as a vanilla hotbar. Extra info would break the strip in half if it sat
+     * between two slots, so it goes outside it instead: above or below a hotbar running across, and
+     * beside one running down.
+     */
+    @Composable
+    private fun VanillaContent(list: List<Entry>, scale: Float) {
+        val horizontal = direction == HORIZONTAL
+        val length = hotbarStripLength(list.size) * scale
+        val thickness = HOTBAR_THICKNESS * scale
+        val stripWidth = if (horizontal) length else thickness
+        val stripHeight = if (horizontal) thickness else length
+
+        val labels = list.map { if (it.text.isEmpty()) 0f else textWidth(it.text, scale) }
+        val labelled = labels.any { it > 0f }
+        val labelWidth = labels.max()
+        val labelHeight = if (labelled) textHeight(scale) else 0f
+        val textFirst = textPosition == LEFT || textPosition == ABOVE
+        val gap = if (labelled) TEXT_GAP * scale else 0f
+
+        fun slotCenter(index: Int) = (HOTBAR_ITEM_INSET + ITEM_SIZE / 2f + index * HOTBAR_SLOT) * scale
+
+        var before = 0f
+        var after = 0f
+        if (horizontal) {
+            for ((index, label) in labels.withIndex()) {
+                if (label <= 0f) continue
+                before = maxOf(before, label / 2f - slotCenter(index))
+                after = maxOf(after, slotCenter(index) + label / 2f - stripWidth)
+            }
+        }
+
+        val stripX = when {
+            horizontal -> before
+            textFirst -> labelWidth + gap
+            else -> 0f
+        }
+        val stripY = if (horizontal && textFirst) labelHeight + gap else 0f
+        val width = if (horizontal) before + stripWidth + after else stripWidth + gap + labelWidth
+        val height = if (horizontal) stripHeight + gap + labelHeight else stripHeight
+
+        PolyBox(modifier = PolyModifier.size(width, height)) {
+            PolyCanvas(PolyModifier.absoluteAt(stripX, stripY).size(stripWidth, stripHeight)) { x, y, _, _ ->
+                VanillaTextures.hotbar()?.drawHotbar(this, x, y, list.size, !horizontal, scale)
+            }
+
+            for ((index, entry) in list.withIndex()) {
+                val along = (HOTBAR_ITEM_INSET + index * HOTBAR_SLOT) * scale
+                val across = HOTBAR_ITEM_INSET * scale
+                ItemIcon(
+                    this@ArmorHud,
+                    entry.stack,
+                    size = ITEM_SIZE * scale,
+                    decorations = showDecorations,
+                    countOverride = entry.count,
+                    modifier = PolyModifier.absoluteAt(
+                        stripX + if (horizontal) along else across,
+                        stripY + if (horizontal) across else along,
+                    ),
+                )
+
+                val label = labels[index]
+                if (label <= 0f) continue
+                val infoX = when {
+                    horizontal -> stripX + slotCenter(index) - label / 2f
+                    textFirst -> labelWidth - label
+                    else -> stripX + stripWidth + gap
+                }
+                val infoY = when {
+                    !horizontal -> stripY + slotCenter(index) - labelHeight / 2f
+                    textFirst -> 0f
+                    else -> stripY + stripHeight + gap
+                }
+                Info(entry, scale, PolyModifier.absoluteAt(infoX, infoY))
+            }
+        }
+    }
+
+    private fun textWidth(text: String, scale: Float): Float = if (font == Font.Minecraft) {
+        McFontQueue.measureTextWidth(text, scale)
+    } else {
+        FontManager.getFont(FONT_SIZE * scale, getPoppinsFontName()).measureTextWidth(text)
+    }
+
+    private fun textHeight(scale: Float): Float = if (font == Font.Minecraft) {
+        McFontQueue.measureTextHeight(scale)
+    } else {
+        FontManager.getFont(FONT_SIZE * scale, getPoppinsFontName()).metrics.let { it.descent - it.ascent }
     }
 
     @Composable
@@ -276,9 +420,8 @@ class ArmorHud : Hud(
     }
 
     @Composable
-    private fun Info(entry: Entry, scale: Float) {
+    private fun Info(entry: Entry, scale: Float, modifier: PolyModifier = PolyModifier.align(PolyAlign.Center)) {
         val color = PolyColor(entry.textColor, textChroma, textChromaSpeed)
-        val modifier = PolyModifier.align(PolyAlign.Center)
         if (font == Font.Minecraft) {
             PolyMcText(entry.text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
         } else {

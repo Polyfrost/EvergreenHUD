@@ -35,6 +35,8 @@ import org.slf4j.LoggerFactory
 //import org.joml.Matrix4f
 //? if >= 1.21.4 && < 1.21.8
 //import com.mojang.blaze3d.ProjectionType
+//? if >= 26.2
+import com.mojang.renderpearl.api.GpuFormat
 
 object HudOffscreen {
     private val LOGGER = LoggerFactory.getLogger("EvergreenHUD/Hud Offscreen")
@@ -208,9 +210,15 @@ object HudOffscreen {
     }
 
     private fun createTarget(width: Int, height: Int): TextureTarget {
-        //? if >= 26.2 {
-        return TextureTarget(null, width, height, true, com.mojang.blaze3d.GpuFormat.RGBA8_UNORM)
-        //? } else if >= 1.21.5 {
+        //? if >= 26.3 {
+        return TextureTarget(
+            null, width, height,
+            GpuFormat.RGBA8_UNORM,
+            GpuFormat.D32_FLOAT,
+        )
+        //? } else if >= 26.2 {
+        /*return TextureTarget(null, width, height, true, GpuFormat.RGBA8_UNORM)
+        *///? } else if >= 1.21.5 {
         /*return TextureTarget(null, width, height, true)
         *///? } else if >= 1.21.4 {
         /*return TextureTarget(width, height, true).also { it.setClearColor(0f, 0f, 0f, 0f) }

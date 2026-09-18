@@ -11,6 +11,7 @@ import org.polyfrost.evergreenhud.client.config.GlobalConfig
 import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
 import org.polyfrost.evergreenhud.client.hooks.HudOffscreen
 import org.polyfrost.evergreenhud.client.hud.*
+import org.polyfrost.evergreenhud.client.hud.item.VanillaTextures
 import org.polyfrost.evergreenhud.client.hud.battery.BatteryHud
 import org.polyfrost.evergreenhud.client.utils.battery.Battery
 import org.polyfrost.evergreenhud.client.hud.clock.ClockHud
@@ -40,6 +41,7 @@ object EvergreenHudClient : ClientModInitializer {
     override fun onInitializeClient() {
         FrameTimeHelper.initialize()
         HudOffscreen.initialize()
+        VanillaTextures.initialize()
         EnderChestTracker.initialize()
         SaturationTracker.initialize()
         GlobalConfig.preload()

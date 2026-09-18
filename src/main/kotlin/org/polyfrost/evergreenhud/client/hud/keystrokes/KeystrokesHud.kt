@@ -5,6 +5,11 @@ import com.mojang.blaze3d.platform.InputConstants
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.client.KeyMapping
+import org.jetbrains.skia.Canvas
+import org.jetbrains.skia.Paint
+import org.jetbrains.skia.PaintMode
+import org.jetbrains.skia.RRect
+import org.jetbrains.skia.Rect
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyColumn
@@ -13,7 +18,6 @@ import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.PolyRow
 import org.polyfrost.compose.composables.PolyText
 import org.polyfrost.compose.composables.align
-import org.polyfrost.compose.composables.background
 import org.polyfrost.compose.composables.margin
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
@@ -43,6 +47,7 @@ import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindHelper
 import org.polyfrost.oneconfig.api.ui.v1.keybind.OneConfigKeybind
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.experimental.or
+import kotlin.math.roundToInt
 
 private const val KEY = 16f
 private const val CPS_SCALE = 0.5f
@@ -72,6 +77,24 @@ private const val UP = "▲"
 private const val DOWN = "▼"
 private const val LEFT = "◀"
 private const val RIGHT = "▶"
+
+private val KEY_PAINT = Paint().apply { isAntiAlias = true }
+private val LINE_PAINT = Paint().apply {
+    isAntiAlias = false
+    mode = PaintMode.STROKE
+}
+
+private fun snapToPixels(canvas: Canvas, x: Float, y: Float, w: Float, h: Float): Rect {
+    val m = canvas.localToDeviceAsMatrix33.mat
+    val scaleX = m[0]
+    val scaleY = m[4]
+    if (m[1] != 0f || m[3] != 0f || scaleX == 0f || scaleY == 0f) return Rect.makeXYWH(x, y, w, h)
+    val transX = m[2]
+    val transY = m[5]
+    fun snapX(v: Float) = ((v * scaleX + transX).roundToInt() - transX) / scaleX
+    fun snapY(v: Float) = ((v * scaleY + transY).roundToInt() - transY) / scaleY
+    return Rect.makeLTRB(snapX(x), snapY(y), snapX(x + w), snapY(y + h))
+}
 
 private val ARROW_CODES = intArrayOf(InputConstants.KEY_UP, InputConstants.KEY_DOWN, InputConstants.KEY_LEFT, InputConstants.KEY_RIGHT)
 
@@ -409,9 +432,25 @@ class KeystrokesHud : Hud(
     private fun keyBg(progress: Float): PolyColor = blend(unpressedBg, pressedBg, progress)
 
     private fun keyModifier(progress: Float, w: Float, h: Float, align: PolyAlign? = null): PolyModifier {
-        var mod = PolyModifier.size(w, h).background(keyBg(progress), keyRadius)
+        var mod = PolyModifier.size(w, h)
         if (align != null) mod = mod.align(align)
         return mod
+    }
+
+    @Composable
+    private fun KeyBackground(progress: Float, w: Float, h: Float) {
+        val color = keyBg(progress)
+        val radius = keyRadius
+        if (color.alpha == 0) return
+        PolyCanvas(PolyModifier.size(w, h)) { x, y, cw, ch ->
+            KEY_PAINT.color = color.argb
+            val rect = snapToPixels(canvas, x, y, cw, ch)
+            if (radius > 0f) {
+                canvas.drawRRect(RRect.makeLTRB(rect.left, rect.top, rect.right, rect.bottom, radius), KEY_PAINT)
+            } else {
+                canvas.drawRect(rect, KEY_PAINT)
+            }
+        }
     }
 
     @Composable
@@ -427,6 +466,7 @@ class KeystrokesHud : Hud(
     private fun Key(label: String, progress: Float, w: Float, h: Float, align: PolyAlign? = null, sub: String? = null) {
         val fg = keyFg(progress)
         PolyBox(modifier = keyModifier(progress, w, h, align)) {
+            KeyBackground(progress, w, h)
             val subScale = textScale * CPS_SCALE
             if (font == Font.Minecraft) {
                 val lineH = McFontQueue.measureTextHeight(textScale)
@@ -474,16 +514,20 @@ class KeystrokesHud : Hud(
     private fun SpaceKey(progress: Float, w: Float, h: Float) {
         val fg = keyFg(progress)
         PolyBox(modifier = keyModifier(progress, w, h)) {
+            KeyBackground(progress, w, h)
             PolyCanvas(PolyModifier.size(w, h)) { x, y, cw, ch ->
                 val s = textScale
                 val half = spaceLineW * s / 2f
                 val thickness = spaceLineH * s
                 val cx = x + cw / 2f - 0.5f * s
                 val cy = y + ch / 2f - 0.5f * s
+                LINE_PAINT.strokeWidth = thickness
                 if (showShadow && font == Font.Minecraft) {
-                    line(cx - half + s, cy + s, cx + half + s, cy + s, fg.darken(0.75f), thickness)
+                    LINE_PAINT.color = fg.darken(0.75f).argb
+                    canvas.drawLine(cx - half + s, cy + s, cx + half + s, cy + s, LINE_PAINT)
                 }
-                line(cx - half, cy, cx + half, cy, fg, thickness)
+                LINE_PAINT.color = fg.argb
+                canvas.drawLine(cx - half, cy, cx + half, cy, LINE_PAINT)
             }
         }
     }
