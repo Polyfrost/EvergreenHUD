@@ -150,7 +150,7 @@ object VanillaTextures {
         if (id in missing) return null
         val image = try {
             mc.resourceManager.getResource(id).orElse(null)
-                ?.open()?.use { ImageLoader.fromBytes(it.readBytes()) }
+                ?.open()?.use { ImageLoader.fromBytes(it.readAllBytes()) }
         } catch (e: Exception) {
             LOGGER.warn("Failed to load the vanilla texture {}", id, e)
             null

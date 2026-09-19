@@ -125,7 +125,7 @@ class PotionEffectsHud : Hud(
             val path = ResourceLocation.fromNamespaceAndPath(id.namespace, "textures/mob_effect/${id.path}.png")
             val icon = try {
                 mc.resourceManager.getResource(path).orElse(null)
-                    ?.open()?.use { ImageLoader.fromBytes(it.readBytes()) }
+                    ?.open()?.use { ImageLoader.fromBytes(it.readAllBytes()) }
             } catch (e: Exception) {
                 LOGGER.warn("Failed to load the icon for effect {}", id, e)
                 null

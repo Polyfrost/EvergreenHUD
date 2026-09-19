@@ -127,7 +127,7 @@ class ResourcePackHud : Hud(
             defaultIconLoaded = true
             defaultIcon = try {
                 mc.resourceManager.getResource(DEFAULT_ICON).orElse(null)
-                    ?.open()?.use { ImageLoader.fromBytes(it.readBytes()) }
+                    ?.open()?.use { ImageLoader.fromBytes(it.readAllBytes()) }
             } catch (e: Exception) {
                 LOGGER.warn("Failed to load the fallback pack icon", e)
                 null
@@ -140,7 +140,7 @@ class ResourcePackHud : Hud(
             return try {
                 openMetadata(pack).use { resources ->
                     val supplier = resources.getRootResource("pack.png") ?: return null
-                    supplier.get().use { ImageLoader.fromBytes(it.readBytes()) }
+                    supplier.get().use { ImageLoader.fromBytes(it.readAllBytes()) }
                 }
             } catch (e: Exception) {
                 LOGGER.warn("Failed to load icon from pack {}", id, e)
