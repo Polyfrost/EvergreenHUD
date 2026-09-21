@@ -164,9 +164,6 @@ class ArmorHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
-    override val alwaysRedraw: Boolean
-        get() = super.alwaysRedraw || (isReal && entries.value.isNotEmpty())
-
     override fun setup() {
         if (isReal) {
             hideIf("fullDurabilityColor") { !dynamicColor }
@@ -352,7 +349,6 @@ class ArmorHud : Hud(
                 val along = (HOTBAR_ITEM_INSET + index * HOTBAR_SLOT) * scale
                 val across = HOTBAR_ITEM_INSET * scale
                 ItemIcon(
-                    this@ArmorHud,
                     entry.stack,
                     size = ITEM_SIZE * scale,
                     decorations = showDecorations,
@@ -402,7 +398,6 @@ class ArmorHud : Hud(
         val body: @Composable () -> Unit = {
             if (textFirst && entry.text.isNotEmpty()) Info(entry, scale)
             ItemIcon(
-                this@ArmorHud,
                 entry.stack,
                 size = ITEM_SIZE * scale,
                 decorations = showDecorations,

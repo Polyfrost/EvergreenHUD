@@ -103,9 +103,6 @@ class ItemTrackerHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
-    override val alwaysRedraw: Boolean
-        get() = super.alwaysRedraw || (isReal && showIcon && entries.value.isNotEmpty())
-
     override fun setup() {
         if (!isReal) return
         eventHandler { _: TickEvent.End -> track() }
@@ -238,7 +235,6 @@ class ItemTrackerHud : Hud(
             if (textPosition != RIGHT) Text(entry, scale)
             if (showIcon) {
                 ItemIcon(
-                    this@ItemTrackerHud,
                     entry.stack,
                     size = ITEM_SIZE * scale,
                     decorations = false,

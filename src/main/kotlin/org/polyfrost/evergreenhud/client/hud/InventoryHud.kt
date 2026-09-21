@@ -169,9 +169,6 @@ class InventoryHud : Hud(
 
     override fun minimumSize(): Pair<Float, Float> = MIN_WIDTH to MIN_HEIGHT
 
-    override val alwaysRedraw: Boolean
-        get() = super.alwaysRedraw || (isReal && grid.value?.items?.any { !it.isEmpty } == true)
-
     override fun setup() {
         super.setup()
         staticWidth = true
@@ -331,6 +328,7 @@ class InventoryHud : Hud(
                     if (item.isEmpty) continue
                     slots.add(
                         ItemGridSlot(
+                            row * COLS + col,
                             originX + (EDGE + col * SLOT) * content,
                             originY + (top + row * SLOT) * content,
                             item,
@@ -339,7 +337,7 @@ class InventoryHud : Hud(
                 }
             }
 
-            ItemGrid(this@InventoryHud, slots, boxW, boxH, size = ITEM_SIZE * content)
+            ItemGrid(slots, boxW, boxH, size = ITEM_SIZE * content)
         }
     }
 
