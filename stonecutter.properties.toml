@@ -1,7 +1,7 @@
 mod.id = "evergreenhud"
 mod.name = "EvergreenHUD"
 mod.group = "org.polyfrost"
-mod.version = "3.9.1"
+mod.version = "3.9.2"
 
 deps.fabric_loader = "0.19.3"
 deps.oneconfig = "1.2.2"
