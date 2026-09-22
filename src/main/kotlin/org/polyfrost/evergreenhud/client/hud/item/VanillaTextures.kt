@@ -10,6 +10,7 @@ import org.jetbrains.skia.Rect
 import org.jetbrains.skia.SamplingMode
 import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.RenderContext
+import org.polyfrost.evergreenhud.client.utils.snapToPixels
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.ResourceFinishedLoading
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
@@ -66,7 +67,7 @@ class VanillaTexture internal constructor(
         ctx.canvas.drawImageRect(
             image,
             Rect.makeXYWH(srcX * texelX, srcY * texelY, srcW * texelX, srcH * texelY),
-            Rect.makeXYWH(x, y, srcW * scale, srcH * scale),
+            snapToPixels(ctx.canvas, x, y, srcW * scale, srcH * scale),
             SamplingMode.DEFAULT,
             paint,
             true,
