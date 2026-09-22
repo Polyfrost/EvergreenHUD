@@ -5,11 +5,9 @@ import com.mojang.blaze3d.platform.InputConstants
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.client.KeyMapping
-import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Paint
 import org.jetbrains.skia.PaintMode
 import org.jetbrains.skia.RRect
-import org.jetbrains.skia.Rect
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyColumn
@@ -27,6 +25,7 @@ import org.polyfrost.evergreenhud.client.utils.copy
 import org.polyfrost.evergreenhud.client.utils.fastRemoveIfReversed
 import org.polyfrost.evergreenhud.client.utils.matchesKeyCode
 import org.polyfrost.evergreenhud.client.utils.matchesMouseButton
+import org.polyfrost.evergreenhud.client.utils.snapToPixels
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
@@ -47,7 +46,6 @@ import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindHelper
 import org.polyfrost.oneconfig.api.ui.v1.keybind.OneConfigKeybind
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.experimental.or
-import kotlin.math.roundToInt
 
 private const val KEY = 16f
 private const val CPS_SCALE = 0.5f
@@ -82,18 +80,6 @@ private val KEY_PAINT = Paint().apply { isAntiAlias = true }
 private val LINE_PAINT = Paint().apply {
     isAntiAlias = false
     mode = PaintMode.STROKE
-}
-
-private fun snapToPixels(canvas: Canvas, x: Float, y: Float, w: Float, h: Float): Rect {
-    val m = canvas.localToDeviceAsMatrix33.mat
-    val scaleX = m[0]
-    val scaleY = m[4]
-    if (m[1] != 0f || m[3] != 0f || scaleX == 0f || scaleY == 0f) return Rect.makeXYWH(x, y, w, h)
-    val transX = m[2]
-    val transY = m[5]
-    fun snapX(v: Float) = ((v * scaleX + transX).roundToInt() - transX) / scaleX
-    fun snapY(v: Float) = ((v * scaleY + transY).roundToInt() - transY) / scaleY
-    return Rect.makeLTRB(snapX(x), snapY(y), snapX(x + w), snapY(y + h))
 }
 
 private val ARROW_CODES = intArrayOf(InputConstants.KEY_UP, InputConstants.KEY_DOWN, InputConstants.KEY_LEFT, InputConstants.KEY_RIGHT)
