@@ -7,14 +7,7 @@ import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
-//? if >= 1.21.10 {
 import org.polyfrost.evergreenhud.client.hooks.PlayerPreviewOffscreen
-//? } else {
-/*import net.minecraft.client.gui.screens.inventory.InventoryScreen
-import org.polyfrost.evergreenhud.client.hooks.HudOffscreen
-import org.polyfrost.evergreenhud.client.hooks.playerPreviewNameTag
-import org.polyfrost.evergreenhud.client.hooks.playerPreviewPartialTick
-*///? }
 import org.polyfrost.evergreenhud.client.hooks.smuggledHudPartialTick
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
@@ -83,10 +76,7 @@ class PlayerPreviewHud : Hud(
         _staticH = mutableStateOf(this@PlayerPreviewHud.staticH)
     }
 
-    override fun update(): Boolean {
-        if (!isReal) return false
-        return queue(effectiveScale)
-    }
+    override fun update(): Boolean = queue(if (isReal) effectiveScale else 1f)
 
     private fun queue(scale: Float): Boolean {
         val player = mc.player ?: return false
@@ -117,7 +107,6 @@ class PlayerPreviewHud : Hud(
             modelTilt = pitch
         }
 
-        //? if >= 1.21.10 {
         val pixelsPerGuiUnit = Platform.screen().let {
             if (it.guiWidth() > 0) it.viewportWidth().toFloat() / it.guiWidth() else 1f
         }
@@ -137,35 +126,6 @@ class PlayerPreviewHud : Hud(
                 nametag = nametag,
             ),
         )
-        //? } else {
-        /*val x1 = x.toInt()
-        val y1 = y.toInt()
-        val x2 = (x + boxW * scale).toInt()
-        val y2 = (y + boxH * scale).toInt()
-        val centerX = (x1 + x2) / 2f
-        val centerY = (y1 + y2) / 2f
-        val entityScale = (entitySize * scale).toInt()
-        val yawOffset = if (paperDoll) bodyLag else rotation - 180f
-
-        HudOffscreen.submit { graphics ->
-            playerPreviewPartialTick = partialTick
-            playerPreviewNameTag = nametag
-            try {
-                InventoryScreen.renderEntityInInventoryFollowsMouse(
-                    graphics,
-                    x1, y1, x2, y2,
-                    entityScale,
-                    0.0625f,
-                    centerX - yawOffset,
-                    centerY + pitch,
-                    player,
-                )
-            } finally {
-                playerPreviewPartialTick = -1f
-                playerPreviewNameTag = false
-            }
-        }
-        *///? }
         return false
     }
 
@@ -173,12 +133,7 @@ class PlayerPreviewHud : Hud(
     override fun Content() {
         PolyBox(modifier = hudBackground().size(staticW, staticH)) {
             PolyCanvas(PolyModifier.size(staticW, staticH)) { _, _, w, h ->
-                //? if >= 1.21.10 {
-                if (!isReal) queue(1f)
                 PlayerPreviewOffscreen.drawInto(this@PlayerPreviewHud, canvas, w, h)
-                //? } else {
-                /*HudOffscreen.drawInto(canvas, x, y, effectiveScale, w, h)
-                *///? }
             }
         }
     }
