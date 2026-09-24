@@ -12,7 +12,6 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import org.polyfrost.oneconfig.api.hud.v1.Hud
-import org.polyfrost.oneconfig.api.hud.v1.HudManager
 
 private const val WORST_RATIO = 0.5
 
@@ -34,6 +33,8 @@ class FpsHud : GenericNumberHud(
 
     @Number(title = "Hide Above FPS Number", description = "Hide the FPS HUD when above a specific number. 0 will always show.", min = 0F, max = 100000F, subcategory = "Visibility")
     private var hideAboveNumber = 0
+
+    private var inRange = true
 
     init {
         accuracy = 0
@@ -59,11 +60,10 @@ class FpsHud : GenericNumberHud(
         val data = FrameTimeHelper.latest
         val baseline = FrameTimeHelper.baselineFps
 
-        val editing = HudManager.isEditing
-        val hiddenByRange = !editing && baseline > 0.0 && qualityPercent(data.currentFps.toFloat(), baseline).let { it < showRange[0] || it > showRange[1] }
-        val hiddenByNumber = !editing && hideAboveNumber > 0 && data.currentFps > hideAboveNumber
+        val hiddenByRange = baseline > 0.0 && qualityPercent(data.currentFps.toFloat(), baseline).let { it < showRange[0] || it > showRange[1] }
+        val hiddenByNumber = hideAboveNumber > 0 && data.currentFps > hideAboveNumber
 
-        autoHidden = hiddenByRange || hiddenByNumber
+        inRange = !hiddenByRange && !hiddenByNumber
 
         return StringBuilder().append(formatString)
             .replace("#fps", format(data.currentFps))
@@ -77,6 +77,8 @@ class FpsHud : GenericNumberHud(
 
     override fun updateFrequency(): Long =
         if (updateRate <= 0F) -1L else (updateRate * 1_000_000_000.0).toLong()
+
+    override fun shouldShow(): Boolean = inRange
 
     override fun valueColor(): PolyColor? {
         val baseline = FrameTimeHelper.baselineFps
