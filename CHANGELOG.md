@@ -1,2 +1,2 @@
-## 3.9.3
-- item count in armor hud
+## 3.9.4
+- fix: stop overwriting the HUD's hidden setting
