@@ -9,7 +9,6 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
-import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
 class ComboHud : CachedTextHud(
@@ -36,7 +35,6 @@ class ComboHud : CachedTextHud(
             field = value
             if (value == 0) updateWithText(noHitMessage)
             else updateWithText(value)
-            updateVisibility()
         }
 
     override fun setup() {
@@ -76,9 +74,5 @@ class ComboHud : CachedTextHud(
         }
     }
 
-    private fun updateVisibility() {
-        if (!HudManager.isEditing) {
-            autoHidden = minCombo > 0F && currentCombo < minCombo.toInt()
-        }
-    }
+    override fun shouldShow(): Boolean = minCombo <= 0F || currentCombo >= minCombo.toInt()
 }
