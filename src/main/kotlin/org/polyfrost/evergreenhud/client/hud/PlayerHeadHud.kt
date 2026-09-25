@@ -26,8 +26,8 @@ import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import java.util.UUID
 import kotlin.math.min
 
-private const val DEFAULT_SIDE = 8f
-private const val MAX_SIDE = 32f
+private const val DEFAULT_SIDE = 16f
+private const val MIN_SIDE = 8f
 
 class PlayerHeadHud : Hud(
     id = "player_head.json",
@@ -37,12 +37,12 @@ class PlayerHeadHud : Hud(
     private var _staticW = mutableStateOf(DEFAULT_SIDE)
     override var staticW: Float
         get() = _staticW.value
-        set(v) { _staticW.value = v.coerceIn(DEFAULT_SIDE, MAX_SIDE) }
+        set(v) { _staticW.value = v.coerceAtLeast(MIN_SIDE) }
 
     private var _staticH = mutableStateOf(DEFAULT_SIDE)
     override var staticH: Float
         get() = _staticH.value
-        set(v) { _staticH.value = v.coerceIn(DEFAULT_SIDE, MAX_SIDE) }
+        set(v) { _staticH.value = v.coerceAtLeast(MIN_SIDE) }
 
     init {
         showBackground = false
@@ -59,7 +59,7 @@ class PlayerHeadHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
-    override fun minimumSize(): Pair<Float, Float> = DEFAULT_SIDE to DEFAULT_SIDE
+    override fun minimumSize(): Pair<Float, Float> = MIN_SIDE to MIN_SIDE
 
     override val alwaysRedraw: Boolean get() = true
 
