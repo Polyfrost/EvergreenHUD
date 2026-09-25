@@ -3,6 +3,7 @@ package org.polyfrost.evergreenhud.client.hud.potion
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+//? if > 1.8.9 {
 import net.minecraft.core.registries.BuiltInRegistries
 //? if < 1.21.11
 //import net.minecraft.resources.ResourceLocation
@@ -10,6 +11,15 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.Identifier as ResourceLocation
 import net.minecraft.world.effect.MobEffectCategory
 import net.minecraft.world.effect.MobEffectInstance
+//?} else {
+/*import net.minecraft.client.resource.language.I18n
+import net.minecraft.entity.living.effect.StatusEffect
+import net.minecraft.entity.living.effect.StatusEffectInstance as MobEffectInstance
+import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
+import net.ornithemc.osl.resource.loader.api.resource.manager.ResourceManager
+import net.ornithemc.osl.resource.loader.api.resource.repository.ResourcePackRepository
+import org.jetbrains.skia.Bitmap
+*///?}
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.Paint
 import org.polyfrost.compose.composables.PolyBox
@@ -111,6 +121,7 @@ class PotionEffectsHud : Hud(
         }
 
         private val iconPaint = Paint()
+        //~ if = 1.8.9 'ResourceLocation' -> 'Int'
         private val iconCache = HashMap<ResourceLocation, Image?>()
         private var cachedPackIds: List<String>? = null
 
@@ -120,12 +131,13 @@ class PotionEffectsHud : Hud(
             iconCache.clear()
         }
 
+        //? if > 1.8.9 {
         fun iconFor(id: ResourceLocation): Image? {
             if (iconCache.containsKey(id)) return iconCache[id]
             val path = ResourceLocation.fromNamespaceAndPath(id.namespace, "textures/mob_effect/${id.path}.png")
             val icon = try {
                 mc.resourceManager.getResource(path).orElse(null)
-                    ?.open()?.use { ImageLoader.fromBytes(it.readBytes()) }
+                    ?.open()?.use { ImageLoader.fromBytes(it.readAllBytes()) }
             } catch (e: Exception) {
                 LOGGER.warn("Failed to load the icon for effect {}", id, e)
                 null
@@ -133,6 +145,26 @@ class PotionEffectsHud : Hud(
             iconCache[id] = icon
             return icon
         }
+        //?} else {
+        /*fun iconFor(effect: StatusEffect): Image? {
+            val id = effect.id
+            if (iconCache.containsKey(id)) return iconCache[id]
+            val path = NamespacedIdentifiers.from("minecraft", "textures/gui/container/inventory.png")
+            val icon = try {
+                ResourceManager.client().getResource(path).orElse(null)?.open()?.use {
+                    val atlas = ImageLoader.fromBytes(it.readBytes())
+                    val bitmap = Bitmap().apply { allocN32Pixels(ICON.toInt(), ICON.toInt()) }
+                    atlas?.readPixels(bitmap, effect.iconIndex % 8 * ICON.toInt(), 198 + effect.iconIndex / 8 * ICON.toInt())
+                    Image.makeFromBitmap(bitmap)
+                }
+            } catch (e: Exception) {
+                LOGGER.warn("Failed to load the icon for effect {}", id, e)
+                null
+            }
+            iconCache[id] = icon
+            return icon
+        }
+        *///?}
 
         fun roman(value: Int): String {
             if (value < 1 || value > 3999) return value.toString()
@@ -256,6 +288,7 @@ class PotionEffectsHud : Hud(
     override fun canMergeBackground(): Boolean = true
 
     override fun update(): Boolean {
+        //~ if = 1.8.9 'mc.resourcePackRepository' -> 'ResourcePackRepository.client()'
         syncIcons(mc.resourcePackRepository.selectedPacks.map { it.id })
         val next = buildRows()
         if (next == rows.value) return false
@@ -285,6 +318,7 @@ class PotionEffectsHud : Hud(
     private fun exampleRows(): List<Row> =
         EXAMPLES.map {
             row(
+                //~ if = 1.8.9 'ResourceLocation.withDefaultNamespace(it.id)' -> 'StatusEffect.get(it.id)'
                 ResourceLocation.withDefaultNamespace(it.id),
                 it.name,
                 it.ticks,
@@ -306,22 +340,37 @@ class PotionEffectsHud : Hud(
 
     private fun sortByRule(effects: List<MobEffectInstance>, rule: String): List<MobEffectInstance> {
         return when (rule) {
+            //? if > 1.8.9 {
             NAME -> effects.sortedBy { it.effect.value().displayName.string }
+            //?} else
+            //NAME -> effects.sortedBy { I18n.translate(it.name) }
             DURATION -> effects.sortedBy { if (it.isInfiniteDuration) Int.MAX_VALUE else it.duration }
             AMPLIFIER -> effects.sortedByDescending { it.amplifier }
             AMBIENT_EFFECTS -> effects.sortedBy { it.isAmbient }
+            //? if > 1.8.9 {
             BENEFICIAL_EFFECTS -> effects.sortedByDescending { it.effect.value().category == MobEffectCategory.BENEFICIAL }
             NEUTRAL_EFFECTS -> effects.sortedByDescending { it.effect.value().category == MobEffectCategory.NEUTRAL }
             HARMFUL_EFFECTS -> effects.sortedByDescending { it.effect.value().category == MobEffectCategory.HARMFUL }
+            //?} else {
+            //BENEFICIAL_EFFECTS -> effects.sortedByDescending { !StatusEffect.BY_ID[it.id].isHarmful }
+            //NEUTRAL_EFFECTS -> effects
+            //HARMFUL_EFFECTS -> effects.sortedByDescending { StatusEffect.BY_ID[it.id].isHarmful }
+            //?}
             else -> {
                 val path = EffectCatalog.titleToPath[rule] ?: return effects
+                //? if > 1.8.9 {
                 effects.sortedByDescending { BuiltInRegistries.MOB_EFFECT.getKey(it.effect.value())?.path == path }
+                //?} else
+                //effects.sortedByDescending { it.id.toString() == path }
             }
         }
     }
 
     private fun shouldDisplayEffect(effect: MobEffectInstance): Boolean {
+        //? if > 1.8.9 {
         if (!effect.showIcon()) return false
+        //?} else
+        //if (!StatusEffect.BY_ID[effect.id].hasIcon()) return false
         val values = valuesFor(effect)
 
         if (!values.showEffects) return false
@@ -337,15 +386,22 @@ class PotionEffectsHud : Hud(
             if (!effect.isInfiniteDuration && effect.duration / 20f !in min..max) return false
         }
 
+        //? if > 1.8.9 {
         val category = effect.effect.value().category
         if (!values.categoryFilter[0] && category == MobEffectCategory.BENEFICIAL) return false
         if (!values.categoryFilter[1] && category == MobEffectCategory.NEUTRAL) return false
         if (!values.categoryFilter[2] && category == MobEffectCategory.HARMFUL) return false
+        //?} else {
+        /*val harmful = StatusEffect.BY_ID[effect.id].isHarmful
+        if (!values.categoryFilter[0] && !harmful) return false
+        if (!values.categoryFilter[2] && harmful) return false
+        *///?}
 
         return true
     }
 
     private fun row(effect: MobEffectInstance, dimmed: Boolean = false): Row {
+        //? if > 1.8.9 {
         val mobEffect = effect.effect.value()
         return row(
             BuiltInRegistries.MOB_EFFECT.getKey(mobEffect),
@@ -356,8 +412,21 @@ class PotionEffectsHud : Hud(
             valuesFor(effect),
             dimmed,
         )
+        //?} else {
+        /*val statusEffect = StatusEffect.BY_ID[effect.id]
+        return row(
+            statusEffect,
+            I18n.translate(statusEffect.translationKey),
+            effect.duration,
+            effect.amplifier,
+            effect.isInfiniteDuration,
+            valuesFor(effect),
+            dimmed,
+        )
+        *///?}
     }
 
+    //~ if = 1.8.9 'ResourceLocation?' -> 'StatusEffect?'
     private fun row(id: ResourceLocation?, name: String, ticks: Int, amplifier: Int, infinite: Boolean, values: EffectComponentValues, dimmed: Boolean = false): Row {
         val level = amplifier + 1
         val amplifierText = if (values.showAmplifier && level > 1) {
@@ -720,6 +789,7 @@ class PotionEffectsHud : Hud(
     }
 
     private fun valuesFor(effect: MobEffectInstance): EffectComponentValues {
+        //? if > 1.8.9 {
         val mobEffect = effect.effect.value()
         val id = BuiltInRegistries.MOB_EFFECT.getKey(mobEffect)
         val categoryScope = when (mobEffect.category) {
@@ -727,15 +797,28 @@ class PotionEffectsHud : Hud(
             MobEffectCategory.NEUTRAL -> categoryScopes.neutral
             MobEffectCategory.HARMFUL -> categoryScopes.harmful
         }
+        //?} else {
+        /*val statusEffect = StatusEffect.BY_ID[effect.id]
+        val harmful = statusEffect.isHarmful
+        val id = effect.id.toString()
+        val categoryScope = if (harmful) categoryScopes.harmful else categoryScopes.beneficial
+        *///?}
 
         for (entry in overrides) {
             val resolved = when (entry) {
+                //? if > 1.8.9 {
                 BENEFICIAL_EFFECTS -> categoryScope.takeIf { mobEffect.category == MobEffectCategory.BENEFICIAL }
                 NEUTRAL_EFFECTS -> categoryScope.takeIf { mobEffect.category == MobEffectCategory.NEUTRAL }
                 HARMFUL_EFFECTS -> categoryScope.takeIf { mobEffect.category == MobEffectCategory.HARMFUL }
+                //?} else {
+                //BENEFICIAL_EFFECTS -> categoryScope.takeIf { !harmful }
+                //NEUTRAL_EFFECTS -> null
+                //HARMFUL_EFFECTS -> categoryScope.takeIf { harmful }
+                //?}
                 AMBIENT_EFFECTS -> categoryScopes.ambient.takeIf { effect.isAmbient }
                 else -> {
                     val path = EffectCatalog.titleToPath[entry] ?: continue
+                    //~ if = 1.8.9 'id != null && id.path == path' -> 'id == path'
                     effectScopes.byPath[path]?.takeIf { id != null && id.path == path }
                 }
             }

@@ -3,13 +3,18 @@ package org.polyfrost.evergreenhud.client
 import net.fabricmc.api.ClientModInitializer
 import net.minecraft.core.BlockPos
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket
+//? if > 1.8.9 {
 import net.minecraft.network.protocol.game.ClientboundDamageEventPacket
 import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket
 import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket
+//?} else {
+/*import net.minecraft.network.packet.s2c.play.BlocksUpdateS2CPacket
+import net.minecraft.network.packet.s2c.play.EntityEventS2CPacket
+*///?}
 import net.minecraft.world.entity.Entity
 import org.polyfrost.evergreenhud.client.config.GlobalConfig
 import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
-import org.polyfrost.evergreenhud.client.hooks.HudOffscreen
+import org.polyfrost.evergreenhud.client.hooks.PlayerPreviewOffscreen
 import org.polyfrost.evergreenhud.client.hud.*
 import org.polyfrost.evergreenhud.client.hud.item.VanillaTextures
 import org.polyfrost.evergreenhud.client.hud.battery.BatteryHud
@@ -39,8 +44,26 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 object EvergreenHudClient : ClientModInitializer {
     override fun onInitializeClient() {
+        // 1.8.9 runs entrypoints before Minecraft.init, so HUDs can't be built yet (I18n isn't loaded).
+        // Wait for InitializationEvent at the end of init, at the lowest priority so OneConfig's own setup runs first
+        //? if = 1.8.9 {
+        /*EventManager.INSTANCE.register(object : EventHandler<InitializationEvent>() {
+            override fun handle(event: InitializationEvent): Boolean {
+                initializeClient()
+                return true
+            }
+
+            override fun getEventClass(): Class<InitializationEvent> = InitializationEvent::class.java
+
+            override fun getPriority(): Int = Int.MIN_VALUE
+        })
+        *///?} else
+        initializeClient()
+    }
+
+    private fun initializeClient() {
         FrameTimeHelper.initialize()
-        HudOffscreen.initialize()
+        PlayerPreviewOffscreen.initialize()
         VanillaTextures.initialize()
         EnderChestTracker.initialize()
         SaturationTracker.initialize()
@@ -82,6 +105,10 @@ object EvergreenHudClient : ClientModInitializer {
             return
         }
 
+        //? if = 1.8.9 {
+        /*// already inside InitializationEvent on 1.8.9, so a handler registered now would never run
+        HudManager.unregister(factory(), removeActiveInstances = true)
+        *///?} else {
         EventManager.INSTANCE.register(object : EventHandler<InitializationEvent>() {
             override fun handle(event: InitializationEvent): Boolean {
                 HudManager.unregister(factory(), removeActiveInstances = true)
@@ -92,6 +119,7 @@ object EvergreenHudClient : ClientModInitializer {
 
             override fun getPriority(): Int = Int.MIN_VALUE
         })
+        //?}
     }
 
     private val recentBlockChanges = ConcurrentLinkedQueue<BlockPos>()
@@ -100,7 +128,10 @@ object EvergreenHudClient : ClientModInitializer {
         eventHandler { event: PacketEvent.Receive ->
             when (val packet = event.getPacket<Any>()) {
                 is ClientboundBlockUpdatePacket -> recentBlockChanges.add(packet.pos)
+                //? if > 1.8.9 {
                 is ClientboundSectionBlocksUpdatePacket -> packet.runUpdates { pos, _ -> recentBlockChanges.add(pos) }
+                //?} else
+                //is BlocksUpdateS2CPacket -> packet.updates.forEach { update -> recentBlockChanges.add(update.blockPos) }
 
             }
         }
@@ -147,10 +178,17 @@ object EvergreenHudClient : ClientModInitializer {
         }
 
         eventHandler { (packet): PacketEvent.Receive ->
+            //? if > 1.8.9 {
             when (packet) {
                 is ClientboundDamageEventPacket -> postServerDamage(packet.entityId, packet.sourceCauseId)
                 is ClientboundHurtAnimationPacket -> postServerDamage(packet.id, causeId = -1)
             }
+            //?} else {
+            /*if (packet is EntityEventS2CPacket && packet.event.toInt() == 2) {
+                val target = packet.getEntity(mc.level ?: return@eventHandler) ?: return@eventHandler
+                postServerDamage(target.uniqueEntityId, causeId = -1)
+            }
+            *///?}
         }
     }
 

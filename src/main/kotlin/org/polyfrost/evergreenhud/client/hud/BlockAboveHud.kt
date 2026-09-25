@@ -1,8 +1,10 @@
 package org.polyfrost.evergreenhud.client.hud
 
 import net.minecraft.core.BlockPos
+//? if > 1.8.9 {
 import net.minecraft.core.Direction
 import net.minecraft.sounds.SoundEvents
+//?}
 import net.minecraft.world.level.block.*
 import org.polyfrost.evergreenhud.client.BlockChangeEvent
 import org.polyfrost.evergreenhud.client.BlockPositionChangedEvent
@@ -61,11 +63,15 @@ class BlockAboveHud : CachedTextHud(
 
     private fun update(currentPos: BlockPos) {
         val level = mc.level ?: return
+        //? if > 1.8.9 {
         val pos = currentPos.mutable().move(Direction.UP)
+        //?} else
+        //var pos = currentPos.above()
 
         var above = 0
         var found = false
         for (i in 1..checkHeight) {
+            //~ if = 1.8.9 'pos.move(Direction.UP)' -> 'pos = pos.above()'
             pos.move(Direction.UP)
             //? if > 1.21.1
             if (pos.y > level.maxY) {
@@ -86,7 +92,10 @@ class BlockAboveHud : CachedTextHud(
 
         val distance = if (found) above else Int.MAX_VALUE
         if (notify && !hidden && distance <= notifyHeight && distance < lastDistance) {
+            //? if > 1.8.9 {
             mc.player?.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 0.25f, 1f)
+            //?} else
+            //mc.player?.playSound("random.orb", 0.25f, 1f)
         }
         lastDistance = distance
 

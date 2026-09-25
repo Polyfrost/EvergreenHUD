@@ -1,6 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
-import org.polyfrost.evergreenhud.client.utils.AutoHideTextHud
+import org.polyfrost.evergreenhud.client.utils.SpacedTextHud
 import org.polyfrost.evergreenhud.client.utils.social.SocialStats
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
@@ -26,7 +26,7 @@ private val PREVIEW = SocialStats.Stats(
     viewers = 1204,
 )
 
-class SocialStatsHud : AutoHideTextHud(
+class SocialStatsHud : SpacedTextHud(
     id = "social_stats.json",
     title = "Social Media Stats",
     category = Category.INFO,
@@ -51,6 +51,8 @@ class SocialStatsHud : AutoHideTextHud(
     @Switch(title = "Hide When Unavailable", description = "Hides the HUD while the counts cannot be fetched.")
     var hideWhenUnavailable = false
 
+    private var available = true
+
     override fun setup() {
         super.setup()
         if (isReal) {
@@ -64,14 +66,16 @@ class SocialStatsHud : AutoHideTextHud(
 
     override fun updateFrequency(): Long = 1.seconds.inWholeNanoseconds
 
+    override fun shouldShow(): Boolean = !hideWhenUnavailable || available
+
     override fun getText(): String {
         if (!isReal) {
-            autoHidden = false
+            available = true
             return render(PREVIEW)
         }
 
         if (channel.isBlank()) {
-            autoHidden = hideWhenUnavailable
+            available = false
             return NO_CHANNEL_TEXT
         }
 
@@ -79,7 +83,7 @@ class SocialStatsHud : AutoHideTextHud(
         val status = SocialStats.get(site, channel, wantsViewers = formatString.contains("#viewers"))
         val stats = status.stats
 
-        autoHidden = hideWhenUnavailable && stats == null
+        available = stats != null
         if (stats == null) return if (status.unknownChannel) UNKNOWN_CHANNEL_TEXT else UNAVAILABLE_TEXT
         return render(stats)
     }

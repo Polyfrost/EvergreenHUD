@@ -27,8 +27,7 @@ build - Copy.gradle
 
 # test run byproducts
 .fabric/
-versions/*/logs/
-versions/*/mods/
+versions/
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/java,gradle,forgegradle,kotlin,macos,intellij,intellij+all,eclipse,visualstudiocode

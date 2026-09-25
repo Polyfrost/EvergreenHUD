@@ -1,0 +1,79 @@
+tiny	2	0	intermediary	named
+c	net/minecraft/client/Minecraft	net/minecraft/client/Minecraft
+	f	Lnet/minecraft/unmapped/C_34399650;	f_26407825	level
+	f	Lnet/minecraft/unmapped/C_42232651;	f_63700667	cameraEntity
+	f	Lnet/minecraft/unmapped/C_91543234;	f_32571834	currentServer
+	m	()Lnet/minecraft/unmapped/C_42232651;	m_67314413	getCameraEntity
+	m	()Lnet/minecraft/unmapped/C_91543234;	m_73689431	getCurrentServer
+	m	()Z	m_10057689	hasSingleplayerServer
+c	net/minecraft/unmapped/C_04419417	net/minecraft/world/inventory/ChestMenu
+	m	()Lnet/minecraft/unmapped/C_43616774;	m_95200425	getContainer
+c	net/minecraft/unmapped/C_15815210	net/minecraft/world/level/block/state/BlockState
+c	net/minecraft/unmapped/C_21828899	net/minecraft/world/food/FoodData
+	m	(F)V	m_27439668	setSaturation
+c	net/minecraft/unmapped/C_23708450	net/minecraft/client/KeyMapping
+	m	()Z	m_70603120	isDown
+c	net/minecraft/unmapped/C_30281404	net/minecraft/entity/living/effect/StatusEffectInstance
+	m	()Z	m_60545402	isInfiniteDuration
+c	net/minecraft/unmapped/C_32594356	net/minecraft/core/BlockPos
+	m	()Lnet/minecraft/unmapped/C_32594356;	m_61542932	above
+	m	(I)Lnet/minecraft/unmapped/C_32594356;	m_64154259	above
+c	net/minecraft/unmapped/C_32220415	net/minecraft/server/Bootstrap
+c	net/minecraft/unmapped/C_40996800	net/minecraft/world/entity/player/Player
+	f	Lnet/minecraft/unmapped/C_46053237;	f_67740326	inventoryMenu
+	f	Lnet/minecraft/unmapped/C_46053237;	f_25936683	containerMenu
+	m	()Lnet/minecraft/unmapped/C_88708284;	m_01577449	getMainHandItem
+	m	()Lnet/minecraft/unmapped/C_21828899;	m_78327552	getFoodData
+c	net/minecraft/unmapped/C_42232651	net/minecraft/world/entity/Entity
+	f	I	f_11112215	id
+	f	D	f_09368719	xo
+	f	D	f_93723721	yo
+	f	D	f_84066837	zo
+	f	F	f_80130373	yRot
+	f	F	f_03549461	xRot
+	m	()Lnet/minecraft/unmapped/C_82690114;	m_41837471	getBoundingBox
+	m	()I	m_27036738	getId
+	m	(F)Lnet/minecraft/unmapped/C_94584382;	m_95361306	getViewVector
+c	net/minecraft/unmapped/C_43616774	net/minecraft/world/Container
+	m	()I	m_54518913	getContainerSize
+c	net/minecraft/unmapped/C_57778754	net/minecraft/client/player/LocalPlayer
+c	net/minecraft/unmapped/C_64041439	net/minecraft/world/level/Level
+	m	()I	m_98920689	getMaxBuildHeight
+	m	()J	m_08839739	getDayTime
+c	net/minecraft/unmapped/C_71252617	net/minecraft/client/renderer/entity/LivingEntityRenderer
+	m	(Lnet/minecraft/unmapped/C_74425583;)Z	m_00180693	shouldShowName
+c	net/minecraft/unmapped/C_71827890	net/minecraft/world/item/BlockItem
+c	net/minecraft/unmapped/C_74425583	net/minecraft/world/entity/LivingEntity
+	m	()Ljava/util/Collection;	m_90679760	getActiveEffects
+c	net/minecraft/unmapped/C_76792751	net/minecraft/client/Options
+	f	Lnet/minecraft/unmapped/C_23708450;	f_15607202	keyUp
+	f	Lnet/minecraft/unmapped/C_23708450;	f_20678369	keyLeft
+	f	Lnet/minecraft/unmapped/C_23708450;	f_46759128	keyDown
+	f	Lnet/minecraft/unmapped/C_23708450;	f_25268871	keyRight
+	f	Lnet/minecraft/unmapped/C_23708450;	f_94470987	keyJump
+	f	Lnet/minecraft/unmapped/C_23708450;	f_89071996	keyShift
+	f	Lnet/minecraft/unmapped/C_23708450;	f_16700522	keyAttack
+	f	Lnet/minecraft/unmapped/C_23708450;	f_49149367	keyUse
+	f	Lnet/minecraft/unmapped/C_23708450;	f_50204069	keySprint
+c	net/minecraft/unmapped/C_85589673	net/minecraft/client/gui/screens/inventory/InventoryScreen
+c	net/minecraft/unmapped/C_87542771	net/minecraft/world/entity/player/Inventory
+c	net/minecraft/unmapped/C_87711245	net/minecraft/client/gui/screens/inventory/AbstractContainerScreen
+c	net/minecraft/unmapped/C_88708284	net/minecraft/world/item/ItemStack
+	f	I	f_60602012	count
+	m	()I	m_02549920	getMaxStackSize
+	m	()Z	m_47232453	isDamageableItem
+	m	()I	m_30227787	getDamageValue
+	m	()Ljava/lang/String;	m_33380262	getLegacyHoverName
+c	net/minecraft/unmapped/C_92086655	net/minecraft/world/item/PotionItem
+c	net/minecraft/unmapped/C_92666871	net/minecraft/network/protocol/game/ClientboundBlockUpdatePacket
+c	net/minecraft/unmapped/C_97448347	net/minecraft/world/item/Items
+c	net/minecraft/unmapped/C_98888256	net/minecraft/world/item/Item
+c	net/minecraft/unmapped/C_23459903	net/minecraft/network/protocol/game/ClientboundSetTimePacket
+c	net/minecraft/unmapped/C_82690114	net/minecraft/world/phys/AABB
+	m	(DDD)Lnet/minecraft/unmapped/C_82690114;	m_92810883	expandTowards
+c	net/minecraft/unmapped/C_94584382	net/minecraft/world/phys/Vec3
+c	net/minecraft/unmapped/C_81592558	net/minecraft/world/level/block/Block
+c	net/minecraft/unmapped/C_53524147	net/minecraft/world/level/block/Blocks
+c	net/minecraft/unmapped/C_55673389	net/minecraft/world/level/block/SignBlock
+c	net/minecraft/unmapped/C_67691656	net/minecraft/world/level/block/VineBlock
+c	net/minecraft/unmapped/C_06226047	net/minecraft/world/level/block/BannerBlock

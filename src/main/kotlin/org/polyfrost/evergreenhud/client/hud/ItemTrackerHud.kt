@@ -6,6 +6,8 @@ import net.minecraft.client.player.LocalPlayer
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
+//? if = 1.8.9
+//import net.minecraft.world.level.block.Blocks
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyColumn
 import org.polyfrost.compose.composables.PolyMcText
@@ -45,6 +47,7 @@ class ItemTrackerHud : Hud(
     category = Category.PLAYER,
 ) {
     private companion object {
+        //~ if = 1.8.9 'Items.COBBLESTONE' -> 'Item.byBlock(Blocks.COBBLESTONE)'
         private val EXAMPLE = listOf(Items.DIAMOND to 3, Items.COBBLESTONE to 64, Items.ARROW to -1)
     }
 
@@ -103,9 +106,6 @@ class ItemTrackerHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
-    override val alwaysRedraw: Boolean
-        get() = super.alwaysRedraw || (isReal && showIcon && entries.value.isNotEmpty())
-
     override fun setup() {
         if (!isReal) return
         eventHandler { _: TickEvent.End -> track() }
@@ -151,6 +151,7 @@ class ItemTrackerHud : Hud(
         val inventory = player.inventory
         for (slot in 0 until inventory.containerSize) {
             val stack = inventory.getItem(slot)
+            //~ if = 1.8.9 'stack.isEmpty' -> 'stack == null || stack.isEmpty'
             if (stack.isEmpty) continue
             counts[stack.item] = (counts[stack.item] ?: 0) + stack.count
         }
@@ -238,7 +239,6 @@ class ItemTrackerHud : Hud(
             if (textPosition != RIGHT) Text(entry, scale)
             if (showIcon) {
                 ItemIcon(
-                    this@ItemTrackerHud,
                     entry.stack,
                     size = ITEM_SIZE * scale,
                     decorations = false,

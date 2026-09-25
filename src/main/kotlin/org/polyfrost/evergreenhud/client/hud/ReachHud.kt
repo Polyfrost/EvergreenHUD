@@ -6,7 +6,6 @@ import org.polyfrost.evergreenhud.client.utils.calculateReachDistanceToEntity
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
-import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.time.Duration.Companion.seconds
 
@@ -43,7 +42,6 @@ class ReachHud : GenericNumberHud(
 
                 this.value = reach
                 this.lastTime = System.currentTimeMillis()
-                autoHidden = false
                 updateWithNumber(reach)
             }
 
@@ -54,7 +52,6 @@ class ReachHud : GenericNumberHud(
             updateWhenChanged("noHitMessage")
             addCallback("hideAfter") {
                 lastTime = System.currentTimeMillis()
-                autoHidden = false
                 updateAndRecalculate()
             }
         }
@@ -74,13 +71,11 @@ class ReachHud : GenericNumberHud(
             value = 0f
         }
 
-        val hideMillis = hideAfterMillis
-        if (hideMillis > 0L && !HudManager.isEditing && elapsed > hideMillis) {
-            autoHidden = true
-        }
-
         return super.update()
     }
 
     override fun updateFrequency() = 1.seconds.inWholeNanoseconds
+
+    override fun shouldShow(): Boolean =
+        hideAfterMillis <= 0L || System.currentTimeMillis() - lastTime <= hideAfterMillis
 }
