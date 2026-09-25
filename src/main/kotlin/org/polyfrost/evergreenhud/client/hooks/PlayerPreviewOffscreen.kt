@@ -422,6 +422,12 @@ object PlayerPreviewOffscreen {
         //Lighting.setupForEntityInInventory()
         dispatcher.overrideCameraOrientation(cameraRotation.conjugate(Quaternionf()).rotateY(Math.PI.toFloat()))
         dispatcher.setRenderShadow(false)
+
+        //? if = 1.21.8 {
+        val savedHitboxes = dispatcher.shouldRenderHitBoxes()
+        dispatcher.setRenderHitBoxes(false)
+        //?}
+
         try {
             //? if >= 1.21.4 {
             dispatcher.render(player, 0.0, 0.0, 0.0, partialTick, pose, buffers, FULL_BRIGHT)
@@ -430,6 +436,8 @@ object PlayerPreviewOffscreen {
             buffers.endBatch()
         } finally {
             dispatcher.setRenderShadow(true)
+            //? if = 1.21.8
+            dispatcher.setRenderHitBoxes(savedHitboxes)
             //? if < 1.21.8
             //Lighting.setupFor3DItems()
             player.yBodyRot = savedBodyRot
