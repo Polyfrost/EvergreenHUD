@@ -17,7 +17,6 @@
     "client.Mixin_RenderGlobal_EntityCounterEvent",
     "client.Mixin_BlockItem_ClientPlaceBlockEvent",
     "client.Mixin_AbstractContainerScreen_ShulkerPreviewTooltip",
-    "client.Mixin_InventoryScreen_PlayerPreviewPartialTick",
     "client.Mixin_LivingEntityRenderer_PlayerPreviewNameTag",
     "client.Mixin_PlayerPreviewPresent"
   ],
