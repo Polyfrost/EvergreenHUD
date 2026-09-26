@@ -17,7 +17,7 @@ import org.polyfrost.oneconfig.utils.v1.dsl.mc
 private const val MAX_REACH_DISTANCE = 6.0f
 
 private val Entity.accurateCollisionBox: AABB
-    get() = boundingBox.expandTowards(pickRadius.toDouble(), pickRadius.toDouble(), pickRadius.toDouble())
+    get() = boundingBox.inflate(pickRadius.toDouble(), pickRadius.toDouble(), pickRadius.toDouble())
 
 val Entity.uniqueEntityId: Int
     get() = id
