@@ -112,6 +112,9 @@ object PlayerPreviewOffscreen {
     private var loggedFirstFrame = false
     private var loggedResolveFailure = false
 
+    @JvmField var rendering = false
+    @JvmField var nameTag = false
+
     fun initialize() {
         eventHandler { _: WorldEvent.Unload -> invalidate() }
     }
@@ -296,13 +299,13 @@ object PlayerPreviewOffscreen {
 
     //? if >= 1.21.10 {
     private fun renderPlayer(slot: Slot, rt: RenderTarget, request: Request, player: Player, width: Int, height: Int, fit: Float) {
-        playerPreviewPartialTick = request.partialTick
-        playerPreviewNameTag = request.nametag
+        rendering = true
+        nameTag = request.nametag
         val state = try {
             client.entityRenderDispatcher.extractEntity(player, request.partialTick) as? AvatarRenderState ?: return
         } finally {
-            playerPreviewPartialTick = -1f
-            playerPreviewNameTag = false
+            rendering = false
+            nameTag = false
         }
 
         state.lightCoords = FULL_BRIGHT
@@ -407,8 +410,8 @@ object PlayerPreviewOffscreen {
         val dispatcher = client.entityRenderDispatcher
         val buffers = client.renderBuffers().bufferSource()
 
-        playerPreviewPartialTick = partialTick
-        playerPreviewNameTag = request.nametag
+        rendering = true
+        nameTag = request.nametag
         player.yBodyRot = request.bodyRot
         player.yBodyRotO = request.bodyRot
         player.yHeadRot = headRot
@@ -447,8 +450,8 @@ object PlayerPreviewOffscreen {
             player.yRot = savedYRot
             player.xRot = savedXRot
             player.xRotO = savedXRotO
-            playerPreviewPartialTick = -1f
-            playerPreviewNameTag = false
+            rendering = false
+            nameTag = false
         }
     }
     *///? }
