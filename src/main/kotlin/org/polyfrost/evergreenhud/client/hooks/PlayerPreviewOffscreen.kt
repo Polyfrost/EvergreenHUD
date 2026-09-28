@@ -519,8 +519,8 @@ object PlayerPreviewOffscreen {
 
         val dispatcher = client.entityRenderDispatcher
 
-        playerPreviewPartialTick = partialTick
-        playerPreviewNameTag = request.nametag
+        rendering = true
+        nameTag = request.nametag
         player.bodyYaw = bodyRot
         player.lastBodyYaw = bodyRot
         player.headYaw = headRot
@@ -561,8 +561,8 @@ object PlayerPreviewOffscreen {
             player.lastYaw = savedYRotO
             player.xRot = savedXRot
             player.lastPitch = savedXRotO
-            playerPreviewPartialTick = -1f
-            playerPreviewNameTag = false
+            rendering = false
+            nameTag = false
         }
     }
     *///?}

@@ -71,6 +71,7 @@ c	net/minecraft/unmapped/C_98888256	net/minecraft/world/item/Item
 c	net/minecraft/unmapped/C_23459903	net/minecraft/network/protocol/game/ClientboundSetTimePacket
 c	net/minecraft/unmapped/C_82690114	net/minecraft/world/phys/AABB
 	m	(DDD)Lnet/minecraft/unmapped/C_82690114;	m_92810883	expandTowards
+	m	(DDD)Lnet/minecraft/unmapped/C_82690114;	m_76425512	inflate
 c	net/minecraft/unmapped/C_94584382	net/minecraft/world/phys/Vec3
 c	net/minecraft/unmapped/C_81592558	net/minecraft/world/level/block/Block
 c	net/minecraft/unmapped/C_53524147	net/minecraft/world/level/block/Blocks
