@@ -18,7 +18,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
 import org.polyfrost.oneconfig.api.hud.v1.Hud
-import org.polyfrost.evergreenhud.client.utils.AutoHideTextHud
+import org.polyfrost.evergreenhud.client.utils.SpacedTextHud
 
 private val AQUA = PolyColor(0xFF55FFFF.toInt())
 private val GRAY = PolyColor(0xFFAAAAAA.toInt())
@@ -28,7 +28,7 @@ private val PLACEHOLDER_LINES = listOf(
     listOf(StyledRun("Hold an item with lore", GRAY, bold = false, italic = false)),
 )
 
-class LoreHud : AutoHideTextHud(
+class LoreHud : SpacedTextHud(
     id = "lore.json",
     title = "Item Lore",
     category = Category.INFO,
@@ -47,6 +47,7 @@ class LoreHud : AutoHideTextHud(
         get() = has(DataComponents.CUSTOM_NAME)
 
     private var currentLines: List<List<StyledRun>> = emptyList()
+    private var hasLore = false
     private var linesState: MutableState<List<List<StyledRun>>> = mutableStateOf(emptyList())
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
@@ -77,7 +78,7 @@ class LoreHud : AutoHideTextHud(
 
     override fun update(): Boolean {
         val lore = loreLines()
-        autoHidden = isReal && lore.isEmpty()
+        hasLore = lore.isNotEmpty()
         currentLines = lore.ifEmpty { PLACEHOLDER_LINES }
 
         val result = super.update()
@@ -86,6 +87,8 @@ class LoreHud : AutoHideTextHud(
     }
 
     override fun getText(): String = currentLines.joinToString("\n") { it.plainText() }
+
+    override fun shouldShow(): Boolean = hasLore
 
     private fun loreLines(): List<List<StyledRun>> {
         val item = theItem ?: return emptyList()

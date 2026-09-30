@@ -6,7 +6,6 @@ import org.polyfrost.evergreenhud.client.utils.SaturationTracker
 import org.polyfrost.oneconfig.api.config.v1.annotations.RangeSlider
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Hud
-import org.polyfrost.oneconfig.api.hud.v1.HudManager
 
 class SaturationHud : GenericNumberHud(
     title = "Saturation",
@@ -32,11 +31,8 @@ class SaturationHud : GenericNumberHud(
     }
 
     override fun getText(): String {
-        val value = SaturationTracker.saturation
-
-        val editing = HudManager.isEditing
-        autoHidden = !editing && (value < showRange[0] || value > showRange[1])
-
-        return format(value)
+        return format(SaturationTracker.saturation)
     }
+
+    override fun shouldShow(): Boolean = SaturationTracker.saturation in showRange[0]..showRange[1]
 }

@@ -12,7 +12,6 @@ import org.polyfrost.oneconfig.api.event.v1.events.KeyInputEvent
 import org.polyfrost.oneconfig.api.event.v1.events.MouseInputEvent
 import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Hud
-import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -54,7 +53,6 @@ class CpsHud : CachedTextHud(
             updateWhenChanged("divider")
             addCallback("hideAfter") {
                 lastClick = System.nanoTime()
-                autoHidden = false
                 updateAndRecalculate()
             }
             handlers.add(eventHandler { (btn, state): MouseInputEvent ->
@@ -107,15 +105,10 @@ class CpsHud : CachedTextHud(
 
     private fun registerClick() {
         lastClick = System.nanoTime()
-        autoHidden = false
     }
 
     override fun getText(): String {
         val time = System.nanoTime()
-        val nanos = hideAfterNanos
-        if (nanos > 0L && !HudManager.isEditing && time - lastClick > nanos) {
-            autoHidden = true
-        }
         left.fastRemoveIfReversed { time - it > 1_000_000_000 }
         right.fastRemoveIfReversed { time - it > 1_000_000_000 }
         val nleft = left.size
@@ -131,4 +124,6 @@ class CpsHud : CachedTextHud(
     }
 
     override fun updateFrequency() = 100.milliseconds.inWholeNanoseconds
+
+    override fun shouldShow(): Boolean = hideAfterNanos <= 0L || System.nanoTime() - lastClick <= hideAfterNanos
 }

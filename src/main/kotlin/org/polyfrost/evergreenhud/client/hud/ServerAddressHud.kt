@@ -39,9 +39,10 @@ class ServerAddressHud : CachedTextHud(
     }
 
     private fun applyServer(ip: String?) {
-        autoHidden = !showInSinglePlayer && mc.hasSingleplayerServer()
         updateWithText(ip)
     }
+
+    override fun shouldShow(): Boolean = showInSinglePlayer || !mc.hasSingleplayerServer()
 
     override fun getText(): String? = if (isReal) super.getText() else EXAMPLE_ADDRESS
 

@@ -1,2 +1,2 @@
-## 3.8.1
-- Fix coords hud
+## 3.9.4
+- fix: stop overwriting the HUD's hidden setting

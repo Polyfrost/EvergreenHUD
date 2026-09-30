@@ -10,7 +10,6 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
-import org.polyfrost.oneconfig.api.event.v1.events.WorldEvent
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.time.Duration.Companion.milliseconds
@@ -30,7 +29,7 @@ class PingHud : CachedTextHud(
         fun sampleIntervalTicks(): Int {
             var interval = -1
             for (hud in HudManager.activeInstances) {
-                if (hud !is PingHud || hud.hidden) continue
+                if (hud !is PingHud || hud.hidden || !hud.shouldShow()) continue
                 if (interval == -1 || hud.sampleIntervalTicks < interval) interval = hud.sampleIntervalTicks
             }
             return interval
@@ -53,11 +52,10 @@ class PingHud : CachedTextHud(
 
     private val sampleIntervalTicks get() = (updateRate / MS_PER_TICK).coerceAtLeast(1)
 
+    override fun shouldShow(): Boolean = !mc.hasSingleplayerServer()
+
     override fun setup() {
         super.setup()
-        eventHandler { _: WorldEvent.Load ->
-            autoHidden = mc.hasSingleplayerServer()
-        }
         eventHandler { _: ServerChangedEvent ->
             resetStats()
         }

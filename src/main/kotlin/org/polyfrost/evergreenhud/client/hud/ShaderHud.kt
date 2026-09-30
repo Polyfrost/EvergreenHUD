@@ -28,6 +28,8 @@ class ShaderHud : CachedTextHud(
 
     override val defaultText: String by ::noShadersText
 
+    private var hasPack = false
+
     override fun setup() {
         super.setup()
 
@@ -43,7 +45,7 @@ class ShaderHud : CachedTextHud(
         val mod = ShaderMod.active
         val pack = mod?.packName()
 
-        autoHidden = hideWhenDisabled && pack == null
+        hasPack = pack != null
         if (mod == null || pack == null) return defaultText
 
         val name = if (hideExtension && pack.endsWith(ZIP, ignoreCase = true)) pack.dropLast(ZIP.length) else pack
@@ -51,4 +53,6 @@ class ShaderHud : CachedTextHud(
     }
 
     override fun updateFrequency(): Long = 1.seconds.inWholeNanoseconds
+
+    override fun shouldShow(): Boolean = !hideWhenDisabled || hasPack
 }

@@ -1,6 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
-import org.polyfrost.evergreenhud.client.utils.AutoHideTextHud
+import org.polyfrost.evergreenhud.client.utils.SpacedTextHud
 import org.polyfrost.evergreenhud.client.utils.weather.RealWeather
 import org.polyfrost.evergreenhud.client.utils.weather.WeatherCode
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
@@ -24,7 +24,7 @@ private val PREVIEW = RealWeather.Conditions(
     isDay = true,
 )
 
-class WeatherHud : AutoHideTextHud(
+class WeatherHud : SpacedTextHud(
     id = "weather.json",
     title = "Weather",
     category = Category.INFO,
@@ -58,6 +58,8 @@ class WeatherHud : AutoHideTextHud(
     @Switch(title = "Hide When Unavailable", description = "Hides the HUD while the forecast cannot be fetched.")
     var hideWhenUnavailable = false
 
+    private var available = true
+
     override fun setup() {
         super.setup()
         if (isReal) {
@@ -76,9 +78,11 @@ class WeatherHud : AutoHideTextHud(
 
     override fun updateFrequency(): Long = 5.seconds.inWholeNanoseconds
 
+    override fun shouldShow(): Boolean = !hideWhenUnavailable || available
+
     override fun getText(): String {
         val conditions = if (isReal) RealWeather.conditions else PREVIEW
-        autoHidden = hideWhenUnavailable && conditions == null
+        available = conditions != null
         if (conditions == null) return UNAVAILABLE_TEXT
         return render(conditions)
     }

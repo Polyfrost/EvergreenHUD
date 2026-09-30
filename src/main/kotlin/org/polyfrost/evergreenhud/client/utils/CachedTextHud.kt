@@ -13,7 +13,7 @@ abstract class CachedTextHud(
     suffix: String = "",
     id: String = "${title.replace(' ', '_').lowercase()}.json",
     protected open val defaultText: String = "",
-) : AutoHideTextHud(id, title, category, prefix, suffix) {
+) : SpacedTextHud(id, title, category, prefix, suffix) {
     protected var currentText: String = defaultText
 
     private var valueColorState: MutableState<PolyColor?> = mutableStateOf(null)
