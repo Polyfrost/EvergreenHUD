@@ -293,13 +293,15 @@ class InventoryHud : Hud(
 
     @Composable
     override fun Content() {
+        // Observe updates even while blocked so joining an allowed server recomposes.
+        rev.value
+        val observedGrid = grid.value
         // The editor can render Content directly; enforce the server rule here too.
         if (!inventoryHudAllowedOnServer(mc.currentServer?.ip)) {
             ShulkerPreview.publishSlots(emptyList())
             return
         }
-        rev.value
-        val current = grid.value ?: return
+        val current = observedGrid ?: return
         val top = gridTop()
         val content = contentScale
         val originX = offsetX(content)

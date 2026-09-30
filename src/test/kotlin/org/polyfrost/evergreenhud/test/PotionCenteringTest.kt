@@ -64,4 +64,34 @@ class PotionCenteringTest {
         assertEquals(x, hud.x, 1f)
         assertEquals(y, hud.y, 1f)
     }
+    @Test
+    fun `disabling centering restores custom fixed dimensions after layout`() {
+        HudManager.guiScreenWidth = 1920f
+        HudManager.guiScreenHeight = 1080f
+        val hud = PotionEffectsHud()
+        hud.staticWidth = true
+        hud.staticW = 200f
+        hud.staticH = 120f
+        hud.renderedW = 200f
+        hud.renderedH = 120f
+        hud.setAbsolutePosition(200f, 300f)
+        hud.applyCenteredGrowth(true)
+        hud.renderedW = 100f
+        hud.renderedH = 40f
+        val left = hud.x
+        val top = hud.y
+        hud.applyCenteredGrowth(false)
+        assertTrue(hud.staticWidth)
+        assertEquals(200f, hud.staticW)
+        assertEquals(120f, hud.staticH)
+        assertEquals(left, hud.x, 1f)
+        assertEquals(top, hud.y, 1f)
+        // A second toggle must preserve the same frame, too.
+        hud.applyCenteredGrowth(true)
+        hud.applyCenteredGrowth(false)
+        assertEquals(200f, hud.staticW)
+        assertEquals(120f, hud.staticH)
+    }
+
+
 }

@@ -228,6 +228,8 @@ class PotionEffectsHud : Hud(
     private var previousGrowthAnchor = HudAnchor.Auto
     private var previousSelfAnchor = HudAnchor.TopLeft
     private var previousStaticWidth = false
+    private var previousStaticW = 0f
+    private var previousStaticH = 0f
 
     // Centering should not change automatic text layout or list direction.
     private val layoutAnchor get() = if (centeredGrowth) previousSelfAnchor else selfAnchorPoint
@@ -291,11 +293,16 @@ class PotionEffectsHud : Hud(
             previousGrowthAnchor = growthAnchor
             previousSelfAnchor = selfAnchorPoint
             previousStaticWidth = staticWidth
+            previousStaticW = staticW
+            previousStaticH = staticH
             enforceCenteredGrowth()
         } else {
             val left = x
             val top = y
             staticWidth = previousStaticWidth
+            // Enabling staticWidth captures rendered dimensions; restore the saved frame after it.
+            staticW = previousStaticW
+            staticH = previousStaticH
             growthAnchor = previousGrowthAnchor
             selfAnchorPoint = previousSelfAnchor
             setAbsolutePosition(left, top)
@@ -751,6 +758,10 @@ class PotionEffectsHud : Hud(
         tree.set("previousSelfAnchor", ktProperty(this::previousSelfAnchor)
             .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
         tree.set("previousStaticWidth", ktProperty(this::previousStaticWidth)
+            .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
+        tree.set("previousStaticW", ktProperty(this::previousStaticW)
+            .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
+        tree.set("previousStaticH", ktProperty(this::previousStaticH)
             .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
         val collector = OneConfigCollector()
 
