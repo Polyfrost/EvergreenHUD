@@ -11,6 +11,17 @@ internal fun isFacingOrigin(x: Double, z: Double, yaw: Double, tolerance: Float)
     return abs(difference) <= tolerance.coerceIn(0f, 180f)
 }
 
-/** Use unrounded effect ticks so the cue starts exactly at 1.5 seconds. */
-internal fun isGappleReEatWindow(regeneration: Boolean, ticks: Int, infinite: Boolean): Boolean =
-    regeneration && !infinite && ticks in 1..30
+/**
+ * A normal golden apple takes 32 ticks to eat. Finite Regeneration heals when
+ * its remaining duration is a multiple of (50 shr amplifier), so the last heal
+ * is one interval before expiry. Finish at least one tick after that heal.
+ * For Regen II and III, show the cue four ticks early to allow 200 ms to react.
+ */
+internal fun isGappleReEatWindow(regeneration: Boolean, ticks: Int, infinite: Boolean, amplifier: Int): Boolean {
+    if (!regeneration || infinite || ticks <= 0) return false
+    // High levels heal every tick; clamp before shifting to avoid JVM shift wrapping.
+    val healInterval = (50 shr amplifier.coerceIn(0, 6)).coerceAtLeast(1)
+    val eatTicks = 32
+    val reactionTicks = if (amplifier in 1..2) 4 else 0
+    return ticks <= reactionTicks + eatTicks + healInterval - 1
+}

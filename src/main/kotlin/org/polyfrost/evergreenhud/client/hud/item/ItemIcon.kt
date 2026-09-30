@@ -3,7 +3,7 @@ package org.polyfrost.evergreenhud.client.hud.item
 import androidx.compose.runtime.Composable
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.item.ItemStack
-import org.jetbrains.skia.Paint
+import org.jetbrains.skia.Rect
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyMcText
@@ -15,11 +15,9 @@ import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.HudOffscreen
 import org.polyfrost.oneconfig.api.hud.v1.Hud
-import org.polyfrost.oneconfig.internal.ui.components.item.ItemCatalog
-import org.polyfrost.oneconfig.internal.ui.components.item.itemImage
+import org.polyfrost.oneconfig.internal.ui.components.item.rememberItemIconHandle
+import org.polyfrost.oneconfig.internal.ui.components.item.polyItemRenderSizePx
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
-import java.util.Collections
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -33,10 +31,6 @@ private const val BAR_WIDTH = 13f
 
 private val BAR_BACKGROUND = PolyColor(0xFF000000.toInt())
 private val COOLDOWN_OVERLAY = PolyColor(0x7FFFFFFF)
-
-private val itemPaint = Paint()
-
-private val requestedIcons: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap())
 
 @Composable
 fun ItemIcon(
@@ -86,6 +80,8 @@ fun ItemGrid(
     val scale = size / ITEM_SIZE
     val offscreen = offscreen(hud)
 
+    val icons = slots.map { rememberItemIconHandle(itemId(it.stack)) }
+
     PolyCanvas(PolyModifier.absoluteAt(0f, 0f).size(width, height)) { x, y, _, _ ->
         if (offscreen) {
             val hudScale = hud.effectiveScale
@@ -113,10 +109,10 @@ fun ItemGrid(
                 return@PolyCanvas
             }
         }
-        for (slot in slots) {
-            val id = itemId(slot.stack)
-            val icon = itemImage(id)
-            if (icon != null) image(icon, x + slot.x, y + slot.y, size, size, itemPaint) else requestIcon(id)
+        for ((index, slot) in slots.withIndex()) {
+            val icon = icons[index] ?: continue
+            icon.setRenderSizePx(polyItemRenderSizePx(size, hud))
+            icon.draw(canvas, Rect.makeXYWH(x + slot.x, y + slot.y, size, size), 1f)
         }
     }
 
@@ -139,6 +135,7 @@ fun ItemGrid(
 
 @Composable
 private fun ItemImage(hud: Hud, stack: ItemStack, size: Float, decorations: Boolean, countOverride: String?) {
+    val icon = rememberItemIconHandle(itemId(stack))
     PolyCanvas(PolyModifier.size(size, size)) { x, y, w, h ->
         if (offscreen(hud)) {
             val hudScale = hud.effectiveScale
@@ -165,15 +162,11 @@ private fun ItemImage(hud: Hud, stack: ItemStack, size: Float, decorations: Bool
                 return@PolyCanvas
             }
         }
-        val id = itemId(stack)
-        val icon = itemImage(id)
-        if (icon != null) image(icon, x, y, w, h, itemPaint) else requestIcon(id)
+        if (icon != null) {
+            icon.setRenderSizePx(polyItemRenderSizePx(size, hud))
+            icon.draw(canvas, Rect.makeXYWH(x, y, w, h), 1f)
+        }
     }
-}
-
-private fun requestIcon(id: String) {
-    if (!requestedIcons.add(id)) return
-    ItemCatalog.loadIcon(id) { requestedIcons.remove(id) }
 }
 
 inline fun <T> whenItemsReady(fallback: T, block: () -> T): T = try {

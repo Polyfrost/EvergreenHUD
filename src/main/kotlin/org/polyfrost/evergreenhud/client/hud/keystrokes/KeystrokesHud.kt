@@ -27,6 +27,7 @@ import org.polyfrost.evergreenhud.client.utils.copy
 import org.polyfrost.evergreenhud.client.utils.fastRemoveIfReversed
 import org.polyfrost.evergreenhud.client.utils.matchesKeyCode
 import org.polyfrost.evergreenhud.client.utils.matchesMouseButton
+import org.polyfrost.evergreenhud.client.utils.transformValues
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
@@ -85,7 +86,7 @@ private val LINE_PAINT = Paint().apply {
 }
 
 private fun snapToPixels(canvas: Canvas, x: Float, y: Float, w: Float, h: Float): Rect {
-    val m = canvas.localToDeviceAsMatrix33.mat
+    val m = canvas.transformValues()
     val scaleX = m[0]
     val scaleY = m[4]
     if (m[1] != 0f || m[3] != 0f || scaleX == 0f || scaleY == 0f) return Rect.makeXYWH(x, y, w, h)

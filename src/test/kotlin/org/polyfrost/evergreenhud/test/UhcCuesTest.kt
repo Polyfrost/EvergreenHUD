@@ -30,13 +30,32 @@ class UhcCuesTest {
     }
 
     @Test
-    fun `re-eat window starts at thirty ticks and excludes expired and infinite effects`() {
-        assertFalse(isGappleReEatWindow(true, 31, false))
-        assertTrue(isGappleReEatWindow(true, 30, false))
-        assertTrue(isGappleReEatWindow(true, 1, false))
-        assertFalse(isGappleReEatWindow(true, 0, false))
-        assertFalse(isGappleReEatWindow(true, -1, true))
-        assertFalse(isGappleReEatWindow(true, 30, true))
-        assertFalse(isGappleReEatWindow(false, 30, false))
+    fun `re-eat window adapts to regeneration level`() {
+        // Amplifiers are zero-based. II starts at 3.0s, III at 2.35s.
+        for ((amplifier, threshold) in listOf(0 to 81, 1 to 60, 2 to 47, 3 to 37, 4 to 34, 5 to 32, 6 to 32, 255 to 32)) {
+            assertFalse(isGappleReEatWindow(true, threshold + 1, false, amplifier))
+            assertTrue(isGappleReEatWindow(true, threshold, false, amplifier))
+            assertTrue(isGappleReEatWindow(true, 1, false, amplifier))
+        }
+    }
+
+    @Test
+    fun `ten second regen keeps every healing tick with a 200 ms reaction delay`() {
+        for ((amplifier, interval) in listOf(1 to 25, 2 to 12)) {
+            val start = (200 downTo 1).first { isGappleReEatWindow(true, it, false, amplifier) }
+            val remainingAtFinish = start - 4 - 32
+            val allHeals = (200 downTo 1).filter { it % interval == 0 }
+            assertTrue(allHeals.all { it > remainingAtFinish })
+            // Starting one tick earlier would finish on the last heal's tick.
+            assertTrue(remainingAtFinish + 1 == allHeals.last())
+        }
+    }
+
+    @Test
+    fun `re-eat window excludes expired infinite and non-regeneration effects`() {
+        assertFalse(isGappleReEatWindow(true, 0, false, 1))
+        assertFalse(isGappleReEatWindow(true, -1, true, 1))
+        assertFalse(isGappleReEatWindow(true, 30, true, 1))
+        assertFalse(isGappleReEatWindow(false, 30, false, 1))
     }
 }

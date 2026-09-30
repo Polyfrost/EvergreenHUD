@@ -4,7 +4,7 @@ mod.group = "org.polyfrost"
 mod.version = "3.8.1"
 
 deps.fabric_loader = "0.19.3"
-deps.oneconfig = "1.1.6"
+deps.oneconfig = "1.2.8"
 deps.junit = "6.1.3"
 deps.devauth = "1.2.2"
 

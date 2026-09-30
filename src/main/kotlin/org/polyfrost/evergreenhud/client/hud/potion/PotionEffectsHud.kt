@@ -30,6 +30,8 @@ import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
 import org.polyfrost.evergreenhud.client.utils.isGappleReEatWindow
 import org.polyfrost.oneconfig.api.config.v1.Node
+import org.polyfrost.oneconfig.api.config.v1.Properties.ktProperty
+import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
@@ -49,6 +51,7 @@ import org.polyfrost.oneconfig.utils.v1.MHUtils.setAccessible
 import org.slf4j.LoggerFactory
 import kotlin.math.PI
 import kotlin.math.cos
+import java.util.function.Supplier
 
 private const val ICON = 18f
 private const val ICON_GAP = 3f
@@ -216,6 +219,20 @@ class PotionEffectsHud : Hud(
     var listDirection = DIRECTION_AUTO
 
     @Switch(
+        title = "Centered Growth",
+        description = "Keeps the middle of the potion HUD fixed as effects are added or removed. Position its middle where you want it in the HUD editor.",
+        subcategory = "Dimensions",
+    )
+    var centeredGrowth = false
+
+    private var previousGrowthAnchor = HudAnchor.Auto
+    private var previousSelfAnchor = HudAnchor.TopLeft
+    private var previousStaticWidth = false
+
+    // Centering should not change automatic text layout or list direction.
+    private val layoutAnchor get() = if (centeredGrowth) previousSelfAnchor else selfAnchorPoint
+
+    @Switch(
         title = "Hide Vanilla Status Effects",
         description = "Turns off VanillaHUD's own status effects element, so it does not draw on top of this one.",
     )
@@ -223,7 +240,7 @@ class PotionEffectsHud : Hud(
 
     @Switch(
         title = "Golden Apple Re-eat Cue",
-        description = "Makes Regeneration flash when there's only 1.5 seconds left, allowing you to gap without losing any regeneration. useful in UHC.",
+        description = "Turns Regeneration text green at 3.0 seconds remaining for Regen II or 2.35 for Regen III, allowing 200 ms to react before eating a golden apple. Assumes normal eating speed and vanilla healing timing. Useful in UHC.",
     )
     var gapCue = false
 
@@ -234,6 +251,13 @@ class PotionEffectsHud : Hud(
     override fun setup() {
         super.setup()
         if (isReal) {
+            // Config loading does not run the switch callback.
+            if (centeredGrowth) enforceCenteredGrowth()
+            hideIf("staticWidth") { centeredGrowth }
+            addCallback("centeredGrowth") { enabled: Boolean ->
+                applyCenteredGrowth(enabled)
+                false
+            }
             hideIf("hideVanillaEffects") { !VanillaHudCompat.isPresent }
             if (VanillaHudCompat.isPresent) {
                 eventHandler { _: TickEvent.End ->
@@ -262,9 +286,45 @@ class PotionEffectsHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
+    internal fun applyCenteredGrowth(enabled: Boolean) {
+        if (enabled) {
+            previousGrowthAnchor = growthAnchor
+            previousSelfAnchor = selfAnchorPoint
+            previousStaticWidth = staticWidth
+            enforceCenteredGrowth()
+        } else {
+            val left = x
+            val top = y
+            staticWidth = previousStaticWidth
+            growthAnchor = previousGrowthAnchor
+            selfAnchorPoint = previousSelfAnchor
+            setAbsolutePosition(left, top)
+        }
+    }
+
+    private fun enforceCenteredGrowth() {
+        // Center along the list's growth axis. A vertical list must keep its
+        // aligned edge fixed when a shorter effect changes the measured width.
+        val anchor = if (direction()) HudAnchor.Center else when (autoTextAlign()) {
+            PolyAlign.Left -> HudAnchor.Left
+            PolyAlign.Right -> HudAnchor.Right
+            else -> HudAnchor.Center
+        }
+        if (!staticWidth && growthAnchor == anchor && selfAnchorPoint == anchor) return
+        val left = x
+        val top = y
+        // OneConfig's staticWidth flag freezes BOTH dimensions, including the
+        // height used for anchoring. Center the actual list, not that fixed frame.
+        staticWidth = false
+        growthAnchor = anchor
+        selfAnchorPoint = anchor
+        setAbsolutePosition(left, top)
+    }
+
     override fun updateFrequency(): Long = 50L
 
     override fun update(): Boolean {
+        if (centeredGrowth) enforceCenteredGrowth()
         syncIcons(mc.resourcePackRepository.selectedPacks.map { it.id })
         val next = buildRows()
         if (next == rows.value) return false
@@ -386,7 +446,7 @@ class PotionEffectsHud : Hud(
             else -> formatDuration(ticks)
         }
         val reEatColor = if (gapCue && isGappleReEatWindow(
-                id == ResourceLocation.withDefaultNamespace("regeneration"), ticks, infinite
+                id == ResourceLocation.withDefaultNamespace("regeneration"), ticks, infinite, amplifier
             )) PolyColor(0xFF55FF55.toInt()) else null
         return Row(
             icon = if (values.iconEnabled && id != null) iconFor(id) else null,
@@ -417,8 +477,8 @@ class PotionEffectsHud : Hud(
     private fun autoTextAlign(): PolyAlign {
         if (textAlignment != 0) return textAlign(textAlignment)
 
-        if (selfAnchorPoint != HudAnchor.Auto) {
-            return horizontalFrom(selfAnchorPoint)
+        if (layoutAnchor != HudAnchor.Auto) {
+            return horizontalFrom(layoutAnchor)
         }
 
         return when (section) {
@@ -438,8 +498,8 @@ class PotionEffectsHud : Hud(
     private fun direction(): Boolean {
         if (listDirection != DIRECTION_AUTO) return listDirection == DIRECTION_HORIZONTAL
 
-        if (selfAnchorPoint != HudAnchor.Auto) {
-            return when (selfAnchorPoint) {
+        if (layoutAnchor != HudAnchor.Auto) {
+            return when (layoutAnchor) {
                 HudAnchor.Top, HudAnchor.Center, HudAnchor.Bottom -> true
                 else -> false
             }
@@ -454,8 +514,8 @@ class PotionEffectsHud : Hud(
     private fun layoutMode(): Int {
         if (layoutMode != MODE_AUTO) return layoutMode
 
-        if (selfAnchorPoint != HudAnchor.Auto) {
-            return when (selfAnchorPoint) {
+        if (layoutAnchor != HudAnchor.Auto) {
+            return when (layoutAnchor) {
                 HudAnchor.Top, HudAnchor.Center, HudAnchor.Bottom -> MODE_STACKED
                 HudAnchor.Left, HudAnchor.Right -> MODE_FULL
                 HudAnchor.TopLeft, HudAnchor.TopRight, HudAnchor.BottomLeft, HudAnchor.BottomRight -> MODE_FULL
@@ -471,8 +531,8 @@ class PotionEffectsHud : Hud(
     }
 
     private fun isBottomAligned(): Boolean {
-        if (selfAnchorPoint != HudAnchor.Auto) {
-            return when (selfAnchorPoint) {
+        if (layoutAnchor != HudAnchor.Auto) {
+            return when (layoutAnchor) {
                 HudAnchor.BottomLeft, HudAnchor.Bottom, HudAnchor.BottomRight -> true
                 else -> false
             }
@@ -686,6 +746,12 @@ class PotionEffectsHud : Hud(
 
     override fun addToSerialized(tree: Tree) {
         super.addToSerialized(tree)
+        tree.set("previousGrowthAnchor", ktProperty(this::previousGrowthAnchor)
+            .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
+        tree.set("previousSelfAnchor", ktProperty(this::previousSelfAnchor)
+            .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
+        tree.set("previousStaticWidth", ktProperty(this::previousStaticWidth)
+            .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
         val collector = OneConfigCollector()
 
         val liveSortOptions = buildList {
