@@ -243,7 +243,7 @@ publishMods {
             minecraftVersions.addAll(compatibleVersions.ifEmpty { listOf(mcversion) })
 
             requires("oneconfig")
-            if (!isOrnithe) requires("fabric-api")
+            requires(if (isOrnithe) "osl" else "fabric-api")
             requires("fabric-language-kotlin")
             findProperty("publish.modrinth.compose-bundle")
                 ?.toString()
