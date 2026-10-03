@@ -33,7 +33,7 @@ class EffectComponentSettings : EffectComponentValues {
     @Color(title = "Duration Color", subcategory = "Duration")
     override var durationColor = PolyColor.rgba(255, 255, 255, 255)
 
-    @Switch(title = "Duration-based Colors", description = "Changes name and timer colors at or below the remaining duration threshold. Takes priority over the golden apple cue.", subcategory = "Duration-based Colors")
+    @Switch(title = "Duration-based Colors", description = "Changes name and timer colors at or below the remaining duration threshold. Regeneration uses its own timing when the golden apple cue is enabled.", subcategory = "Duration-based Colors")
     override var timedColorEnabled = false
     @Slider(title = "Color Threshold (s)", subcategory = "Duration-based Colors", min = 0F, max = 600F, step = 0.05F)
     override var timedColorThreshold = 3f

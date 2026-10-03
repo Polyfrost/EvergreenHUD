@@ -228,12 +228,9 @@ class PotionEffectsHud : EvergreenHud(
     @Switch(
         title = "Golden Apple Re-eat Cue",
         subcategory = "Duration-based Colors",
-        description = "Highlights Regeneration near expiry using its re-eat timing. Regen II and III thresholds are configurable below. Useful in UHC.",
+        description = "Highlights Regeneration using its own re-eat timing instead of duration-based colors. Regen II and III thresholds are configurable below. Useful in UHC.",
     )
     var gapCue = false
-
-    @Switch(title = "Independent Regeneration Cue", description = "Uses the golden apple cue for Regeneration instead of duration-based colors, including per-effect overrides.", subcategory = "Duration-based Colors")
-    var independentRegenerationCue = false
 
     @Slider(title = "Regen II Cue (s)", description = "Remaining duration when the Regeneration II cue starts.", min = 0F, max = 10F, step = 0.05F, subcategory = "Duration-based Colors")
     var regenIICueSeconds = 3f
@@ -411,11 +408,11 @@ class PotionEffectsHud : EvergreenHud(
             else -> formatDuration(ticks)
         }
         val regeneration = id == ResourceLocation.withDefaultNamespace("regeneration")
-        val independentCue = regeneration && independentRegenerationCue
-        val reEatColor = if ((gapCue || independentCue) && isGappleReEatWindow(
+        val regenerationCueEnabled = regeneration && gapCue
+        val reEatColor = if (regenerationCueEnabled && isGappleReEatWindow(
                 regeneration, ticks, infinite, amplifier, regenIICueSeconds, regenIIICueSeconds
             )) regenerationCueColor else null
-        val timedColor = !independentCue && values.timedColorEnabled && isDurationColorWindow(ticks, infinite, values.timedColorThreshold)
+        val timedColor = !regenerationCueEnabled && values.timedColorEnabled && isDurationColorWindow(ticks, infinite, values.timedColorThreshold)
         return Row(
             icon = if (values.iconEnabled && id != null) iconFor(id) else null,
             name = title,
