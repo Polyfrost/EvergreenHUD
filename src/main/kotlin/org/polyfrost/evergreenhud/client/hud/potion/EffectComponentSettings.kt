@@ -33,6 +33,15 @@ class EffectComponentSettings : EffectComponentValues {
     @Color(title = "Duration Color", subcategory = "Duration")
     override var durationColor = PolyColor.rgba(255, 255, 255, 255)
 
+    @Switch(title = "Duration-based Colors", description = "Changes name and timer colors at or below the remaining duration threshold. Takes priority over the golden apple cue.", subcategory = "Duration-based Colors")
+    override var timedColorEnabled = false
+    @Slider(title = "Color Threshold (s)", subcategory = "Duration-based Colors", min = 0F, max = 600F, step = 0.05F)
+    override var timedColorThreshold = 3f
+    @Color(title = "Name Highlight Color", subcategory = "Duration-based Colors")
+    override var timedNameColor = PolyColor(0xFF55FF55.toInt())
+    @Color(title = "Timer Highlight Color", subcategory = "Duration-based Colors")
+    override var timedDurationColor = PolyColor(0xFF55FF55.toInt())
+
     @Switch(title = "Show Effect(s)", subcategory = "Filtering")
     override var showEffects = true
 
@@ -65,6 +74,10 @@ class EffectComponentSettings : EffectComponentValues {
         durationEnabled = other.durationEnabled
         durationBlink = other.durationBlink
         durationColor = other.durationColor.copy()
+        timedColorEnabled = other.timedColorEnabled
+        timedColorThreshold = other.timedColorThreshold
+        timedNameColor = other.timedNameColor.copy()
+        timedDurationColor = other.timedDurationColor.copy()
 
         showEffects = other.showEffects
         ambientFilter = other.ambientFilter.copyOf()

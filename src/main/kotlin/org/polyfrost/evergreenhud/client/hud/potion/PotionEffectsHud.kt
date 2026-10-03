@@ -220,7 +220,7 @@ class PotionEffectsHud : Hud(
 
     @Switch(
         title = "Centered Growth",
-        description = "Keeps the middle of the potion HUD fixed as effects are added or removed. Position its middle where you want it in the HUD editor.",
+        description = "Keeps the middle of the potion HUD fixed as effects are added or removed.",
         subcategory = "Dimensions",
     )
     var centeredGrowth = false
@@ -242,7 +242,7 @@ class PotionEffectsHud : Hud(
 
     @Switch(
         title = "Golden Apple Re-eat Cue",
-        description = "Turns Regeneration text green at 3.0 seconds remaining for Regen II or 2.35 for Regen III, allowing 200 ms to react before eating a golden apple. Assumes normal eating speed and vanilla healing timing. Useful in UHC.",
+        description = "Turns Regeneration text green at 3.0 seconds remaining for Regen II or 2.35 for Regen III, allowing 200 ms to react before eating a golden apple. Useful in UHC.",
     )
     var gapCue = false
 
@@ -455,6 +455,7 @@ class PotionEffectsHud : Hud(
         val reEatColor = if (gapCue && isGappleReEatWindow(
                 id == ResourceLocation.withDefaultNamespace("regeneration"), ticks, infinite, amplifier
             )) PolyColor(0xFF55FF55.toInt()) else null
+        val timedColor = values.timedColorEnabled && isDurationColorWindow(ticks, infinite, values.timedColorThreshold)
         return Row(
             icon = if (values.iconEnabled && id != null) iconFor(id) else null,
             name = title,
@@ -462,9 +463,9 @@ class PotionEffectsHud : Hud(
             fade = fade(ticks, infinite, values.blinkThreshold),
             iconBlink = values.iconBlink,
             nameBlink = values.nameBlink,
-            nameColor = reEatColor ?: values.nameColor,
+            nameColor = if (timedColor) values.timedNameColor else reEatColor ?: values.nameColor,
             durationBlink = values.durationBlink,
-            durationColor = reEatColor ?: values.durationColor,
+            durationColor = if (timedColor) values.timedDurationColor else reEatColor ?: values.durationColor,
             dimmed = dimmed,
         )
     }
