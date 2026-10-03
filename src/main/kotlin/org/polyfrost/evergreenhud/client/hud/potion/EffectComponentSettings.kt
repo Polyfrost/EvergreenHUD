@@ -10,6 +10,23 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 
 class EffectComponentSettings : EffectComponentValues {
+    @Switch(
+        title = "Golden Apple Re-eat Cue",
+        subcategory = "Golden Apple Re-eat Cue",
+        description = "Highlights Regeneration using its own re-eat timing instead of duration-based colors. Regen II and III thresholds are configurable below. Useful in UHC.",
+    )
+    var gapCue = false
+
+    @Slider(title = "Regen II Cue (s)", description = "Remaining duration when the Regeneration II cue starts.", min = 0F, max = 10F, step = 0.05F, subcategory = "Golden Apple Re-eat Cue")
+    var regenIICueSeconds = 3f
+
+    @Slider(title = "Regen III Cue (s)", description = "Remaining duration when the Regeneration III cue starts.", min = 0F, max = 10F, step = 0.05F, subcategory = "Golden Apple Re-eat Cue")
+    var regenIIICueSeconds = 2.35f
+
+    @org.polyfrost.oneconfig.api.config.v1.annotations.Color(title = "Regeneration Cue Color", subcategory = "Golden Apple Re-eat Cue")
+    var regenerationCueColor = PolyColor(0xFF55FF55.toInt())
+
+
     @Switch(title = "Show Icon", subcategory = "Icon")
     override var iconEnabled = true
     @Switch(title = "Blink Icon", subcategory = "Icon")
@@ -64,6 +81,10 @@ class EffectComponentSettings : EffectComponentValues {
     override var blinkThreshold = 10f
 
     fun copyFrom(other: EffectComponentSettings) {
+        gapCue = other.gapCue
+        regenIICueSeconds = other.regenIICueSeconds
+        regenIIICueSeconds = other.regenIIICueSeconds
+        regenerationCueColor = other.regenerationCueColor.copy()
         iconEnabled = other.iconEnabled
         iconBlink = other.iconBlink
         nameEnabled = other.nameEnabled

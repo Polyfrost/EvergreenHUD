@@ -105,6 +105,8 @@ class PotionEffectsHud : EvergreenHud(
             Example("strength", "Strength", 140, 0),
         )
 
+        val REGEN_CUE_FIELDS = setOf("gapCue", "regenIICueSeconds", "regenIIICueSeconds", "regenerationCueColor")
+
         val ALL_LEAF_FIELDS: List<String> by lazy {
             EffectComponentSettings::class.java.declaredFields
                 .filter { field ->
@@ -113,6 +115,7 @@ class PotionEffectsHud : EvergreenHud(
                     }
                 }
                 .map { it.name }
+                .filter { it !in REGEN_CUE_FIELDS }
         }
 
         private val iconPaint = Paint()
@@ -225,22 +228,6 @@ class PotionEffectsHud : EvergreenHud(
     )
     var hideVanillaEffects = false
 
-    @Switch(
-        title = "Golden Apple Re-eat Cue",
-        subcategory = "Duration-based Colors",
-        description = "Highlights Regeneration using its own re-eat timing instead of duration-based colors. Regen II and III thresholds are configurable below. Useful in UHC.",
-    )
-    var gapCue = false
-
-    @Slider(title = "Regen II Cue (s)", description = "Remaining duration when the Regeneration II cue starts.", min = 0F, max = 10F, step = 0.05F, subcategory = "Duration-based Colors")
-    var regenIICueSeconds = 3f
-
-    @Slider(title = "Regen III Cue (s)", description = "Remaining duration when the Regeneration III cue starts.", min = 0F, max = 10F, step = 0.05F, subcategory = "Duration-based Colors")
-    var regenIIICueSeconds = 2.35f
-
-    @org.polyfrost.oneconfig.api.config.v1.annotations.Color(title = "Regeneration Cue Color", subcategory = "Duration-based Colors")
-    var regenerationCueColor = PolyColor(0xFF55FF55.toInt())
-
     private var rows = mutableStateOf<List<Row>>(emptyList())
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
@@ -248,6 +235,7 @@ class PotionEffectsHud : EvergreenHud(
     override fun setup() {
         super.setup()
         if (isReal) {
+            for (field in REGEN_CUE_FIELDS) hideIf("regeneration.$field") { "Regeneration" !in overrides }
             hideIf("hideVanillaEffects") { !VanillaHudCompat.isPresent }
             if (VanillaHudCompat.isPresent) {
                 eventHandler { _: TickEvent.End ->
@@ -408,10 +396,11 @@ class PotionEffectsHud : EvergreenHud(
             else -> formatDuration(ticks)
         }
         val regeneration = id == ResourceLocation.withDefaultNamespace("regeneration")
-        val regenerationCueEnabled = regeneration && gapCue
+        val cue = effectScopes.byPath.getValue("regeneration")
+        val regenerationCueEnabled = regeneration && values === cue && "Regeneration" in overrides && cue.gapCue
         val reEatColor = if (regenerationCueEnabled && isGappleReEatWindow(
-                regeneration, ticks, infinite, amplifier, regenIICueSeconds, regenIIICueSeconds
-            )) regenerationCueColor else null
+                regeneration, ticks, infinite, amplifier, cue.regenIICueSeconds, cue.regenIIICueSeconds
+            )) cue.regenerationCueColor else null
         val timedColor = !regenerationCueEnabled && values.timedColorEnabled && isDurationColorWindow(ticks, infinite, values.timedColorThreshold)
         return Row(
             icon = if (values.iconEnabled && id != null) iconFor(id) else null,
@@ -729,6 +718,7 @@ class PotionEffectsHud : EvergreenHud(
                 "collapsed" to (scope.key != "global")
             ))
             collector.handle(t, scope.settings, 0)
+            for (field in REGEN_CUE_FIELDS) stripProperty(t, field)
             for (field in scope.strippedFields) stripProperty(t, field)
             addDurationColorSection(tree, t, scope.key, scope.title, scope.settings, collector)
             tree.put(t)
@@ -744,6 +734,7 @@ class PotionEffectsHud : EvergreenHud(
                 "collapsed" to true
             ))
             collector.handle(t, settings, 0)
+            if (entryDef.path != "regeneration") for (field in REGEN_CUE_FIELDS) stripProperty(t, field)
             stripProperty(t, "categoryFilter")
             addDurationColorSection(tree, t, entryDef.path, entryDef.title, settings, collector)
             tree.put(t)
@@ -767,6 +758,7 @@ class PotionEffectsHud : EvergreenHud(
             "collapsed" to (key != "global"),
         ))
         collector.handle(section, settings, 0)
+        for (field in REGEN_CUE_FIELDS) stripProperty(section, field)
         for (field in ALL_LEAF_FIELDS) {
             if (field !in colorFields) stripProperty(section, field)
             else original.getProp(field)?.addDisplayCondition(Supplier { Property.Display.HIDDEN })
