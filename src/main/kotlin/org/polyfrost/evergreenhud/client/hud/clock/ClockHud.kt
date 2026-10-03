@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud.clock
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -28,7 +29,7 @@ private const val DETAIL_NUMBERS = 2
 
 private fun millisOfDay(zone: ZoneId): Long = LocalTime.now(zone).toNanoOfDay() / 1_000_000L
 
-class ClockHud : Hud(
+class ClockHud : EvergreenHud(
     id = "clock.json",
     title = "Clock",
     category = Category.INFO,

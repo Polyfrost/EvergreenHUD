@@ -1,10 +1,11 @@
 package org.polyfrost.evergreenhud.client.hud.battery
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import kotlin.time.Duration.Companion.seconds
 
-class BatteryHud : Hud(
+class BatteryHud : EvergreenHud(
     id = "battery.json",
     title = "Battery",
     category = Category.INFO,

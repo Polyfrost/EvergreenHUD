@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud.mouse
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,7 +46,7 @@ private const val PREVIEW_Y = -0.3f
 
 private const val DEFAULT_SIDE = 48f
 
-class MouseStrokesHud : Hud(
+class MouseStrokesHud : EvergreenHud(
     id = "mousestrokes.json",
     title = "Mouse Strokes",
     category = Category.INFO,

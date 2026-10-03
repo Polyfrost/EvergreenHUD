@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud.potion
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,7 +85,7 @@ private const val DIRECTION_AUTO = 0
 private const val DIRECTION_VERTICAL = 1
 private const val DIRECTION_HORIZONTAL = 2
 
-class PotionEffectsHud : Hud(
+class PotionEffectsHud : EvergreenHud(
     id = "potion_effects.json",
     title = "Potion Effects",
     category = Category.PLAYER,
@@ -219,22 +220,6 @@ class PotionEffectsHud : Hud(
     var listDirection = DIRECTION_AUTO
 
     @Switch(
-        title = "Centered Growth",
-        description = "Keeps the middle of the potion HUD fixed as effects are added or removed.",
-        subcategory = "Dimensions",
-    )
-    var centeredGrowth = false
-
-    private var previousGrowthAnchor = HudAnchor.Auto
-    private var previousSelfAnchor = HudAnchor.TopLeft
-    private var previousStaticWidth = false
-    private var previousStaticW = 0f
-    private var previousStaticH = 0f
-
-    // Centering should not change automatic text layout or list direction.
-    private val layoutAnchor get() = if (centeredGrowth) previousSelfAnchor else selfAnchorPoint
-
-    @Switch(
         title = "Hide Vanilla Status Effects",
         description = "Turns off VanillaHUD's own status effects element, so it does not draw on top of this one.",
     )
@@ -265,13 +250,6 @@ class PotionEffectsHud : Hud(
     override fun setup() {
         super.setup()
         if (isReal) {
-            // Config loading does not run the switch callback.
-            if (centeredGrowth) enforceCenteredGrowth()
-            hideIf("staticWidth") { centeredGrowth }
-            addCallback("centeredGrowth") { enabled: Boolean ->
-                applyCenteredGrowth(enabled)
-                false
-            }
             hideIf("hideVanillaEffects") { !VanillaHudCompat.isPresent }
             if (VanillaHudCompat.isPresent) {
                 eventHandler { _: TickEvent.End ->
@@ -300,45 +278,12 @@ class PotionEffectsHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
-    internal fun applyCenteredGrowth(enabled: Boolean) {
-        if (enabled) {
-            previousGrowthAnchor = growthAnchor
-            previousSelfAnchor = selfAnchorPoint
-            previousStaticWidth = staticWidth
-            previousStaticW = staticW
-            previousStaticH = staticH
-            enforceCenteredGrowth()
-        } else {
-            val left = x
-            val top = y
-            staticWidth = previousStaticWidth
-            // Enabling staticWidth captures rendered dimensions; restore the saved frame after it.
-            staticW = previousStaticW
-            staticH = previousStaticH
-            growthAnchor = previousGrowthAnchor
-            selfAnchorPoint = previousSelfAnchor
-            setAbsolutePosition(left, top)
-        }
-    }
-
-    private fun enforceCenteredGrowth() {
-        // Center along the list's growth axis. A vertical list must keep its
-        // aligned edge fixed when a shorter effect changes the measured width.
-        val anchor = if (direction()) HudAnchor.Center else when (autoTextAlign()) {
+    override fun centeredGrowthAnchor(): HudAnchor =
+        if (direction()) HudAnchor.Center else when (autoTextAlign()) {
             PolyAlign.Left -> HudAnchor.Left
             PolyAlign.Right -> HudAnchor.Right
             else -> HudAnchor.Center
         }
-        if (!staticWidth && growthAnchor == anchor && selfAnchorPoint == anchor) return
-        val left = x
-        val top = y
-        // OneConfig's staticWidth flag freezes BOTH dimensions, including the
-        // height used for anchoring. Center the actual list, not that fixed frame.
-        staticWidth = false
-        growthAnchor = anchor
-        selfAnchorPoint = anchor
-        setAbsolutePosition(left, top)
-    }
 
     override fun updateFrequency(): Long = 50L
 
@@ -768,16 +713,6 @@ class PotionEffectsHud : Hud(
 
     override fun addToSerialized(tree: Tree) {
         super.addToSerialized(tree)
-        tree.set("previousGrowthAnchor", ktProperty(this::previousGrowthAnchor)
-            .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
-        tree.set("previousSelfAnchor", ktProperty(this::previousSelfAnchor)
-            .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
-        tree.set("previousStaticWidth", ktProperty(this::previousStaticWidth)
-            .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
-        tree.set("previousStaticW", ktProperty(this::previousStaticW)
-            .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
-        tree.set("previousStaticH", ktProperty(this::previousStaticH)
-            .addDisplayCondition(Supplier { Property.Display.HIDDEN }))
         val collector = OneConfigCollector()
 
         val liveSortOptions = buildList {

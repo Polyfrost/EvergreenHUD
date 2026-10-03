@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.utils
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenTextHud
 import org.polyfrost.oneconfig.api.config.v1.Properties.ktProperty
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Tree
@@ -12,7 +13,7 @@ abstract class SpacedTextHud(
     category: Category,
     prefix: String,
     suffix: String = "",
-) : TextHud(id, title, category, prefix, suffix) {
+) : EvergreenTextHud(id, title, category, prefix, suffix) {
 
     private val defaultPrefix = prefix
     private val defaultSuffix = suffix

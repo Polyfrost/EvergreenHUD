@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud.direction
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,7 +50,7 @@ private const val DEFAULT_WIDTH = 140f
 
 private const val DEFAULT_HEIGHT = 24f
 
-class DirectionHud : Hud(
+class DirectionHud : EvergreenHud(
     id = "direction.json",
     title = "Direction",
     category = Category.PLAYER,

@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenTextHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -10,7 +11,7 @@ import org.polyfrost.oneconfig.api.hud.v1.TextHud
 
 private const val DEFAULT_TEXT = "Custom Text"
 
-class CustomTextHud : TextHud(
+class CustomTextHud : EvergreenTextHud(
     id = "custom_text.json",
     title = "Custom Text",
     category = Category.INFO,

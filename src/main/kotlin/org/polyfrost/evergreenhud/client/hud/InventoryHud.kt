@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import com.mojang.blaze3d.platform.InputConstants
@@ -69,7 +70,7 @@ private const val MIN_HEIGHT = (GRID_TOP + GRID_HEIGHT + GRID_BOTTOM) * MIN_SCAL
 
 private const val DEFAULT_HEIGHT = GRID_TOP_TITLED + GRID_HEIGHT + GRID_BOTTOM
 
-class InventoryHud : Hud(
+class InventoryHud : EvergreenHud(
     id = "inventory.json",
     title = "Inventory",
     category = Category.PLAYER,

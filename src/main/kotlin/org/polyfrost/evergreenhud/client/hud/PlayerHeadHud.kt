@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import com.mojang.blaze3d.platform.NativeImage
@@ -29,7 +30,7 @@ import kotlin.math.min
 private const val DEFAULT_SIDE = 16f
 private const val MIN_SIDE = 8f
 
-class PlayerHeadHud : Hud(
+class PlayerHeadHud : EvergreenHud(
     id = "player_head.json",
     title = "Player Head",
     category = Category.PLAYER,

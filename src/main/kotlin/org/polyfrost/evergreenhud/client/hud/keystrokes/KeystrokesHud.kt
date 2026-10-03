@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud.keystrokes
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import com.mojang.blaze3d.platform.InputConstants
 import androidx.compose.runtime.MutableState
@@ -89,7 +90,7 @@ private const val DOWN_SHORT = "Down"
 private const val LEFT_SHORT = "Left"
 private const val RIGHT_SHORT = "Right"
 
-class KeystrokesHud : Hud(
+class KeystrokesHud : EvergreenHud(
     id = "keystrokes.json",
     title = "Keystrokes",
     category = Category.INFO,

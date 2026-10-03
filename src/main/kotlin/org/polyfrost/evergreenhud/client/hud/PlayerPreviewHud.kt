@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.util.Mth
@@ -23,7 +24,7 @@ private const val MIN_HEIGHT = 36f
 
 private const val DEFAULT_ENTITY_SCALE = 40f
 
-class PlayerPreviewHud : Hud(
+class PlayerPreviewHud : EvergreenHud(
     id = "player_preview.json",
     title = "Player Preview",
     category = Category.PLAYER,

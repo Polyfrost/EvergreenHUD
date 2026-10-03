@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import org.jetbrains.skia.FilterMipmap
@@ -30,7 +31,7 @@ private val NEAREST = FilterMipmap(FilterMode.NEAREST, MipmapMode.NONE)
 private val PLACEHOLDER_COLOR = PolyColor(0x40FFFFFF)
 private val PLACEHOLDER_OUTLINE = PolyColor(0x80FFFFFF.toInt())
 
-class CustomImageHud : Hud(
+class CustomImageHud : EvergreenHud(
     id = "custom_image.json",
     title = "Custom Image",
     category = Category.INFO,
