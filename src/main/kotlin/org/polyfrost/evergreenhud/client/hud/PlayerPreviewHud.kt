@@ -2,7 +2,10 @@ package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+//? if > 1.8.9 {
 import net.minecraft.util.Mth
+//?} else
+//import net.minecraft.util.math.MathHelper
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
@@ -86,7 +89,12 @@ class PlayerPreviewHud : Hud(
         val entitySize = modelScale * (boxH / HEIGHT)
 
         val bodyLag = if (paperDoll) {
+            //? if > 1.8.9 {
             Mth.wrapDegrees(Mth.rotLerp(partialTick, player.yBodyRotO, player.yBodyRot) - player.yRot)
+            //?} else {
+            /*val bodyRot = player.lastBodyYaw + partialTick * MathHelper.wrapDegrees(player.bodyYaw - player.lastBodyYaw)
+            MathHelper.wrapDegrees(bodyRot - player.yRot)
+            *///?}
         } else {
             0f
         }

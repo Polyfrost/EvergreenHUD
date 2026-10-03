@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.client.Minecraft
+//? if > 1.8.9
 import net.minecraft.core.component.DataComponents
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
@@ -44,6 +45,7 @@ class LoreHud : SpacedTextHud(
     var maxLines = 0
 
     private val ItemStack.isNameShown: Boolean
+        //~ if = 1.8.9 'has(DataComponents.CUSTOM_NAME)' -> 'hasCustomHoverName()'
         get() = has(DataComponents.CUSTOM_NAME)
 
     private var currentLines: List<List<StyledRun>> = emptyList()
@@ -111,10 +113,18 @@ class LoreHud : SpacedTextHud(
     }
 
     private inline fun ItemStack.forEachLore(consumer: (List<StyledRun>) -> Unit) {
+        //? if > 1.8.9 {
         val lore = this.get(DataComponents.LORE) ?: return
         for (line: Component in lore.lines) {
             consumer(line.toStyledRuns())
         }
+        //?} else {
+        /*val display = nbt?.getCompound("display") ?: return
+        val lore = display.getList("Lore", 8)
+        for (i in 0 until lore.size()) {
+            consumer(Component.fromLegacy(lore.getString(i)).toStyledRuns())
+        }
+        *///?}
     }
 
     override fun clone(): Hud = (super.clone() as LoreHud).also {

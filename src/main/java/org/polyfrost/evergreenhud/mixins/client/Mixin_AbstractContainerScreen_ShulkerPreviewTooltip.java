@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.mixins.client;
 
+//? if > 1.8.9 {
 import net.minecraft.client.Minecraft;
 //? if < 26
 //import net.minecraft.client.gui.GuiGraphics;
@@ -40,3 +41,10 @@ public class Mixin_AbstractContainerScreen_ShulkerPreviewTooltip {
     }
 
 }
+//?} else {
+/*import net.minecraft.SharedConstants;
+import org.spongepowered.asm.mixin.Mixin;
+
+@Mixin(SharedConstants.class)
+public class Mixin_AbstractContainerScreen_ShulkerPreviewTooltip {}
+*///?}

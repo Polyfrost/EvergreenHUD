@@ -7,6 +7,8 @@ import net.minecraft.client.input.MouseButtonEvent
 import net.minecraft.client.input.MouseButtonInfo
 //?}
 import net.minecraft.client.KeyMapping
+//? if = 1.8.9
+//import org.polyfrost.oneconfig.internal.legacy.KeyCodes
 //? if > 1.21.1
 import net.minecraft.util.profiling.Profiler
 import net.minecraft.world.entity.Entity
@@ -48,6 +50,7 @@ fun calculateReachDistanceToEntity(entity: Entity): Float {
     val eyePos = player.getEyePosition(1.0f)
     val lookPos = player.getViewVector(1.0f)
     val adjustedPos = eyePos.add(lookPos.x * MAX_REACH_DISTANCE, lookPos.y * MAX_REACH_DISTANCE, lookPos.z * MAX_REACH_DISTANCE)
+    //~ if = 1.8.9 '.orElse(null)' -> '?.facePos'
     val hit = collisionBox.clip(eyePos, adjustedPos).orElse(null)
     if (hit != null) {
         result = eyePos.distanceTo(hit).toFloat()
@@ -70,17 +73,19 @@ inline fun <L, E> L.fastRemoveIfReversed(predicate: (E) -> Boolean) where L : Mu
 fun KeyMapping.matchesMouseButton(button: Int): Boolean {
     //? if >= 1.21.10 {
     return matchesMouse(MouseButtonEvent(0.0, 0.0, MouseButtonInfo(button, 0)))
-    //?} else {
+    //?} elif > 1.8.9 {
     /*return matchesMouse(button)
-    *///?}
+    *///?} else
+    //return keyCode == KeyCodes.mouseToLegacy(button) - 100
 }
 
 fun KeyMapping.matchesKeyCode(keyCode: Int): Boolean {
     //? if >= 1.21.10 {
     return matches(KeyEvent(keyCode, 0, 0))
-    //?} else {
+    //?} elif > 1.8.9 {
     /*return matches(keyCode, 0)
-    *///?}
+    *///?} else
+    //return this.keyCode == KeyCodes.toLegacy(keyCode)
 }
 
 fun PolyColor.copy(): PolyColor = PolyColor(rawArgb, chroma, chromaSpeed)

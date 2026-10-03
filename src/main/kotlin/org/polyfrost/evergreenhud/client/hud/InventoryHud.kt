@@ -3,9 +3,11 @@ package org.polyfrost.evergreenhud.client.hud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import com.mojang.blaze3d.platform.InputConstants
+//? if > 1.8.9
 import net.minecraft.core.component.DataComponents
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
+//? if > 1.8.9
 import net.minecraft.world.item.component.ItemContainerContents
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
@@ -17,9 +19,11 @@ import org.polyfrost.compose.composables.background
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
+//? if > 1.8.9 {
 import org.polyfrost.evergreenhud.client.hooks.ShulkerPreview
 import org.polyfrost.evergreenhud.client.hooks.heldShulkerBox
 import org.polyfrost.evergreenhud.client.hooks.shulkerContents
+//?}
 import org.polyfrost.evergreenhud.client.hud.item.CONTAINER_ITEM_INSET
 import org.polyfrost.evergreenhud.client.hud.item.ITEM_SIZE
 import org.polyfrost.evergreenhud.client.hud.item.ItemGrid
@@ -75,6 +79,7 @@ class InventoryHud : Hud(
     category = Category.PLAYER,
 ) {
     private companion object {
+        //? if > 1.8.9 {
         private val exampleShulker by lazy {
             ItemStack(Items.SHULKER_BOX).apply {
                 set(
@@ -90,6 +95,7 @@ class InventoryHud : Hud(
                 )
             }
         }
+        //?}
 
         private val exampleContents by lazy {
             List(ROWS * COLS) { i ->
@@ -98,13 +104,17 @@ class InventoryHud : Hud(
                     1 -> ItemStack(Items.ENCHANTED_BOOK)
                     9 -> ItemStack(Items.GOLDEN_APPLE, 8)
                     11 -> ItemStack(Items.DIAMOND_PICKAXE)
+                    //~ if = 1.8.9 'ItemStack.EMPTY' -> 'null'
                     else -> ItemStack.EMPTY
                 }
             }
         }
     }
 
+    //? if > 1.8.9 {
     @RadioButton(title = "Inventory", options = ["Player", "Ender Chest", "Held Shulker"])
+    //?} else
+    //@RadioButton(title = "Inventory", options = ["Player", "Ender Chest"])
     var type = PLAYER
 
     @RadioButton(
@@ -126,6 +136,7 @@ class InventoryHud : Hud(
     @Slider(title = "Slot Bounds Radius", min = 0F, max = 8F, step = 1F)
     var slotBoundsRadius = 0f
 
+    //? if > 1.8.9 {
     @Keybind(
         title = "Pin Shulker Preview",
         description = "Held Shulker only. Keeps the shulker's contents on screen after you stop holding it. Press again to unpin.",
@@ -135,7 +146,9 @@ class InventoryHud : Hud(
         .inScreens()
         .action { pressed: Boolean -> if (pressed) ShulkerPreview.togglePin(); true }
         .register()
+    //?}
 
+    //~ if = 1.8.9 'List<ItemStack>' -> 'List<ItemStack?>'
     private class Grid(val title: String?, val items: List<ItemStack>)
 
     private var grid = mutableStateOf<Grid?>(null)
@@ -154,11 +167,16 @@ class InventoryHud : Hud(
 
     private var sizedForHeight = 0f
 
+    //? if > 1.8.9 {
     private fun shulker(): ItemStack? =
         if (!isReal) exampleShulker else ShulkerPreview.pinnedStack ?: mc.player?.heldShulkerBox()
+    //?}
 
     private val visible: Boolean
+        //? if > 1.8.9 {
         get() = type != HELD_SHULKER || HudManager.isEditing || shulker() != null
+        //?} else
+        //get() = true
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
@@ -206,6 +224,7 @@ class InventoryHud : Hud(
             items.indices.all { ItemStack.matches(items[it], other.items[it]) }
 
     private fun publishSlots(next: Grid?) {
+        //? if > 1.8.9 {
         if (next == null || type != HELD_SHULKER || !isReal || HudManager.isEditing) return
         val scale = effectiveScale
         val content = contentScale
@@ -226,6 +245,8 @@ class InventoryHud : Hud(
             )
         }
         ShulkerPreview.publishSlots(slots)
+        //?} else
+        //return
     }
 
     private fun gridTop(): Float = when {
@@ -270,16 +291,22 @@ class InventoryHud : Hud(
     private fun titleText(): String = when (type) {
         PLAYER -> "Inventory"
         ENDER_CHEST -> "Ender Chest"
+        //? if > 1.8.9 {
         else -> shulker()?.hoverName?.string ?: "Shulker Box"
+        //?} else
+        //else -> "Inventory"
     }
 
+    //~ if = 1.8.9 'List<ItemStack>?' -> 'List<ItemStack?>?'
     private fun contents(): List<ItemStack>? = when (type) {
+        //? if > 1.8.9
         HELD_SHULKER -> shulker()?.shulkerContents()
         ENDER_CHEST -> if (!isReal) exampleContents else EnderChestTracker.contents()
         else -> if (!isReal) {
             exampleContents
         } else {
             val inv = mc.player?.inventory
+            //~ if = 1.8.9 '.copy() else ItemStack.EMPTY' -> '?.copy() else null'
             inv?.let { List(ROWS * COLS) { i -> if (COLS + i < it.containerSize) it.getItem(COLS + i).copy() else ItemStack.EMPTY } }
         }
     }

@@ -2,8 +2,10 @@ package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+//? if > 1.8.9 {
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.HumanoidArm
+//?}
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -73,6 +75,7 @@ class ArmorHud : Hud(
         private val exampleLeggings by lazy { ItemStack(Items.DIAMOND_LEGGINGS) }
         private val exampleBoots by lazy { ItemStack(Items.DIAMOND_BOOTS) }
         private val exampleMainHand by lazy { ItemStack(Items.DIAMOND_SWORD) }
+        //? if > 1.8.9
         private val exampleOffhand by lazy { ItemStack(Items.SHIELD) }
     }
 
@@ -98,8 +101,10 @@ class ArmorHud : Hud(
     @Switch(title = "Main Hand")
     var showMainHand = true
 
+    //? if > 1.8.9 {
     @Switch(title = "Off Hand")
     var showOffhand = true
+    //?}
 
     @Slider(title = "Padding", min = 0F, max = 20F, step = 1F)
     var padding = 5f
@@ -152,7 +157,10 @@ class ArmorHud : Hud(
         return x to HudManager.guiScreenHeight - height
     }
 
+    //? if > 1.8.9 {
     private fun mainHandOnRight(): Boolean = mc.options?.mainHand()?.get() != HumanoidArm.LEFT
+    //?} else
+    //private fun mainHandOnRight(): Boolean = true
 
     private fun defaultSize(): Pair<Float, Float> {
         val scale = textScale.coerceAtLeast(0.01f)
@@ -168,6 +176,7 @@ class ArmorHud : Hud(
     }
 
     private fun enabledSlots(): Int =
+        //~ if = 1.8.9 'showMainHand, showOffhand)' -> 'showMainHand)'
         listOf(showHelmet, showChestplate, showLeggings, showBoots, showMainHand, showOffhand).count { it }
 
     override fun hasBackground(): Boolean = style != VANILLA
@@ -208,7 +217,9 @@ class ArmorHud : Hud(
             textColor
         }
         val count = when {
+            //~ if = 1.8.9 'Items.BOW || stack.item == Items.CROSSBOW)' -> 'Items.BOW)'
             showArrowCount && (stack.item == Items.BOW || stack.item == Items.CROSSBOW) -> arrowCount().toString()
+            //~ if = 1.8.9 'carried(stack.item)' -> 'carried(stack)'
             countHeld && slot.inHand -> carried(stack.item).takeIf { it > 1 }?.toString()
             else -> null
         }
@@ -229,6 +240,7 @@ class ArmorHud : Hud(
         if (showLeggings) list.add(Slot(exampleLeggings, false))
         if (showBoots) list.add(Slot(exampleBoots, false))
         if (showMainHand) list.add(Slot(exampleMainHand, true))
+        //? if > 1.8.9
         if (showOffhand) list.add(Slot(exampleOffhand, true))
         return list
     }
@@ -236,6 +248,7 @@ class ArmorHud : Hud(
     private fun equippedItems(): ArrayList<Slot> {
         val list = ArrayList<Slot>(6)
         val player = mc.player ?: return list
+        //? if > 1.8.9 {
         fun add(slot: EquipmentSlot, inHand: Boolean = false) =
             player.getItemBySlot(slot).let { if (!it.isEmpty) list.add(Slot(it, inHand)) }
         if (showHelmet) add(EquipmentSlot.HEAD)
@@ -244,6 +257,14 @@ class ArmorHud : Hud(
         if (showBoots) add(EquipmentSlot.FEET)
         if (showMainHand) add(EquipmentSlot.MAINHAND, inHand = true)
         if (showOffhand) add(EquipmentSlot.OFFHAND, inHand = true)
+        //?} else {
+        /*fun add(stack: ItemStack?, inHand: Boolean = false) = stack?.let { list.add(Slot(it, inHand)) }
+        if (showHelmet) add(player.getArmor(3))
+        if (showChestplate) add(player.getArmor(2))
+        if (showLeggings) add(player.getArmor(1))
+        if (showBoots) add(player.getArmor(0))
+        if (showMainHand) add(player.mainHandItem, inHand = true)
+        *///?}
         return list
     }
 
@@ -251,6 +272,7 @@ class ArmorHud : Hud(
         DURABILITY -> if (stack.isDamageableItem) (stack.maxDamage - stack.damageValue).toString() else ""
         DURABILITY_PERCENT -> if (stack.isDamageableItem) "${durabilityPercent(stack)}%" else ""
         NAME -> stack.hoverName.string
+        //~ if = 1.8.9 'carried(stack.item)' -> 'carried(stack)'
         ITEM_COUNT -> carried(stack.item).toString()
         else -> ""
     }
@@ -265,18 +287,25 @@ class ArmorHud : Hud(
         var count = 0
         for (i in 0 until inv.containerSize) {
             val s = inv.getItem(i)
+            //? if > 1.8.9 {
             if (s.item == Items.ARROW || s.item == Items.SPECTRAL_ARROW || s.item == Items.TIPPED_ARROW) count += s.count
+            //?} else
+            //if (s != null && s.item == Items.ARROW) count += s.count
         }
         return count
     }
 
+    //~ if = 1.8.9 'item: Item' -> 'stack: ItemStack'
     private fun carried(item: Item): Int {
         if (!isReal) return 64
         val inv = mc.player?.inventory ?: return 0
         var count = 0
         for (i in 0 until inv.containerSize) {
             val s = inv.getItem(i)
+            //? if > 1.8.9 {
             if (s.item == item) count += s.count
+            //?} else
+            //if (s != null && s.item == stack.item && (!stack.item.hasCustomData() || s.metadata == stack.metadata)) count += s.count
         }
         return count
     }

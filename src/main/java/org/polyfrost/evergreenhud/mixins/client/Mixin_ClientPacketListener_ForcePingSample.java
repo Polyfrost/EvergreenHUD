@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.mixins.client;
 
+//? if > 1.8.9 {
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import org.polyfrost.evergreenhud.client.hud.PingHud;
@@ -31,3 +32,10 @@ public class Mixin_ClientPacketListener_ForcePingSample {
         return false;
     }
 }
+//?} else {
+/*import net.minecraft.SharedConstants;
+import org.spongepowered.asm.mixin.Mixin;
+
+@Mixin(SharedConstants.class)
+public class Mixin_ClientPacketListener_ForcePingSample {}
+*///?}

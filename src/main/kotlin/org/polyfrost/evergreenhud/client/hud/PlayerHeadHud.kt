@@ -3,11 +3,19 @@ package org.polyfrost.evergreenhud.client.hud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import com.mojang.blaze3d.platform.NativeImage
+//? if > 1.8.9 {
 import net.minecraft.client.resources.DefaultPlayerSkin
 //? if < 1.21.10
 //import net.minecraft.client.resources.PlayerSkin
 //? if >= 1.21.10
 import net.minecraft.world.entity.player.PlayerSkin
+//?} else {
+/*import net.minecraft.client.resource.skin.DefaultSkinUtils
+import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
+import net.ornithemc.osl.resource.loader.api.resource.manager.ResourceManager
+import org.polyfrost.oneconfig.internal.legacy.PlayerSkin
+import javax.imageio.ImageIO
+*///?}
 import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorInfo
 import org.jetbrains.skia.ColorSpace
@@ -86,6 +94,12 @@ class PlayerHeadHud : Hud(
 
 private val HEAD_PAINT = Paint()
 
+//? if = 1.8.9 {
+/*private object DefaultPlayerSkin {
+    fun get(uuid: UUID) = PlayerSkin(DefaultSkinUtils.getDefaultSkin(uuid))
+}
+*///?}
+
 private object PlayerHeadTexture {
     private val FALLBACK_UUID = UUID(0L, 0L)
 
@@ -110,21 +124,27 @@ private object PlayerHeadTexture {
     }
 
     private fun texturePath(skin: PlayerSkin): Any {
-        //? if >= 1.21.10
+        //? if >= 1.21.10 || = 1.8.9
         return skin.body().texturePath()
-        //? if < 1.21.10
+        //? if < 1.21.10 && > 1.8.9
         //return skin.texture
     }
 
     private fun build(skin: PlayerSkin): Image? = runCatching {
-        //? if >= 1.21.10
+        //? if >= 1.21.10 || = 1.8.9
         val texture = skin.body().texturePath()
-        //? if < 1.21.10
+        //? if < 1.21.10 && > 1.8.9
         //val texture = skin.texture
 
+        //? if > 1.8.9 {
         val packed = mc.resourceManager.getResource(texture).orElse(null)
         if (packed != null) return@runCatching packed.open().use { NativeImage.read(it) }.use { headImage(it) }
+        //?} else {
+        /*val packed = ResourceManager.client().getResource(NamespacedIdentifiers.from(texture.namespace, texture.path)).orElse(null)
+        if (packed != null) return@runCatching packed.open().use { NativeImage(ImageIO.read(it)) }.use { headImage(it) }
+        *///?}
 
+        //~ if = 1.8.9 'getTexture(' -> 'get('
         val pixels = PlayerHeadTextureAccess.readPixels(mc.textureManager.getTexture(texture))
         pixels?.let { headImage(it) }
     }.getOrNull()
