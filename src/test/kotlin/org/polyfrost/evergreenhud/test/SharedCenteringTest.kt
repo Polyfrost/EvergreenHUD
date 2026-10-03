@@ -3,15 +3,22 @@ package org.polyfrost.evergreenhud.test
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.polyfrost.evergreenhud.client.hud.CustomTextHud
+import org.polyfrost.evergreenhud.client.utils.EvergreenTextHud
 import org.polyfrost.oneconfig.api.hud.v1.HudAnchor
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 
 class SharedCenteringTest {
+    private class OptInTextHud : EvergreenTextHud("test.json", "Test", Category.INFO) {
+        override val supportsCenteredGrowth: Boolean get() = true
+        override fun getText(): String = "Test"
+        override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
+    }
+
     @Test
     fun `text HUD preserves midpoint as both content dimensions change`() {
         HudManager.guiScreenWidth = 1920f
         HudManager.guiScreenHeight = 1080f
-        val hud = CustomTextHud()
+        val hud = OptInTextHud()
         hud.renderedW = 100f
         hud.renderedH = 40f
         hud.setAbsolutePosition(200f, 300f)
@@ -29,7 +36,7 @@ class SharedCenteringTest {
 
     @Test
     fun `shared text HUD restores custom fixed frame`() {
-        val hud = CustomTextHud()
+        val hud = OptInTextHud()
         hud.staticWidth = true
         hud.staticW = 200f
         hud.staticH = 120f

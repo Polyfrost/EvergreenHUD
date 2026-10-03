@@ -10,6 +10,9 @@ abstract class EvergreenHud(id: String, title: String, category: Category) : Hud
     @Switch(title = "Centered Growth", description = "Keeps the middle of the HUD fixed as its content changes size.", subcategory = "Dimensions")
     var centeredGrowth = false
 
+    /** Modules opt in when this control is useful for their layout. */
+    protected open val supportsCenteredGrowth: Boolean get() = false
+
     private var centering = CenteredGrowth()
     protected val layoutAnchor get() = if (centeredGrowth) centering.previousSelfAnchor else selfAnchorPoint
     protected open fun centeredGrowthAnchor(): HudAnchor = HudAnchor.Center
@@ -20,20 +23,26 @@ abstract class EvergreenHud(id: String, title: String, category: Category) : Hud
     override var renderedW: Float
         get() = super.renderedW
         set(value) {
-            if (centeredGrowth) enforceCenteredGrowth()
+            if (supportsCenteredGrowth && centeredGrowth) enforceCenteredGrowth()
             super.renderedW = value
         }
     override var renderedH: Float
         get() = super.renderedH
         set(value) {
-            if (centeredGrowth) enforceCenteredGrowth()
+            if (supportsCenteredGrowth && centeredGrowth) enforceCenteredGrowth()
             super.renderedH = value
         }
 
     override fun setup() {
         super.setup()
         if (isReal) {
-            if (centeredGrowth) enforceCenteredGrowth()
+            // Undo saved centering from versions that exposed it on every HUD.
+            if (!supportsCenteredGrowth && centeredGrowth) {
+                applyCenteredGrowth(false)
+                centeredGrowth = false
+            }
+            hideIf("centeredGrowth") { !supportsCenteredGrowth }
+            if (supportsCenteredGrowth && centeredGrowth) enforceCenteredGrowth()
             hideIf("staticWidth") { centeredGrowth }
             addCallback("centeredGrowth") { enabled: Boolean ->
                 applyCenteredGrowth(enabled)

@@ -264,6 +264,8 @@ class PotionEffectsHud : EvergreenHud(
 
     override fun canMergeBackground(): Boolean = true
 
+    override val supportsCenteredGrowth: Boolean get() = true
+
     override fun centeredGrowthAnchor(): HudAnchor =
         if (direction()) HudAnchor.Center else when (autoTextAlign()) {
             PolyAlign.Left -> HudAnchor.Left
