@@ -227,20 +227,21 @@ class PotionEffectsHud : EvergreenHud(
 
     @Switch(
         title = "Golden Apple Re-eat Cue",
+        subcategory = "Duration-based Colors",
         description = "Highlights Regeneration near expiry using its re-eat timing. Regen II and III thresholds are configurable below. Useful in UHC.",
     )
     var gapCue = false
 
-    @Switch(title = "Independent Regeneration Cue", description = "Uses the golden apple cue for Regeneration instead of duration-based colors, including per-effect overrides.")
+    @Switch(title = "Independent Regeneration Cue", description = "Uses the golden apple cue for Regeneration instead of duration-based colors, including per-effect overrides.", subcategory = "Duration-based Colors")
     var independentRegenerationCue = false
 
-    @Slider(title = "Regen II Cue (s)", description = "Remaining duration when the Regeneration II cue starts.", min = 0F, max = 10F, step = 0.05F)
+    @Slider(title = "Regen II Cue (s)", description = "Remaining duration when the Regeneration II cue starts.", min = 0F, max = 10F, step = 0.05F, subcategory = "Duration-based Colors")
     var regenIICueSeconds = 3f
 
-    @Slider(title = "Regen III Cue (s)", description = "Remaining duration when the Regeneration III cue starts.", min = 0F, max = 10F, step = 0.05F)
+    @Slider(title = "Regen III Cue (s)", description = "Remaining duration when the Regeneration III cue starts.", min = 0F, max = 10F, step = 0.05F, subcategory = "Duration-based Colors")
     var regenIIICueSeconds = 2.35f
 
-    @org.polyfrost.oneconfig.api.config.v1.annotations.Color(title = "Regeneration Cue Color")
+    @org.polyfrost.oneconfig.api.config.v1.annotations.Color(title = "Regeneration Cue Color", subcategory = "Duration-based Colors")
     var regenerationCueColor = PolyColor(0xFF55FF55.toInt())
 
     private var rows = mutableStateOf<List<Row>>(emptyList())
@@ -732,6 +733,7 @@ class PotionEffectsHud : EvergreenHud(
             ))
             collector.handle(t, scope.settings, 0)
             for (field in scope.strippedFields) stripProperty(t, field)
+            addDurationColorSection(tree, t, scope.key, scope.title, scope.settings, collector)
             tree.put(t)
         }
 
@@ -746,6 +748,7 @@ class PotionEffectsHud : EvergreenHud(
             ))
             collector.handle(t, settings, 0)
             stripProperty(t, "categoryFilter")
+            addDurationColorSection(tree, t, entryDef.path, entryDef.title, settings, collector)
             tree.put(t)
         }
 
@@ -756,6 +759,29 @@ class PotionEffectsHud : EvergreenHud(
 
         val prop = tree.getProp("overrides") ?: throw IllegalStateException("overrides property not found on tree")
         prop.addMetadata("options", liveOptions)
+    }
+
+    private fun addDurationColorSection(root: Tree, original: Tree, key: String, title: String, settings: EffectComponentSettings, collector: OneConfigCollector) {
+        val colorFields = setOf("timedColorEnabled", "timedColorThreshold", "timedNameColor", "timedDurationColor")
+        val section = Tree.tree("durationColors_$key")
+        section.addMetadata(mapOf(
+            "title" to if (key == "global") "All Effects" else title,
+            "category" to "General", "subcategory" to "Duration-based Colors",
+            "collapsed" to (key != "global"),
+        ))
+        collector.handle(section, settings, 0)
+        for (field in ALL_LEAF_FIELDS) {
+            if (field !in colorFields) stripProperty(section, field)
+            else original.getProp(field)?.addDisplayCondition(Supplier { Property.Display.HIDDEN })
+        }
+        if (key != "global") {
+            for (field in colorFields) {
+                section.getProp(field)?.addDisplayCondition(Supplier {
+                    if (title in overrides) Property.Display.SHOWN else Property.Display.HIDDEN
+                })
+            }
+        }
+        root.put(section)
     }
 
     private fun valuesFor(effect: MobEffectInstance): EffectComponentValues {
