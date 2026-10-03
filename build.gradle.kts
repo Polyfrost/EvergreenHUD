@@ -164,6 +164,9 @@ tasks {
         }
     }
 
+    // Fabric Loader's JUnit launcher can't locate the 1.8.9 game without this stub; elsewhere it'd just mute test logs
+    if (!isOrnithe) processTestResources { exclude("log4j2.xml") }
+
     processResources {
         val props = mapOf(
             "mod_id" to modid,
