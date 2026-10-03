@@ -58,4 +58,14 @@ class UhcCuesTest {
         assertFalse(isGappleReEatWindow(true, 30, true, 1))
         assertFalse(isGappleReEatWindow(false, 30, false, 1))
     }
+    @Test
+    fun `regeneration levels use independent configurable cue thresholds`() {
+        assertTrue(isGappleReEatWindow(true, 80, false, 1, 4f, 1f))
+        assertFalse(isGappleReEatWindow(true, 81, false, 1, 4f, 1f))
+        assertTrue(isGappleReEatWindow(true, 20, false, 2, 4f, 1f))
+        assertFalse(isGappleReEatWindow(true, 21, false, 2, 4f, 1f))
+        assertFalse(isGappleReEatWindow(true, 1, false, 1, 0f, 1f))
+        assertFalse(isGappleReEatWindow(true, 20, true, 2, 4f, 1f))
+    }
+
 }

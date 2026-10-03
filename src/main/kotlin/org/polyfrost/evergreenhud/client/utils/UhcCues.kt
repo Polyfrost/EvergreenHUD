@@ -17,8 +17,16 @@ internal fun isFacingOrigin(x: Double, z: Double, yaw: Double, tolerance: Float)
  * is one interval before expiry. Finish at least one tick after that heal.
  * For Regen II and III, show the cue four ticks early to allow 200 ms to react.
  */
-internal fun isGappleReEatWindow(regeneration: Boolean, ticks: Int, infinite: Boolean, amplifier: Int): Boolean {
+internal fun isGappleReEatWindow(regeneration: Boolean, ticks: Int, infinite: Boolean, amplifier: Int, regenIISeconds: Float = 3f, regenIIISeconds: Float = 2.35f): Boolean {
     if (!regeneration || infinite || ticks <= 0) return false
+    val customSeconds = when (amplifier) {
+        1 -> regenIISeconds
+        2 -> regenIIISeconds
+        else -> null
+    }
+    if (customSeconds != null) {
+        return customSeconds.isFinite() && customSeconds > 0f && ticks / 20f <= customSeconds
+    }
     // High levels heal every tick; clamp before shifting to avoid JVM shift wrapping.
     val healInterval = (50 shr amplifier.coerceIn(0, 6)).coerceAtLeast(1)
     val eatTicks = 32

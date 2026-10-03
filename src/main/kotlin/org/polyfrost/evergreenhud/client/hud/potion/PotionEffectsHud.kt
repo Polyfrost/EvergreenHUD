@@ -242,9 +242,21 @@ class PotionEffectsHud : Hud(
 
     @Switch(
         title = "Golden Apple Re-eat Cue",
-        description = "Turns Regeneration text green at 3.0 seconds remaining for Regen II or 2.35 for Regen III, allowing 200 ms to react before eating a golden apple. Useful in UHC.",
+        description = "Highlights Regeneration near expiry using its re-eat timing. Regen II and III thresholds are configurable below. Useful in UHC.",
     )
     var gapCue = false
+
+    @Switch(title = "Independent Regeneration Cue", description = "Uses the golden apple cue for Regeneration instead of duration-based colors, including per-effect overrides.")
+    var independentRegenerationCue = false
+
+    @Slider(title = "Regen II Cue (s)", description = "Remaining duration when the Regeneration II cue starts.", min = 0F, max = 10F, step = 0.05F)
+    var regenIICueSeconds = 3f
+
+    @Slider(title = "Regen III Cue (s)", description = "Remaining duration when the Regeneration III cue starts.", min = 0F, max = 10F, step = 0.05F)
+    var regenIIICueSeconds = 2.35f
+
+    @org.polyfrost.oneconfig.api.config.v1.annotations.Color(title = "Regeneration Cue Color")
+    var regenerationCueColor = PolyColor(0xFF55FF55.toInt())
 
     private var rows = mutableStateOf<List<Row>>(emptyList())
 
@@ -452,10 +464,12 @@ class PotionEffectsHud : Hud(
             infinite -> INFINITE
             else -> formatDuration(ticks)
         }
-        val reEatColor = if (gapCue && isGappleReEatWindow(
-                id == ResourceLocation.withDefaultNamespace("regeneration"), ticks, infinite, amplifier
-            )) PolyColor(0xFF55FF55.toInt()) else null
-        val timedColor = values.timedColorEnabled && isDurationColorWindow(ticks, infinite, values.timedColorThreshold)
+        val regeneration = id == ResourceLocation.withDefaultNamespace("regeneration")
+        val independentCue = regeneration && independentRegenerationCue
+        val reEatColor = if ((gapCue || independentCue) && isGappleReEatWindow(
+                regeneration, ticks, infinite, amplifier, regenIICueSeconds, regenIIICueSeconds
+            )) regenerationCueColor else null
+        val timedColor = !independentCue && values.timedColorEnabled && isDurationColorWindow(ticks, infinite, values.timedColorThreshold)
         return Row(
             icon = if (values.iconEnabled && id != null) iconFor(id) else null,
             name = title,
