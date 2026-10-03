@@ -39,6 +39,7 @@ import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
 import org.polyfrost.oneconfig.api.config.v1.Node
+import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
@@ -55,6 +56,8 @@ import org.polyfrost.oneconfig.api.hud.v1.Section
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import org.polyfrost.oneconfig.utils.v1.MHUtils.setAccessible
 import org.slf4j.LoggerFactory
+import java.util.function.Predicate
+import java.util.function.Supplier
 import kotlin.math.PI
 import kotlin.math.cos
 
@@ -110,6 +113,9 @@ class PotionEffectsHud : Hud(
         )
 
         private val EFFECT_STRIPPED_FIELDS = setOf("categoryFilter")
+
+        private val PROPERTY_CONDITIONS = Property::class.java.getDeclaredField("conditions").apply { setAccessible() }
+        private val PROPERTY_CALLBACKS = Property::class.java.getDeclaredField("callbacks").apply { setAccessible() }
 
         private val iconPaint = Paint()
         //~ if = 1.8.9 'ResourceLocation' -> 'Int'
@@ -257,38 +263,64 @@ class PotionEffectsHud : Hud(
                 }
             }
 
+            val scoped = ArrayList<Property<*>>()
             for (scope in categoryScopes.scopeDefs) {
                 if (!scope.isOverride) continue
                 val key = scope.key
-                setupOverrideScope(key, scope.title, scope.strippedFields) { categoryScopes[key] }
+                scoped += setupOverrideScope(key, scope.title, scope.strippedFields) { categoryScopes[key] }
             }
 
             for (entry in EffectCatalog.ENTRIES) {
                 val path = entry.path
-                setupOverrideScope(path, entry.title, EFFECT_STRIPPED_FIELDS) { effectScopes.byPath.getValue(path) }
+                scoped += setupOverrideScope(path, entry.title, EFFECT_STRIPPED_FIELDS) { effectScopes.byPath.getValue(path) }
             }
+
+            val overridesProp = claim(getProperty("overrides"))
+            overridesProp.addCallback(OwnedCallback(this) { for (prop in scoped) prop.revaluateDisplay() })
         }
     }
 
-    private fun setupOverrideScope(key: String, title: String, stripped: Set<String>, settings: () -> EffectComponentSettings) {
+    private fun claim(prop: Property<*>): Property<Any?> {
+        @Suppress("UNCHECKED_CAST")
+        (PROPERTY_CONDITIONS.get(prop) as MutableList<Any>?)?.removeIf { it is OwnedCondition && it.owner !== this }
+        @Suppress("UNCHECKED_CAST")
+        (PROPERTY_CALLBACKS.get(prop) as MutableList<Any>?)?.removeIf { it is OwnedCallback<*> && it.owner !== this }
+        return Property.recast(prop)
+    }
+
+    private fun setupOverrideScope(key: String, title: String, stripped: Set<String>, settings: () -> EffectComponentSettings): List<Property<*>> {
         migrateOverriddenOptions(settings(), stripped)
 
-        hideIf("$key.$OVERRIDDEN_OPTIONS") { title !in overrides }
-        val fieldPaths = EffectComponentSettings.LEAF_FIELDS.filter { it !in stripped }.map { "$key.$it" }
-        for (path in fieldPaths) {
-            val field = path.substringAfterLast('.')
-            hideIf(path) { title !in overrides || field !in settings().overriddenOptions }
+        val listProp = claim(getProperty("$key.$OVERRIDDEN_OPTIONS"))
+        listProp.addDisplayCondition(OwnedCondition(this) { title !in overrides })
+
+        val fieldProps = EffectComponentSettings.LEAF_FIELDS.filter { it !in stripped }.map { field ->
+            claim(getProperty("$key.$field")).also { prop ->
+                prop.addDisplayCondition(OwnedCondition(this) { title !in overrides || field !in settings().overriddenOptions })
+            }
         }
 
         var previous = settings().overriddenOptions.toSet()
-        addCallback<Array<String>>("$key.$OVERRIDDEN_OPTIONS") { next ->
+        listProp.addCallback(OwnedCallback(this) { next ->
             val target = settings()
-            val current = next.toSet()
+            val current = (next as? Array<*>)?.filterIsInstance<String>().orEmpty().toSet()
             for (field in current - previous) target.copyField(field, categoryScopes.global)
             for (field in previous - current) target.copyField(field, EffectComponentSettings.DEFAULTS)
             previous = current
-            for (path in fieldPaths) getProperty(path).revaluateDisplay()
-            false
+            for (prop in fieldProps) prop.revaluateDisplay()
+        })
+
+        return fieldProps + listProp
+    }
+
+    private class OwnedCondition(val owner: PotionEffectsHud, private val hidden: () -> Boolean) : Supplier<Property.Display> {
+        override fun get(): Property.Display = if (hidden()) Property.Display.HIDDEN else Property.Display.SHOWN
+    }
+
+    private class OwnedCallback<T>(val owner: PotionEffectsHud, private val action: (T) -> Unit) : Predicate<T> {
+        override fun test(t: T): Boolean {
+            action(t)
+            return false
         }
     }
 
