@@ -20,6 +20,7 @@ import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
+import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.internal.ui.PlayerHeadTextureAccess
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
@@ -84,6 +85,34 @@ class PlayerHeadHud : Hud(
     }
 }
 
+/** Reusable head renderer for HUDs and optional mod integrations. [size] includes the border. */
+@Composable
+fun PlayerHead(
+    skin: PlayerSkin,
+    size: Float = 8f,
+    borderColor: PolyColor = PolyColor(0xFFFFFFFF.toInt()),
+    borderWidth: Float = 0f,
+    opacity: Float = 1f,
+    modifier: PolyModifier = PolyModifier,
+) {
+    if (!size.isFinite() || size <= 0f) return
+    PolyCanvas(modifier.size(size, size)) { x, y, w, h ->
+        val head = PlayerHeadTexture.forSkin(skin) ?: return@PolyCanvas
+        val alpha = if (opacity.isFinite()) opacity.coerceIn(0f, 1f) else 1f
+        val border = if (borderWidth.isFinite()) borderWidth.coerceIn(0f, min(w, h) / 2f) else 0f
+        Paint().use { paint ->
+            if (border > 0f) {
+                paint.color = borderColor.rawArgb
+                paint.alpha = ((((borderColor.rawArgb ushr 24) and 0xFF) * alpha).toInt())
+                canvas.drawRect(Rect.makeXYWH(x, y, w, h), paint)
+            }
+            paint.color = 0xFFFFFFFF.toInt()
+            paint.alpha = (255 * alpha).toInt()
+            canvas.drawImageRect(head, Rect.makeXYWH(x + border, y + border, w - border * 2f, h - border * 2f), paint)
+        }
+    }
+}
+
 private val HEAD_PAINT = Paint()
 
 private object PlayerHeadTexture {
@@ -95,18 +124,29 @@ private object PlayerHeadTexture {
     private const val HAT_U = 40
     private const val HAT_V = 8
 
-    private var cachedTexture: Any? = null
-    private var image: Image? = null
+    // Bound native image memory when integrations display many different players.
+    private val images = object : LinkedHashMap<Any, Image>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Any, Image>): Boolean {
+            if (size <= 128) return false
+            eldest.value.close()
+            return true
+        }
+    }
 
-    fun current(): Image? {
-        val skin = mc.player?.skin ?: DefaultPlayerSkin.get(FALLBACK_UUID)
+    fun current(): Image? = forSkin(mc.player?.skin ?: DefaultPlayerSkin.get(FALLBACK_UUID))
+
+    fun forSkin(skin: PlayerSkin): Image? {
         val texture = texturePath(skin)
-        if (texture == cachedTexture) return image
-
-        image?.close()
-        image = build(skin) ?: build(DefaultPlayerSkin.get(FALLBACK_UUID))
-        cachedTexture = texture
-        return image
+        images[texture]?.let { return it }
+        // Do not cache a fallback under a downloading skin's key: retry once it becomes available.
+        val result = build(skin)
+        if (result != null) {
+            images[texture] = result
+            return result
+        }
+        val fallback = DefaultPlayerSkin.get(FALLBACK_UUID)
+        val fallbackTexture = texturePath(fallback)
+        return images[fallbackTexture] ?: build(fallback)?.also { images[fallbackTexture] = it }
     }
 
     private fun texturePath(skin: PlayerSkin): Any {
