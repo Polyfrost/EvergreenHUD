@@ -18,6 +18,11 @@ import org.polyfrost.compose.composables.clip
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.hud.PlayerHead
+//? if < 1.21.10
+//import net.minecraft.client.resources.PlayerSkin
+//? if >= 1.21.10
+import net.minecraft.world.entity.player.PlayerSkin
 import org.polyfrost.evergreenhud.client.utils.Facing
 import org.polyfrost.evergreenhud.client.utils.cameraYaw
 import org.polyfrost.evergreenhud.client.utils.copy
@@ -45,7 +50,9 @@ private const val FADE_START = 0.55f
 
 private const val PREVIEW_BEARING = 22.5f
 
-private const val DEFAULT_WIDTH = 140f
+private const val DEFAULT_WIDTH = 220f
+
+private const val REFERENCE_WIDTH = 140f
 
 private const val DEFAULT_HEIGHT = 24f
 
@@ -94,6 +101,8 @@ class DirectionHud : Hud(
 
     private val compassWidth: Float get() = if (staticWidth) scaledWidth else DEFAULT_WIDTH
 
+    private val visibleSpan: Float get() = (span * compassWidth / REFERENCE_WIDTH).coerceIn(1f, 360f)
+
     private val compassHeight: Float get() = if (staticWidth) scaledHeight else DEFAULT_HEIGHT
 
     override fun minimumSize(): Pair<Float, Float> = 32f to 12f
@@ -127,6 +136,7 @@ class DirectionHud : Hud(
         val modifier = hudBackground(PolyModifier.size(compassWidth, compassHeight))
         PolyBox(modifier = modifier.clip(bgRadius)) {
             Compass(bearing)
+            PlayerMarkers(bearing)
         }
     }
 
@@ -146,8 +156,8 @@ class DirectionHud : Hud(
         Ticks(bearing, width, ribbonHeight, headingHeight, tickStrip)
 
         val centreX = width / 2f
-        val pixelsPerDegree = width / span
-        val halfSpan = span / 2f
+        val pixelsPerDegree = REFERENCE_WIDTH / span
+        val halfSpan = visibleSpan / 2f
         val labelWidth = LABEL * textScale
 
         for (facing in Facing.entries) {
@@ -167,13 +177,56 @@ class DirectionHud : Hud(
         }
     }
 
+    /** Empty composition hook for optional integrations such as Hoplite Tweaks.
+     * Inject marker calls here; the integration selects players and owns its settings.
+     * [bearing] is the current camera compass bearing.
+     */
+    @Composable
+    fun PlayerMarkers(bearing: Float) = Unit
+
+    /** Hook for optional integrations. Call from the compass composition after its labels.
+     * [playerBearing] uses compass degrees (north = 0, east = 90).
+     * Size includes the border; width expansion uses the same projection as compass labels.
+     */
+    @Composable
+    fun PlayerHeadMarker(
+        skin: PlayerSkin,
+        playerBearing: Float,
+        cameraBearing: Float,
+        size: Float = 12f,
+        borderColor: PolyColor = PolyColor(0xFFFFFFFF.toInt()),
+        borderWidth: Float = 1f,
+    ) {
+        if (!size.isFinite() || size <= 0f || !playerBearing.isFinite() || !cameraBearing.isFinite()) return
+        val halfSpan = visibleSpan / 2f
+        val delta = Facing.wrapDegrees(playerBearing - cameraBearing)
+        if (abs(delta) > halfSpan) return
+        val headingHeight = if (showHeading) LINE * textScale else 0f
+        val ribbonHeight = compassHeight - headingHeight
+        val tickStrip = if (showTicks) ribbonHeight * TICK_STRIP else 0f
+        val opacity = PolyColor(0xFFFFFFFF.toInt()).faded(delta, halfSpan).let {
+            ((it.rawArgb ushr 24) and 0xFF) / 255f
+        }
+        PlayerHead(
+            skin = skin,
+            size = size,
+            borderColor = borderColor,
+            borderWidth = borderWidth,
+            opacity = opacity,
+            modifier = PolyModifier.absoluteAt(
+                compassWidth / 2f + delta * REFERENCE_WIDTH / span - size / 2f,
+                headingHeight + (ribbonHeight - tickStrip - size) / 2f,
+            ),
+        )
+    }
+
     @Composable
     private fun Ticks(bearing: Float, width: Float, height: Float, top: Float, tickStrip: Float) {
         PolyCanvas(PolyModifier.size(width, height).absoluteAt(0f, top)) { x, y, w, h ->
             val centreX = x + w / 2f
             val bottom = y + h
-            val halfSpan = span / 2f
-            val pixelsPerDegree = w / span
+            val halfSpan = visibleSpan / 2f
+            val pixelsPerDegree = REFERENCE_WIDTH / span
 
             if (showTicks) {
                 var heading = 0
