@@ -10,6 +10,23 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 
 class EffectComponentSettings : EffectComponentValues {
+    @Switch(
+        title = "Golden Apple Re-eat Cue",
+        subcategory = "Golden Apple Re-eat Cue",
+        description = "Highlights Regeneration using its own re-eat timing instead of duration-based colors. Regen II and III thresholds are configurable below. Useful in UHC.",
+    )
+    var gapCue = false
+
+    @Slider(title = "Regen II Cue (s)", description = "Remaining duration when the Regeneration II cue starts.", min = 0F, max = 10F, step = 0.05F, subcategory = "Golden Apple Re-eat Cue")
+    var regenIICueSeconds = 3f
+
+    @Slider(title = "Regen III Cue (s)", description = "Remaining duration when the Regeneration III cue starts.", min = 0F, max = 10F, step = 0.05F, subcategory = "Golden Apple Re-eat Cue")
+    var regenIIICueSeconds = 2.35f
+
+    @org.polyfrost.oneconfig.api.config.v1.annotations.Color(title = "Regeneration Cue Color", subcategory = "Golden Apple Re-eat Cue")
+    var regenerationCueColor = PolyColor(0xFF55FF55.toInt())
+
+
     @Switch(title = "Show Icon", subcategory = "Icon")
     override var iconEnabled = true
     @Switch(title = "Blink Icon", subcategory = "Icon")
@@ -33,6 +50,15 @@ class EffectComponentSettings : EffectComponentValues {
     @Color(title = "Duration Color", subcategory = "Duration")
     override var durationColor = PolyColor.rgba(255, 255, 255, 255)
 
+    @Switch(title = "Duration-based Colors", description = "Changes name and timer colors at or below the remaining duration threshold. Regeneration uses its own timing when the golden apple cue is enabled.", subcategory = "Duration-based Colors")
+    override var timedColorEnabled = false
+    @Slider(title = "Color Threshold (s)", subcategory = "Duration-based Colors", min = 0F, max = 600F, step = 0.05F)
+    override var timedColorThreshold = 3f
+    @Color(title = "Name Highlight Color", subcategory = "Duration-based Colors")
+    override var timedNameColor = PolyColor(0xFF55FF55.toInt())
+    @Color(title = "Timer Highlight Color", subcategory = "Duration-based Colors")
+    override var timedDurationColor = PolyColor(0xFF55FF55.toInt())
+
     @Switch(title = "Show Effect(s)", subcategory = "Filtering")
     override var showEffects = true
 
@@ -55,6 +81,10 @@ class EffectComponentSettings : EffectComponentValues {
     override var blinkThreshold = 10f
 
     fun copyFrom(other: EffectComponentSettings) {
+        gapCue = other.gapCue
+        regenIICueSeconds = other.regenIICueSeconds
+        regenIIICueSeconds = other.regenIIICueSeconds
+        regenerationCueColor = other.regenerationCueColor.copy()
         iconEnabled = other.iconEnabled
         iconBlink = other.iconBlink
         nameEnabled = other.nameEnabled
@@ -65,6 +95,10 @@ class EffectComponentSettings : EffectComponentValues {
         durationEnabled = other.durationEnabled
         durationBlink = other.durationBlink
         durationColor = other.durationColor.copy()
+        timedColorEnabled = other.timedColorEnabled
+        timedColorThreshold = other.timedColorThreshold
+        timedNameColor = other.timedNameColor.copy()
+        timedDurationColor = other.timedDurationColor.copy()
 
         showEffects = other.showEffects
         ambientFilter = other.ambientFilter.copyOf()

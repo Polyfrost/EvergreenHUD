@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud.potion
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,7 +29,10 @@ import org.polyfrost.compose.mc.McFontQueue.measureWidth
 import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
+import org.polyfrost.evergreenhud.client.utils.isGappleReEatWindow
 import org.polyfrost.oneconfig.api.config.v1.Node
+import org.polyfrost.oneconfig.api.config.v1.Properties.ktProperty
+import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
@@ -48,6 +52,7 @@ import org.polyfrost.oneconfig.utils.v1.MHUtils.setAccessible
 import org.slf4j.LoggerFactory
 import kotlin.math.PI
 import kotlin.math.cos
+import java.util.function.Supplier
 
 private const val ICON = 18f
 private const val ICON_GAP = 3f
@@ -80,7 +85,7 @@ private const val DIRECTION_AUTO = 0
 private const val DIRECTION_VERTICAL = 1
 private const val DIRECTION_HORIZONTAL = 2
 
-class PotionEffectsHud : Hud(
+class PotionEffectsHud : EvergreenHud(
     id = "potion_effects.json",
     title = "Potion Effects",
     category = Category.PLAYER,
@@ -100,6 +105,8 @@ class PotionEffectsHud : Hud(
             Example("strength", "Strength", 140, 0),
         )
 
+        val REGEN_CUE_FIELDS = setOf("gapCue", "regenIICueSeconds", "regenIIICueSeconds", "regenerationCueColor")
+
         val ALL_LEAF_FIELDS: List<String> by lazy {
             EffectComponentSettings::class.java.declaredFields
                 .filter { field ->
@@ -108,6 +115,7 @@ class PotionEffectsHud : Hud(
                     }
                 }
                 .map { it.name }
+                .filter { it !in REGEN_CUE_FIELDS }
         }
 
         private val iconPaint = Paint()
@@ -227,6 +235,7 @@ class PotionEffectsHud : Hud(
     override fun setup() {
         super.setup()
         if (isReal) {
+            for (field in REGEN_CUE_FIELDS) hideIf("regeneration.$field") { "Regeneration" !in overrides }
             hideIf("hideVanillaEffects") { !VanillaHudCompat.isPresent }
             if (VanillaHudCompat.isPresent) {
                 eventHandler { _: TickEvent.End ->
@@ -255,7 +264,19 @@ class PotionEffectsHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
+    override val supportsCenteredGrowth: Boolean get() = true
+
+    override fun centeredGrowthAnchor(): HudAnchor =
+        if (direction()) HudAnchor.Center else when (autoTextAlign()) {
+            PolyAlign.Left -> HudAnchor.Left
+            PolyAlign.Right -> HudAnchor.Right
+            else -> HudAnchor.Center
+        }
+
+    override fun updateFrequency(): Long = 50L
+
     override fun update(): Boolean {
+        if (centeredGrowth) enforceCenteredGrowth()
         syncIcons(mc.resourcePackRepository.selectedPacks.map { it.id })
         val next = buildRows()
         if (next == rows.value) return false
@@ -376,6 +397,13 @@ class PotionEffectsHud : Hud(
             infinite -> INFINITE
             else -> formatDuration(ticks)
         }
+        val regeneration = id == ResourceLocation.withDefaultNamespace("regeneration")
+        val cue = effectScopes.byPath.getValue("regeneration")
+        val regenerationCueEnabled = regeneration && values === cue && "Regeneration" in overrides && cue.gapCue
+        val reEatColor = if (regenerationCueEnabled && isGappleReEatWindow(
+                regeneration, ticks, infinite, amplifier, cue.regenIICueSeconds, cue.regenIIICueSeconds
+            )) cue.regenerationCueColor else null
+        val timedColor = !regenerationCueEnabled && values.timedColorEnabled && isDurationColorWindow(ticks, infinite, values.timedColorThreshold)
         return Row(
             icon = if (values.iconEnabled && id != null) iconFor(id) else null,
             name = title,
@@ -383,9 +411,9 @@ class PotionEffectsHud : Hud(
             fade = fade(ticks, infinite, values.blinkThreshold),
             iconBlink = values.iconBlink,
             nameBlink = values.nameBlink,
-            nameColor = values.nameColor,
+            nameColor = if (timedColor) values.timedNameColor else reEatColor ?: values.nameColor,
             durationBlink = values.durationBlink,
-            durationColor = values.durationColor,
+            durationColor = if (timedColor) values.timedDurationColor else reEatColor ?: values.durationColor,
             dimmed = dimmed,
         )
     }
@@ -405,8 +433,8 @@ class PotionEffectsHud : Hud(
     private fun autoTextAlign(): PolyAlign {
         if (textAlignment != 0) return textAlign(textAlignment)
 
-        if (selfAnchorPoint != HudAnchor.Auto) {
-            return horizontalFrom(selfAnchorPoint)
+        if (layoutAnchor != HudAnchor.Auto) {
+            return horizontalFrom(layoutAnchor)
         }
 
         return when (section) {
@@ -426,8 +454,8 @@ class PotionEffectsHud : Hud(
     private fun direction(): Boolean {
         if (listDirection != DIRECTION_AUTO) return listDirection == DIRECTION_HORIZONTAL
 
-        if (selfAnchorPoint != HudAnchor.Auto) {
-            return when (selfAnchorPoint) {
+        if (layoutAnchor != HudAnchor.Auto) {
+            return when (layoutAnchor) {
                 HudAnchor.Top, HudAnchor.Center, HudAnchor.Bottom -> true
                 else -> false
             }
@@ -442,8 +470,8 @@ class PotionEffectsHud : Hud(
     private fun layoutMode(): Int {
         if (layoutMode != MODE_AUTO) return layoutMode
 
-        if (selfAnchorPoint != HudAnchor.Auto) {
-            return when (selfAnchorPoint) {
+        if (layoutAnchor != HudAnchor.Auto) {
+            return when (layoutAnchor) {
                 HudAnchor.Top, HudAnchor.Center, HudAnchor.Bottom -> MODE_STACKED
                 HudAnchor.Left, HudAnchor.Right -> MODE_FULL
                 HudAnchor.TopLeft, HudAnchor.TopRight, HudAnchor.BottomLeft, HudAnchor.BottomRight -> MODE_FULL
@@ -459,8 +487,8 @@ class PotionEffectsHud : Hud(
     }
 
     private fun isBottomAligned(): Boolean {
-        if (selfAnchorPoint != HudAnchor.Auto) {
-            return when (selfAnchorPoint) {
+        if (layoutAnchor != HudAnchor.Auto) {
+            return when (layoutAnchor) {
                 HudAnchor.BottomLeft, HudAnchor.Bottom, HudAnchor.BottomRight -> true
                 else -> false
             }
@@ -692,7 +720,9 @@ class PotionEffectsHud : Hud(
                 "collapsed" to (scope.key != "global")
             ))
             collector.handle(t, scope.settings, 0)
+            for (field in REGEN_CUE_FIELDS) stripProperty(t, field)
             for (field in scope.strippedFields) stripProperty(t, field)
+            addDurationColorSection(tree, t, scope.key, scope.title, scope.settings, collector)
             tree.put(t)
         }
 
@@ -706,7 +736,9 @@ class PotionEffectsHud : Hud(
                 "collapsed" to true
             ))
             collector.handle(t, settings, 0)
+            if (entryDef.path != "regeneration") for (field in REGEN_CUE_FIELDS) stripProperty(t, field)
             stripProperty(t, "categoryFilter")
+            addDurationColorSection(tree, t, entryDef.path, entryDef.title, settings, collector)
             tree.put(t)
         }
 
@@ -717,6 +749,30 @@ class PotionEffectsHud : Hud(
 
         val prop = tree.getProp("overrides") ?: throw IllegalStateException("overrides property not found on tree")
         prop.addMetadata("options", liveOptions)
+    }
+
+    private fun addDurationColorSection(root: Tree, original: Tree, key: String, title: String, settings: EffectComponentSettings, collector: OneConfigCollector) {
+        val colorFields = setOf("timedColorEnabled", "timedColorThreshold", "timedNameColor", "timedDurationColor")
+        val section = Tree.tree("durationColors_$key")
+        section.addMetadata(mapOf(
+            "title" to if (key == "global") "All Effects" else title,
+            "category" to "General", "subcategory" to "Duration-based Colors",
+            "collapsed" to (key != "global"),
+        ))
+        collector.handle(section, settings, 0)
+        for (field in REGEN_CUE_FIELDS) stripProperty(section, field)
+        for (field in ALL_LEAF_FIELDS) {
+            if (field !in colorFields) stripProperty(section, field)
+            else original.getProp(field)?.addDisplayCondition(Supplier { Property.Display.HIDDEN })
+        }
+        if (key != "global") {
+            for (field in colorFields) {
+                section.getProp(field)?.addDisplayCondition(Supplier {
+                    if (title in overrides) Property.Display.SHOWN else Property.Display.HIDDEN
+                })
+            }
+        }
+        root.put(section)
     }
 
     private fun valuesFor(effect: MobEffectInstance): EffectComponentValues {

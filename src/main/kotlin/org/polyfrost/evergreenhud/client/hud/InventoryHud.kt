@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import com.mojang.blaze3d.platform.InputConstants
@@ -69,7 +70,7 @@ private const val MIN_HEIGHT = (GRID_TOP + GRID_HEIGHT + GRID_BOTTOM) * MIN_SCAL
 
 private const val DEFAULT_HEIGHT = GRID_TOP_TITLED + GRID_HEIGHT + GRID_BOTTOM
 
-class InventoryHud : Hud(
+class InventoryHud : EvergreenHud(
     id = "inventory.json",
     title = "Inventory",
     category = Category.PLAYER,
@@ -160,10 +161,17 @@ class InventoryHud : Hud(
     private val visible: Boolean
         get() = type != HELD_SHULKER || HudManager.isEditing || shulker() != null
 
+    override fun shouldShow(): Boolean {
+        val allowed = inventoryHudAllowedOnServer(mc.currentServer?.ip)
+        if (!allowed) ShulkerPreview.publishSlots(emptyList())
+        return allowed && super.shouldShow()
+    }
+
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
     // the container is the background in the vanilla style, so OneConfig has none to draw or to fuse
-    override fun hasBackground(): Boolean = style != VANILLA
+    override fun hasBackground(): Boolean =
+        inventoryHudAllowedOnServer(mc.currentServer?.ip) && style != VANILLA
 
     override fun canMergeBackground(): Boolean = true
 
@@ -189,7 +197,7 @@ class InventoryHud : Hud(
 
     override fun update(): Boolean {
         val next = whenItemsReady(null) {
-            if (visible) Grid(if (showTitle) titleText() else null, contents().orEmpty()) else null
+            if (inventoryHudAllowedOnServer(mc.currentServer?.ip) && visible) Grid(if (showTitle) titleText() else null, contents().orEmpty()) else null
         }
         publishSlots(next)
         keepScaleAcrossNaturalHeight()
@@ -286,8 +294,15 @@ class InventoryHud : Hud(
 
     @Composable
     override fun Content() {
+        // Observe updates even while blocked so joining an allowed server recomposes.
         rev.value
-        val current = grid.value ?: return
+        val observedGrid = grid.value
+        // The editor can render Content directly; enforce the server rule here too.
+        if (!inventoryHudAllowedOnServer(mc.currentServer?.ip)) {
+            ShulkerPreview.publishSlots(emptyList())
+            return
+        }
+        val current = observedGrid ?: return
         val top = gridTop()
         val content = contentScale
         val originX = offsetX(content)
@@ -369,3 +384,7 @@ class InventoryHud : Hud(
         it.sizedForHeight = sizedForHeight
     }
 }
+
+/** This restriction applies to every inventory type and cannot be toggled off. */
+internal fun inventoryHudAllowedOnServer(address: String?): Boolean =
+    address?.contains("hoplite", ignoreCase = true) != true

@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 //? if < 1.21.11
@@ -39,7 +40,7 @@ private const val TITLE_GAP = 1f
 private const val DESCRIPTION_WIDTH = 140f
 private const val FONT_SIZE = 8f
 
-class ResourcePackHud : Hud(
+class ResourcePackHud : EvergreenHud(
     id = "resource_pack.json",
     title = "Resource Pack",
     category = Category.INFO,

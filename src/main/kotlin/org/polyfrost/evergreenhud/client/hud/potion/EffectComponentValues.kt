@@ -13,6 +13,10 @@ interface EffectComponentValues {
     val durationEnabled: Boolean
     val durationBlink: Boolean
     val durationColor: PolyColor
+    val timedColorEnabled: Boolean
+    val timedColorThreshold: Float
+    val timedNameColor: PolyColor
+    val timedDurationColor: PolyColor
 
     val showEffects: Boolean
     val ambientFilter: BooleanArray

@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud.shape
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import org.jetbrains.skia.Path
@@ -16,7 +17,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 
-class ShapeHud : Hud(
+class ShapeHud : EvergreenHud(
     id = "shape.json",
     title = "Shape",
     category = Category.INFO,

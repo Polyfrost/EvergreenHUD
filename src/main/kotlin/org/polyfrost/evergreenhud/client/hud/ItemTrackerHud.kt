@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.client.player.LocalPlayer
@@ -39,7 +40,7 @@ private const val BASE_PADDING = 1f
 
 private const val RIGHT = 1
 
-class ItemTrackerHud : Hud(
+class ItemTrackerHud : EvergreenHud(
     id = "item_tracker.json",
     title = "Item Tracker",
     category = Category.PLAYER,

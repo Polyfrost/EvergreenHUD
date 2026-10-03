@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.world.entity.EquipmentSlot
@@ -62,7 +63,7 @@ private const val RIGHT = 1
 private const val ABOVE = 2
 private const val BELOW = 3
 
-class ArmorHud : Hud(
+class ArmorHud : EvergreenHud(
     id = "armor.json",
     title = "Armor Status",
     category = Category.PLAYER,

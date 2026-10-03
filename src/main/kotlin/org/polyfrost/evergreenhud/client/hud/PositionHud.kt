@@ -9,11 +9,13 @@ import org.polyfrost.evergreenhud.client.utils.HudStyledCells
 import org.polyfrost.evergreenhud.client.utils.StyledCell
 import org.polyfrost.evergreenhud.client.utils.StyledRun
 import org.polyfrost.evergreenhud.client.utils.cameraYaw
+import org.polyfrost.evergreenhud.client.utils.isFacingOrigin
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.oneconfig.api.config.v1.annotations.Checkbox
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
+import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
@@ -58,6 +60,15 @@ class PositionHud : GenericNumberHud(
     @Checkbox(title = "Show Pitch")
     var showPitch = false
 
+    @Switch(title = "Origin Highlight", description = "Highlights coordinates when looking towards (0, 0). Useful in UHC.", subcategory = "Origin Highlight")
+    var highlight = false
+
+    @Slider(title = "Angle Tolerance", description = "Maximum angle from the direction to 0, 0, in degrees.", min = 0f, max = 180f, step = 1f, subcategory = "Origin Highlight")
+    var originAngleTolerance = 5f
+
+    @Color(title = "Highlight Color", subcategory = "Origin Highlight")
+    var originHighlightColor = PolyColor(0xFF55FF55.toInt())
+
     @Switch(title = "Per-Axis Label Colors", description = "Colours the X/Y/Z labels; values keep the HUD text colour.", subcategory = "Colors")
     var perAxisColors = false
 
@@ -99,6 +110,12 @@ class PositionHud : GenericNumberHud(
             updateWhenChanged("showAxis")
             updateWhenChanged("displayMode")
             updateWhenChanged("perAxisColors")
+            updateWhenChanged("highlight")
+            updateWhenChanged("originAngleTolerance")
+            updateWhenChanged("originHighlightColor")
+
+            hideIf("originAngleTolerance") { !highlight }
+            hideIf("originHighlightColor") { !highlight }
 
             hideIf("alignDirection") { !showDirection || displayMode != 0 }
             hideIf("perAxisColors") { !showAxis }
@@ -114,17 +131,18 @@ class PositionHud : GenericNumberHud(
     override fun Content() = HudStyledCells(linesState.value, alignColumns = alignState.value)
 
     override fun update(): Boolean {
+        val player = mc.player
+        if (player != null) {
+            val camera = mc.cameraEntity ?: player
+            this.px = player.x
+            this.py = player.y
+            this.pz = player.z
+            this.yaw = Facing.wrapDegrees(camera.yRot).toDouble()
+            this.pitch = camera.xRot.toDouble()
+        }
         val entries = createEntries()
         currentText = entries.joinToString(separator) { it.plain }
         val result = super.update()
-
-        val player = mc.player ?: return result
-        val camera = mc.cameraEntity ?: player
-        this.px = player.x
-        this.py = player.y
-        this.pz = player.z
-        this.yaw = Facing.wrapDegrees(camera.yRot).toDouble()
-        this.pitch = camera.xRot.toDouble()
 
         linesState.value = buildLines(entries)
         alignState.value = alignDirection && showDirection && displayMode == 0
@@ -133,7 +151,7 @@ class PositionHud : GenericNumberHud(
 
     private val separator get() = if (displayMode == 0) "\n" else ", "
 
-    private class Entry(val label: String, val value: String, val direction: String?, val color: PolyColor?) {
+    private class Entry(val label: String, val value: String, val direction: String?, val color: PolyColor?, val highlight: PolyColor? = null) {
         val plain get() = label + value + (direction ?: "")
     }
 
@@ -141,10 +159,10 @@ class PositionHud : GenericNumberHud(
 
     private fun cells(entry: Entry): List<MutableList<StyledRun>> {
         val main = mutableListOf<StyledRun>()
-        if (entry.label.isNotEmpty()) main.add(run(entry.label, entry.color))
-        main.add(run(entry.value))
+        if (entry.label.isNotEmpty()) main.add(run(entry.label, entry.highlight ?: entry.color))
+        main.add(run(entry.value, entry.highlight))
 
-        return if (entry.direction != null) listOf(main, mutableListOf(run(entry.direction)))
+        return if (entry.direction != null) listOf(main, mutableListOf(run(entry.direction, entry.highlight)))
         else listOf(main)
     }
 
@@ -182,6 +200,9 @@ class PositionHud : GenericNumberHud(
         value = format(value),
         direction = if (showDirection && sign != NO_SIGN) "  ($sign)" else null,
         color = color.takeIf { perAxisColors },
+        highlight = originHighlightColor.takeIf {
+            highlight && mc.player != null && isFacingOrigin(px, pz, yaw, originAngleTolerance)
+        },
     )
 
     private fun angleEntry(label: String, value: Double, color: PolyColor): Entry = Entry(

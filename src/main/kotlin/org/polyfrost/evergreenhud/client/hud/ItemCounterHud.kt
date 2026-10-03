@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
+import org.polyfrost.evergreenhud.client.utils.EvergreenHud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.core.registries.BuiltInRegistries
@@ -50,7 +51,7 @@ private const val MC_INK_HEIGHT = 7f
 
 private const val BASE_PADDING = 1f
 
-class ItemCounterHud : Hud(
+class ItemCounterHud : EvergreenHud(
     id = "item_counter.json",
     title = "Item Counter",
     category = Category.PLAYER,
