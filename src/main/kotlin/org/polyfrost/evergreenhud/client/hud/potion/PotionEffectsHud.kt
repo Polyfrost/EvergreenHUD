@@ -132,11 +132,8 @@ class PotionEffectsHud : Hud(
             if (ids == cachedPackIds) return
             cachedPackIds = ids
             iconCache.clear()
-            //? if = 1.8.9 {
-            /*atlas?.close()
-            atlas = null
-            atlasLoaded = false
-            *///?}
+            //? if = 1.8.9
+            //iconsLoaded = false
         }
 
         //? if > 1.8.9 {
@@ -154,39 +151,36 @@ class PotionEffectsHud : Hud(
             return icon
         }
         //?} else {
-        /*private var atlas: Image? = null
-        private var atlasLoaded = false
+        /*private var iconsLoaded = false
 
-        private fun atlas(): Image? {
-            if (!atlasLoaded) {
-                atlasLoaded = true
-                val path = NamespacedIdentifiers.from("minecraft", "textures/gui/container/inventory.png")
-                atlas = ResourceManager.client().getResource(path).orElse(null)?.open()?.use { ImageLoader.fromBytes(it.readBytes()) }
+        private fun loadIcons() {
+            val path = NamespacedIdentifiers.from("minecraft", "textures/gui/container/inventory.png")
+            val atlas = ResourceManager.client().getResource(path).orElse(null)?.open()?.use { ImageLoader.fromBytes(it.readBytes()) } ?: return
+            atlas.use {
+                val scale = atlas.width / 256f
+                val size = (ICON * scale).roundToInt()
+                Bitmap().use { bitmap ->
+                    bitmap.allocN32Pixels(size, size)
+                    for (effect in StatusEffect.BY_ID) {
+                        if (effect == null || !effect.hasIcon()) continue
+                        val x = ((effect.iconIndex % 8 * ICON) * scale).roundToInt()
+                        val y = ((198 + effect.iconIndex / 8 * ICON) * scale).roundToInt()
+                        if (atlas.readPixels(bitmap, x, y)) iconCache[effect.id] = Image.makeFromBitmap(bitmap)
+                    }
+                }
             }
-            return atlas
         }
 
         fun iconFor(effect: StatusEffect): Image? {
-            if (!effect.hasIcon()) return null
-            val id = effect.id
-            if (iconCache.containsKey(id)) return iconCache[id]
-            val icon = try {
-                atlas()?.let { atlas ->
-                    val scale = atlas.width / 256f
-                    val size = (ICON * scale).roundToInt()
-                    val x = ((effect.iconIndex % 8 * ICON) * scale).roundToInt()
-                    val y = ((198 + effect.iconIndex / 8 * ICON) * scale).roundToInt()
-                    Bitmap().use { bitmap ->
-                        bitmap.allocN32Pixels(size, size)
-                        if (atlas.readPixels(bitmap, x, y)) Image.makeFromBitmap(bitmap) else null
-                    }
+            if (!iconsLoaded) {
+                iconsLoaded = true
+                try {
+                    loadIcons()
+                } catch (e: Exception) {
+                    LOGGER.warn("Failed to load potion effect icons", e)
                 }
-            } catch (e: Exception) {
-                LOGGER.warn("Failed to load the icon for effect {}", id, e)
-                null
             }
-            iconCache[id] = icon
-            return icon
+            return iconCache[effect.id]
         }
         *///?}
 
@@ -328,7 +322,7 @@ class PotionEffectsHud : Hud(
         //? if > 1.8.9 {
         val active = mc.player?.activeEffects?.filter { it.showIcon() }.orEmpty()
         //?} else
-        //val active = mc.player?.activeEffects?.toList().orEmpty()
+        //val active = mc.player?.activeEffects?.filter { StatusEffect.BY_ID[it.id].hasIcon() }.orEmpty()
         if (active.isEmpty()) {
             return if (HudManager.isEditing) exampleRows()
             else emptyList()
@@ -700,7 +694,7 @@ class PotionEffectsHud : Hud(
     private fun Icon(icon: Image, size: Float, alpha: Float, modifier: PolyModifier = PolyModifier) {
         PolyCanvas(modifier.size(size, size)) { x, y, w, h ->
             iconPaint.alpha = (255f * alpha).toInt().coerceIn(0, 255)
-            val downscaled = w * canvas.localToDeviceAsMatrix33.mat[0] < icon.width
+            val downscaled = w < icon.width && w * canvas.localToDeviceAsMatrix33.mat[0] < icon.width
             val sampling = if (downscaled) SamplingMode.LINEAR else SamplingMode.DEFAULT
             canvas.drawImageRect(icon, Rect.makeWH(icon.width.toFloat(), icon.height.toFloat()), Rect.makeXYWH(x, y, w, h), sampling, iconPaint, true)
         }
