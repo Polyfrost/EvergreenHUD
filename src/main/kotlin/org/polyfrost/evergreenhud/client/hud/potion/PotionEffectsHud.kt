@@ -19,6 +19,7 @@ import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
 import net.ornithemc.osl.resource.loader.api.resource.manager.ResourceManager
 import net.ornithemc.osl.resource.loader.api.resource.repository.ResourcePackRepository
 import org.jetbrains.skia.Bitmap
+import kotlin.math.roundToInt
 *///?}
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.Paint
@@ -152,10 +153,14 @@ class PotionEffectsHud : Hud(
             val path = NamespacedIdentifiers.from("minecraft", "textures/gui/container/inventory.png")
             val icon = try {
                 ResourceManager.client().getResource(path).orElse(null)?.open()?.use {
-                    val atlas = ImageLoader.fromBytes(it.readBytes())
-                    val bitmap = Bitmap().apply { allocN32Pixels(ICON.toInt(), ICON.toInt()) }
-                    atlas?.readPixels(bitmap, effect.iconIndex % 8 * ICON.toInt(), 198 + effect.iconIndex / 8 * ICON.toInt())
-                    Image.makeFromBitmap(bitmap)
+                    ImageLoader.fromBytes(it.readBytes())?.use { atlas ->
+                        val scale = atlas.width / 256f
+                        val size = (ICON * scale).roundToInt()
+                        val bitmap = Bitmap().apply { allocN32Pixels(size, size) }
+                        val x = ((effect.iconIndex % 8 * ICON) * scale).roundToInt()
+                        val y = ((198 + effect.iconIndex / 8 * ICON) * scale).roundToInt()
+                        if (atlas.readPixels(bitmap, x, y)) Image.makeFromBitmap(bitmap) else null
+                    }
                 }
             } catch (e: Exception) {
                 LOGGER.warn("Failed to load the icon for effect {}", id, e)
