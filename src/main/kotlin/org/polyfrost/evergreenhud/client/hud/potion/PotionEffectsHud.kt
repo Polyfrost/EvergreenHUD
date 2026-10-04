@@ -301,7 +301,12 @@ class PotionEffectsHud : Hud(
             return exampleRows()
         }
 
-        val active = mc.player?.activeEffects?.toList().orEmpty()
+        val active = mc.player?.activeEffects?.filter {
+            //? if > 1.8.9 {
+            it.showIcon()
+            //?} else
+            //StatusEffect.BY_ID[it.id].hasIcon()
+        }.orEmpty()
         if (active.isEmpty()) {
             return if (HudManager.isEditing) exampleRows()
             else emptyList()
@@ -367,10 +372,6 @@ class PotionEffectsHud : Hud(
     }
 
     private fun shouldDisplayEffect(effect: MobEffectInstance): Boolean {
-        //? if > 1.8.9 {
-        if (!effect.showIcon()) return false
-        //?} else
-        //if (!StatusEffect.BY_ID[effect.id].hasIcon()) return false
         val values = valuesFor(effect)
 
         if (!values.showEffects) return false
