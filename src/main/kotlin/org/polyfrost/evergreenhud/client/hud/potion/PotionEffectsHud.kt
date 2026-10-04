@@ -90,6 +90,14 @@ private const val DIRECTION_AUTO = 0
 private const val DIRECTION_VERTICAL = 1
 private const val DIRECTION_HORIZONTAL = 2
 
+private const val SECTION_SWITCH_DISTANCE = 4f
+
+private val SECTION_GRID = arrayOf(
+    arrayOf(Section.TopLeft, Section.TopCenter, Section.TopRight),
+    arrayOf(Section.CenterLeft, Section.Center, Section.CenterRight),
+    arrayOf(Section.BottomLeft, Section.BottomCenter, Section.BottomRight),
+)
+
 class PotionEffectsHud : Hud(
     id = "potion_effects.json",
     title = "Potion Effects",
@@ -254,6 +262,19 @@ class PotionEffectsHud : Hud(
 
     private var rows = mutableStateOf<List<Row>>(emptyList())
 
+    private var layoutSection = mutableStateOf<Section?>(null)
+    private val activeSection: Section get() = layoutSection.value ?: section
+
+    private var dragging = false
+    private var dragX = 0f
+    private var dragY = 0f
+    private var settledX = 0f
+    private var settledY = 0f
+    private var holdingSection = false
+    private var heldAtX = 0f
+    private var heldAtY = 0f
+    private var revertingSection = false
+
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
     override fun setup() {
@@ -291,10 +312,87 @@ class PotionEffectsHud : Hud(
         //~ if = 1.8.9 'mc.resourcePackRepository' -> 'ResourcePackRepository.client()'
         syncIcons(mc.resourcePackRepository.selectedPacks.map { it.id })
         val next = buildRows()
-        if (next == rows.value) return false
-        rows.value = next
+        val rowsChanged = next != rows.value
+        if (rowsChanged) rows.value = next
+        val sectionChanged = settleLayoutSection()
+        return rowsChanged || sectionChanged
+    }
+
+    override fun onEditorDragStart() {
+        super.onEditorDragStart()
+        dragging = true
+        dragX = x
+        dragY = y
+    }
+
+    override fun onEditorDragEnd() {
+        super.onEditorDragEnd()
+        dragging = false
+    }
+
+    override fun updateRelativeX(absX: Float) {
+        super.updateRelativeX(absX)
+        if (!revertingSection) dragX = absX
+    }
+
+    override fun updateRelativeY(absY: Float) {
+        super.updateRelativeY(absY)
+        if (!revertingSection) dragY = absY
+    }
+
+    private fun settleLayoutSection(): Boolean {
+        val target = section
+        val held = layoutSection.value
+
+        if (held == target || held == null || !HudManager.isEditing || selfAnchorPoint != HudAnchor.Auto) {
+            if (!dragging) {
+                dragX = x
+                dragY = y
+            }
+            if (holdingSection && dragX == heldAtX && dragY == heldAtY && held == target) return false
+            holdingSection = false
+            settledX = dragX
+            settledY = dragY
+            if (held == target) return false
+            layoutSection.value = target
+            return true
+        }
+
+        val row = towards(rowOf(held), rowOf(target), dragY - settledY)
+        val column = towards(columnOf(held), columnOf(target), dragX - settledX)
+        val next = SECTION_GRID[row][column]
+
+        if (next != target) {
+            revertingSection = true
+            try {
+                section = next
+                x = dragX
+                y = dragY
+            } finally {
+                revertingSection = false
+            }
+            holdingSection = true
+            heldAtX = dragX
+            heldAtY = dragY
+        }
+
+        if (next == held) return false
+        if (next == target) holdingSection = false
+        layoutSection.value = next
+        settledX = dragX
+        settledY = dragY
         return true
     }
+
+    private fun towards(from: Int, to: Int, moved: Float): Int = when {
+        to > from && moved >= SECTION_SWITCH_DISTANCE -> to
+        to < from && moved <= -SECTION_SWITCH_DISTANCE -> to
+        else -> from
+    }
+
+    private fun rowOf(sec: Section): Int = SECTION_GRID.indexOfFirst { sec in it }
+
+    private fun columnOf(sec: Section): Int = SECTION_GRID[rowOf(sec)].indexOf(sec)
 
     private fun buildRows(): List<Row> {
         if (!isReal) {
@@ -471,14 +569,14 @@ class PotionEffectsHud : Hud(
         else -> PolyAlign.Left
     }
 
-    private fun autoTextAlign(): PolyAlign {
+    private fun autoTextAlign(sec: Section = activeSection): PolyAlign {
         if (textAlignment != 0) return textAlign(textAlignment)
 
         if (selfAnchorPoint != HudAnchor.Auto) {
             return horizontalFrom(selfAnchorPoint)
         }
 
-        return when (section) {
+        return when (sec) {
             Section.TopLeft, Section.CenterLeft, Section.BottomLeft -> PolyAlign.Left
             Section.TopCenter, Section.Center, Section.BottomCenter -> PolyAlign.Center
             Section.TopRight, Section.CenterRight, Section.BottomRight -> PolyAlign.Right
@@ -492,7 +590,7 @@ class PotionEffectsHud : Hud(
         HudAnchor.Auto -> PolyAlign.Left
     }
 
-    private fun direction(): Boolean {
+    private fun direction(sec: Section = activeSection): Boolean {
         if (listDirection != DIRECTION_AUTO) return listDirection == DIRECTION_HORIZONTAL
 
         if (selfAnchorPoint != HudAnchor.Auto) {
@@ -502,13 +600,13 @@ class PotionEffectsHud : Hud(
             }
         }
 
-        return when (section) {
+        return when (sec) {
             Section.TopCenter, Section.Center, Section.BottomCenter -> true
             else -> false
         }
     }
 
-    private fun layoutMode(): Int {
+    private fun layoutMode(sec: Section = activeSection): Int {
         if (layoutMode != MODE_AUTO) return layoutMode
 
         if (selfAnchorPoint != HudAnchor.Auto) {
@@ -520,7 +618,7 @@ class PotionEffectsHud : Hud(
             }
         }
 
-        return when (section) {
+        return when (sec) {
             Section.TopCenter, Section.Center, Section.BottomCenter -> MODE_STACKED
             Section.CenterLeft, Section.CenterRight -> MODE_FULL
             Section.TopLeft, Section.TopRight, Section.BottomLeft, Section.BottomRight -> MODE_FULL
@@ -534,9 +632,29 @@ class PotionEffectsHud : Hud(
                 else -> false
             }
         }
-        return when (section) {
+        return when (activeSection) {
             Section.BottomLeft, Section.BottomCenter, Section.BottomRight -> true
             else -> false
+        }
+    }
+
+    private fun rowWidth(list: List<Row>, scale: Float, mode: Int): Float {
+        val hasAnyIcon = list.any { it.icon != null }
+        val iconWidth = ICON * scale
+        val iconGap = ICON_GAP * scale
+
+        return list.maxOf { row ->
+            val nameWidth = row.name?.let { measureWidth?.invoke(it, scale) ?: 0f } ?: 0f
+            val durationWidth = row.duration?.let { measureWidth?.invoke(it, scale) ?: 0f } ?: 0f
+            when (mode) {
+                MODE_STACKED -> maxOf(if (row.icon != null) iconWidth else 0f, nameWidth, durationWidth)
+                MODE_SINGLE_LINE -> {
+                    val gapWidth = if (row.name != null && row.duration != null) charWidth(scale) else 0f
+                    val textWidth = nameWidth + gapWidth + durationWidth
+                    (if (hasAnyIcon) iconWidth + iconGap else 0f) + textWidth
+                }
+                else -> (if (hasAnyIcon) iconWidth + iconGap else 0f) + maxOf(nameWidth, durationWidth)
+            }
         }
     }
 
@@ -560,26 +678,8 @@ class PotionEffectsHud : Hud(
         if (list.isEmpty()) return
         val scale = textScale.coerceAtLeast(0.01f)
 
-        val maxRowWidth = remember(list, scale, font, layoutMode()) {
-            val mode = layoutMode()
-            val hasAnyIcon = list.any { it.icon != null }
-            val iconWidth = ICON * scale
-            val iconGap = ICON_GAP * scale
-
-            list.maxOf { row ->
-                val nameWidth = row.name?.let { measureWidth?.invoke(it, scale) ?: 0f } ?: 0f
-                val durationWidth = row.duration?.let { measureWidth?.invoke(it, scale) ?: 0f } ?: 0f
-                when (mode) {
-                    MODE_STACKED -> maxOf(if (row.icon != null) iconWidth else 0f, nameWidth, durationWidth)
-                    MODE_SINGLE_LINE -> {
-                        val gapWidth = if (row.name != null && row.duration != null) charWidth(scale) else 0f
-                        val textWidth = nameWidth + gapWidth + durationWidth
-                        (if (hasAnyIcon) iconWidth + iconGap else 0f) + textWidth
-                    }
-                    else -> (if (hasAnyIcon) iconWidth + iconGap else 0f) + maxOf(nameWidth, durationWidth)
-                }
-            }
-        }
+        val mode = layoutMode()
+        val maxRowWidth = remember(list, scale, font, mode) { rowWidth(list, scale, mode) }
 
         val horizontal = direction()
         val modifier = hudBackground().padding(padLeft, padTop, padRight, padBottom)
@@ -713,6 +813,7 @@ class PotionEffectsHud : Hud(
         it.effectScopes = effectScopes.deepCopy()
 
         it.rows = mutableStateOf(emptyList())
+        it.layoutSection = mutableStateOf(null)
     }
 
     private class PerCategoryEffectSettings {
