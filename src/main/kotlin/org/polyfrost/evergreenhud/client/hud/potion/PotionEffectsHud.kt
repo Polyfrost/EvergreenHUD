@@ -132,6 +132,11 @@ class PotionEffectsHud : Hud(
             if (ids == cachedPackIds) return
             cachedPackIds = ids
             iconCache.clear()
+            //? if = 1.8.9 {
+            /*atlas?.close()
+            atlas = null
+            atlasLoaded = false
+            *///?}
         }
 
         //? if > 1.8.9 {
@@ -149,21 +154,31 @@ class PotionEffectsHud : Hud(
             return icon
         }
         //?} else {
-        /*fun iconFor(effect: StatusEffect): Image? {
+        /*private var atlas: Image? = null
+        private var atlasLoaded = false
+
+        private fun atlas(): Image? {
+            if (!atlasLoaded) {
+                atlasLoaded = true
+                val path = NamespacedIdentifiers.from("minecraft", "textures/gui/container/inventory.png")
+                atlas = ResourceManager.client().getResource(path).orElse(null)?.open()?.use { ImageLoader.fromBytes(it.readBytes()) }
+            }
+            return atlas
+        }
+
+        fun iconFor(effect: StatusEffect): Image? {
+            if (!effect.hasIcon()) return null
             val id = effect.id
             if (iconCache.containsKey(id)) return iconCache[id]
-            val path = NamespacedIdentifiers.from("minecraft", "textures/gui/container/inventory.png")
             val icon = try {
-                ResourceManager.client().getResource(path).orElse(null)?.open()?.use {
-                    ImageLoader.fromBytes(it.readBytes())?.use { atlas ->
-                        val scale = atlas.width / 256f
-                        val size = (ICON * scale).roundToInt()
-                        val x = ((effect.iconIndex % 8 * ICON) * scale).roundToInt()
-                        val y = ((198 + effect.iconIndex / 8 * ICON) * scale).roundToInt()
-                        Bitmap().use { bitmap ->
-                            bitmap.allocN32Pixels(size, size)
-                            if (atlas.readPixels(bitmap, x, y)) Image.makeFromBitmap(bitmap) else null
-                        }
+                atlas()?.let { atlas ->
+                    val scale = atlas.width / 256f
+                    val size = (ICON * scale).roundToInt()
+                    val x = ((effect.iconIndex % 8 * ICON) * scale).roundToInt()
+                    val y = ((198 + effect.iconIndex / 8 * ICON) * scale).roundToInt()
+                    Bitmap().use { bitmap ->
+                        bitmap.allocN32Pixels(size, size)
+                        if (atlas.readPixels(bitmap, x, y)) Image.makeFromBitmap(bitmap) else null
                     }
                 }
             } catch (e: Exception) {
@@ -310,12 +325,10 @@ class PotionEffectsHud : Hud(
             return exampleRows()
         }
 
-        val active = mc.player?.activeEffects?.filter {
-            //? if > 1.8.9 {
-            it.showIcon()
-            //?} else
-            //StatusEffect.BY_ID[it.id].hasIcon()
-        }.orEmpty()
+        //? if > 1.8.9 {
+        val active = mc.player?.activeEffects?.filter { it.showIcon() }.orEmpty()
+        //?} else
+        //val active = mc.player?.activeEffects?.toList().orEmpty()
         if (active.isEmpty()) {
             return if (HudManager.isEditing) exampleRows()
             else emptyList()
