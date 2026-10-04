@@ -158,10 +158,12 @@ class PotionEffectsHud : Hud(
                     ImageLoader.fromBytes(it.readBytes())?.use { atlas ->
                         val scale = atlas.width / 256f
                         val size = (ICON * scale).roundToInt()
-                        val bitmap = Bitmap().apply { allocN32Pixels(size, size) }
                         val x = ((effect.iconIndex % 8 * ICON) * scale).roundToInt()
                         val y = ((198 + effect.iconIndex / 8 * ICON) * scale).roundToInt()
-                        if (atlas.readPixels(bitmap, x, y)) Image.makeFromBitmap(bitmap) else null
+                        Bitmap().use { bitmap ->
+                            bitmap.allocN32Pixels(size, size)
+                            if (atlas.readPixels(bitmap, x, y)) Image.makeFromBitmap(bitmap) else null
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -685,7 +687,9 @@ class PotionEffectsHud : Hud(
     private fun Icon(icon: Image, size: Float, alpha: Float, modifier: PolyModifier = PolyModifier) {
         PolyCanvas(modifier.size(size, size)) { x, y, w, h ->
             iconPaint.alpha = (255f * alpha).toInt().coerceIn(0, 255)
-            canvas.drawImageRect(icon, Rect.makeWH(icon.width.toFloat(), icon.height.toFloat()), Rect.makeXYWH(x, y, w, h), SamplingMode.DEFAULT, iconPaint, true)
+            val downscaled = w * canvas.localToDeviceAsMatrix33.mat[0] < icon.width
+            val sampling = if (downscaled) SamplingMode.LINEAR else SamplingMode.DEFAULT
+            canvas.drawImageRect(icon, Rect.makeWH(icon.width.toFloat(), icon.height.toFloat()), Rect.makeXYWH(x, y, w, h), sampling, iconPaint, true)
         }
     }
 
