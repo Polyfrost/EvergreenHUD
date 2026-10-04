@@ -23,6 +23,8 @@ import kotlin.math.roundToInt
 *///?}
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.Paint
+import org.jetbrains.skia.Rect
+import org.jetbrains.skia.SamplingMode
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyColumn
@@ -683,7 +685,7 @@ class PotionEffectsHud : Hud(
     private fun Icon(icon: Image, size: Float, alpha: Float, modifier: PolyModifier = PolyModifier) {
         PolyCanvas(modifier.size(size, size)) { x, y, w, h ->
             iconPaint.alpha = (255f * alpha).toInt().coerceIn(0, 255)
-            image(icon, x, y, w, h, iconPaint)
+            canvas.drawImageRect(icon, Rect.makeWH(icon.width.toFloat(), icon.height.toFloat()), Rect.makeXYWH(x, y, w, h), SamplingMode.DEFAULT, iconPaint, true)
         }
     }
 
