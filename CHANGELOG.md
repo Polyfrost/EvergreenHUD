@@ -1,2 +1,2 @@
-## 3.9.6
-- fix potion effect icons being aliased
+## 3.9.7
+- Fixed armor hud hotbar with custom hotbar textures.
