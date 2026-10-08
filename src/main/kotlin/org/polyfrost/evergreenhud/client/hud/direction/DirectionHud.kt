@@ -18,6 +18,8 @@ import org.polyfrost.compose.composables.clip
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.render.PolyColor
+import net.minecraft.world.entity.Entity
+import org.polyfrost.evergreenhud.client.hooks.smuggledHudPartialTick
 import org.polyfrost.evergreenhud.client.hud.PlayerHead
 //? if < 1.21.10
 //import net.minecraft.client.resources.PlayerSkin
@@ -31,6 +33,8 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.utils.v1.dsl.mc
+import kotlin.math.atan2
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -183,6 +187,40 @@ class DirectionHud : Hud(
      */
     @Composable
     fun PlayerMarkers(bearing: Float) = Unit
+
+    /** Render an entity marker using interpolated positions for both the target and camera.
+     * Integrations choose which entities to display; no marker is enabled by default.
+     */
+    @Composable
+    fun PlayerHeadMarker(
+        skin: PlayerSkin,
+        target: Entity,
+        cameraBearing: Float,
+        size: Float = 12f,
+        borderColor: PolyColor = PolyColor(0xFFFFFFFF.toInt()),
+        borderWidth: Float = 1f,
+    ) {
+        val targetBearing = remember(target) { mutableFloatStateOf(Float.NaN) }
+        LaunchedEffect(target) {
+            while (true) {
+                withFrameMillis {
+                    val observer = mc.cameraEntity ?: mc.player
+                    val partialTick = smuggledHudPartialTick
+                    val origin = observer?.getPosition(partialTick)
+                    val position = target.getPosition(partialTick)
+                    targetBearing.floatValue = if (origin == null) {
+                        Float.NaN
+                    } else {
+                        val dx = position.x - origin.x
+                        val dz = position.z - origin.z
+                        if (dx == 0.0 && dz == 0.0) Float.NaN
+                        else Math.toDegrees(atan2(dx, -dz)).toFloat()
+                    }
+                }
+            }
+        }
+        PlayerHeadMarker(skin, targetBearing.floatValue, cameraBearing, size, borderColor, borderWidth)
+    }
 
     /** Hook for optional integrations. Call from the compass composition after its labels.
      * [playerBearing] uses compass degrees (north = 0, east = 90).
