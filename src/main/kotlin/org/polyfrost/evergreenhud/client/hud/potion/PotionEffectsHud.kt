@@ -9,19 +9,26 @@ import net.minecraft.core.registries.BuiltInRegistries
 //import net.minecraft.resources.ResourceLocation
 //? if >= 1.21.11
 import net.minecraft.resources.Identifier as ResourceLocation
+import net.minecraft.server.packs.resources.ReloadableResourceManager
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener
 import net.minecraft.world.effect.MobEffectCategory
 import net.minecraft.world.effect.MobEffectInstance
+import org.polyfrost.oneconfig.api.event.v1.events.InitializationEvent
 //?} else {
 /*import net.minecraft.client.resource.language.I18n
 import net.minecraft.entity.living.effect.StatusEffect
 import net.minecraft.entity.living.effect.StatusEffectInstance as MobEffectInstance
 import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
+import net.ornithemc.osl.resource.loader.api.client.ClientResourceLoaderEvents
 import net.ornithemc.osl.resource.loader.api.resource.manager.ResourceManager
-import net.ornithemc.osl.resource.loader.api.resource.repository.ResourcePackRepository
 import org.jetbrains.skia.Bitmap
+import java.util.function.BiConsumer
+import kotlin.math.roundToInt
 *///?}
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.Paint
+import org.jetbrains.skia.Rect
+import org.jetbrains.skia.SamplingMode
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyColumn
@@ -131,12 +138,22 @@ class PotionEffectsHud : Hud(
         private val iconPaint = Paint()
         //~ if = 1.8.9 'ResourceLocation' -> 'Int'
         private val iconCache = HashMap<ResourceLocation, Image?>()
-        private var cachedPackIds: List<String>? = null
 
-        fun syncIcons(ids: List<String>) {
-            if (ids == cachedPackIds) return
-            cachedPackIds = ids
+        init {
+            //? if > 1.8.9 {
+            eventHandler { _: InitializationEvent ->
+                val manager = mc.resourceManager as? ReloadableResourceManager
+                if (manager != null) manager.registerReloadListener(ResourceManagerReloadListener { clearIcons() })
+                else LOGGER.warn("Resource manager is not reloadable, potion effect icons will not follow resource pack changes")
+            }
+            //?} else
+            //ClientResourceLoaderEvents.END_RESOURCE_RELOAD.register(BiConsumer { _, _ -> clearIcons() })
+        }
+
+        private fun clearIcons() {
             iconCache.clear()
+            //? if = 1.8.9
+            //iconsLoaded = false
         }
 
         //? if > 1.8.9 {
@@ -154,23 +171,41 @@ class PotionEffectsHud : Hud(
             return icon
         }
         //?} else {
-        /*fun iconFor(effect: StatusEffect): Image? {
-            val id = effect.id
-            if (iconCache.containsKey(id)) return iconCache[id]
+        /*private var iconsLoaded = false
+
+        private fun loadIcons() {
             val path = NamespacedIdentifiers.from("minecraft", "textures/gui/container/inventory.png")
-            val icon = try {
-                ResourceManager.client().getResource(path).orElse(null)?.open()?.use {
-                    val atlas = ImageLoader.fromBytes(it.readBytes())
-                    val bitmap = Bitmap().apply { allocN32Pixels(ICON.toInt(), ICON.toInt()) }
-                    atlas?.readPixels(bitmap, effect.iconIndex % 8 * ICON.toInt(), 198 + effect.iconIndex / 8 * ICON.toInt())
-                    Image.makeFromBitmap(bitmap)
-                }
-            } catch (e: Exception) {
-                LOGGER.warn("Failed to load the icon for effect {}", id, e)
-                null
+            val atlas = ResourceManager.client().getResource(path).orElse(null)?.open()?.use { ImageLoader.fromBytes(it.readBytes()) }
+            if (atlas == null) {
+                LOGGER.warn("Failed to read the potion effect icon atlas {}", path)
+                return
             }
-            iconCache[id] = icon
-            return icon
+            atlas.use {
+                val scale = atlas.width / 256f
+                val size = (ICON * scale).roundToInt()
+                Bitmap().use { bitmap ->
+                    bitmap.allocN32Pixels(size, size)
+                    for (effect in StatusEffect.BY_ID) {
+                        if (effect == null || !effect.hasIcon()) continue
+                        val x = ((effect.iconIndex % 8 * ICON) * scale).roundToInt()
+                        val y = ((198 + effect.iconIndex / 8 * ICON) * scale).roundToInt()
+                        bitmap.erase(0)
+                        if (atlas.readPixels(bitmap, x, y)) iconCache[effect.id] = Image.makeFromBitmap(bitmap)
+                    }
+                }
+            }
+        }
+
+        fun iconFor(effect: StatusEffect): Image? {
+            if (!iconsLoaded) {
+                iconsLoaded = true
+                try {
+                    loadIcons()
+                } catch (e: Exception) {
+                    LOGGER.warn("Failed to load potion effect icons", e)
+                }
+            }
+            return iconCache[effect.id]
         }
         *///?}
 
@@ -309,8 +344,6 @@ class PotionEffectsHud : Hud(
     override fun canMergeBackground(): Boolean = true
 
     override fun update(): Boolean {
-        //~ if = 1.8.9 'mc.resourcePackRepository' -> 'ResourcePackRepository.client()'
-        syncIcons(mc.resourcePackRepository.selectedPacks.map { it.id })
         val next = buildRows()
         val rowsChanged = next != rows.value
         if (rowsChanged) rows.value = next
@@ -399,7 +432,10 @@ class PotionEffectsHud : Hud(
             return exampleRows()
         }
 
-        val active = mc.player?.activeEffects?.toList().orEmpty()
+        //? if > 1.8.9 {
+        val active = mc.player?.activeEffects?.filter { it.showIcon() }.orEmpty()
+        //?} else
+        //val active = mc.player?.activeEffects?.filter { StatusEffect.BY_ID.getOrNull(it.id)?.hasIcon() == true }.orEmpty()
         if (active.isEmpty()) {
             return if (HudManager.isEditing) exampleRows()
             else emptyList()
@@ -465,10 +501,6 @@ class PotionEffectsHud : Hud(
     }
 
     private fun shouldDisplayEffect(effect: MobEffectInstance): Boolean {
-        //? if > 1.8.9 {
-        if (!effect.showIcon()) return false
-        //?} else
-        //if (!StatusEffect.BY_ID[effect.id].hasIcon()) return false
         val values = valuesFor(effect)
 
         if (!values.showEffects) return false
@@ -775,9 +807,12 @@ class PotionEffectsHud : Hud(
 
     @Composable
     private fun Icon(icon: Image, size: Float, alpha: Float, modifier: PolyModifier = PolyModifier) {
+        val src = remember(icon) { Rect.makeWH(icon.width.toFloat(), icon.height.toFloat()) }
         PolyCanvas(modifier.size(size, size)) { x, y, w, h ->
             iconPaint.alpha = (255f * alpha).toInt().coerceIn(0, 255)
-            image(icon, x, y, w, h, iconPaint)
+            val downscaled = w * canvas.localToDeviceAsMatrix33.mat[0] < src.right
+            val sampling = if (downscaled) SamplingMode.LINEAR else SamplingMode.DEFAULT
+            canvas.drawImageRect(icon, src, Rect.makeXYWH(x, y, w, h), sampling, iconPaint, true)
         }
     }
 

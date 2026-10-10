@@ -78,26 +78,48 @@ class VanillaTexture internal constructor(
         )
     }
 
+    private fun blitRotated(
+        ctx: RenderContext,
+        srcX: Float,
+        srcY: Float,
+        srcW: Float,
+        srcH: Float,
+        x: Float,
+        y: Float,
+        scale: Float,
+    ) {
+        val texelX = image.width / baseWidth
+        val texelY = image.height / baseHeight
+        val canvas = ctx.canvas
+        val dst = snapToPixels(canvas, x, y, srcH * scale, srcW * scale)
+        canvas.save()
+        canvas.translate(dst.right, dst.top)
+        canvas.rotate(90f)
+        canvas.drawImageRect(
+            image,
+            Rect.makeXYWH(srcX * texelX, srcY * texelY, srcW * texelX, srcH * texelY),
+            Rect.makeWH(dst.height, dst.width),
+            SamplingMode.DEFAULT,
+            paint,
+            true,
+        )
+        canvas.restore()
+    }
+
     fun drawHotbar(ctx: RenderContext, x: Float, y: Float, slots: Int, vertical: Boolean, scale: Float) {
         if (slots <= 0) return
         val length = hotbarStripLength(slots)
-        val far = HOTBAR_TEXTURE_WIDTH - HOTBAR_BORDER
+        val near = if (slots == 1) length / 2f else HOTBAR_BORDER + (slots + 1) / 2 * HOTBAR_SLOT
+        val far = length - near
+        val farSrc = HOTBAR_TEXTURE_WIDTH - far
 
-        if (!vertical) {
-            blit(ctx, 0f, 0f, length - HOTBAR_BORDER, HOTBAR_THICKNESS, x, y, scale)
-            blit(ctx, far, 0f, HOTBAR_BORDER, HOTBAR_THICKNESS, x + (length - HOTBAR_BORDER) * scale, y, scale)
-            return
+        if (vertical) {
+            blitRotated(ctx, 0f, 0f, near, HOTBAR_THICKNESS, x, y, scale)
+            blitRotated(ctx, farSrc, 0f, far, HOTBAR_THICKNESS, x, y + near * scale, scale)
+        } else {
+            blit(ctx, 0f, 0f, near, HOTBAR_THICKNESS, x, y, scale)
+            blit(ctx, farSrc, 0f, far, HOTBAR_THICKNESS, x + near * scale, y, scale)
         }
-
-        val bodyWidth = HOTBAR_THICKNESS - HOTBAR_BORDER
-        fun row(srcY: Float, height: Float, offset: Float) {
-            blit(ctx, 0f, srcY, bodyWidth, height, x, y + offset * scale, scale)
-            blit(ctx, far, srcY, HOTBAR_BORDER, height, x + bodyWidth * scale, y + offset * scale, scale)
-        }
-
-        row(0f, HOTBAR_BORDER, 0f)
-        for (slot in 0 until slots) row(HOTBAR_BORDER, HOTBAR_SLOT, HOTBAR_BORDER + slot * HOTBAR_SLOT)
-        row(HOTBAR_THICKNESS - HOTBAR_BORDER, HOTBAR_BORDER, length - HOTBAR_BORDER)
     }
 
     fun drawContainer(ctx: RenderContext, x: Float, y: Float, rows: Int, titled: Boolean, scale: Float) {

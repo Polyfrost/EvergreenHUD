@@ -28,6 +28,9 @@ class PositionHud : GenericNumberHud(
         textAlign = 0
     }
 
+    override val searchTags: List<String>
+        get() = listOf("coords", "coordinates", "xyz", "location")
+
     @RadioButton(
         title = "Mode",
         options = ["Vertical", "Horizontal"]
