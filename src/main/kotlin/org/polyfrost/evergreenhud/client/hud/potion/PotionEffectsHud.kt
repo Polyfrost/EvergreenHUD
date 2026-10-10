@@ -46,11 +46,12 @@ import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
 import org.polyfrost.oneconfig.api.config.v1.Node
+import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
+import org.polyfrost.oneconfig.api.config.v1.annotations.Include
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
-import org.polyfrost.oneconfig.api.config.v1.annotations.Option
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
 import org.polyfrost.oneconfig.api.config.v1.collect.impl.OneConfigCollector
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
@@ -63,6 +64,8 @@ import org.polyfrost.oneconfig.api.hud.v1.Section
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import org.polyfrost.oneconfig.utils.v1.MHUtils.setAccessible
 import org.slf4j.LoggerFactory
+import java.util.function.Predicate
+import java.util.function.Supplier
 import kotlin.math.PI
 import kotlin.math.cos
 
@@ -97,6 +100,8 @@ private const val DIRECTION_AUTO = 0
 private const val DIRECTION_VERTICAL = 1
 private const val DIRECTION_HORIZONTAL = 2
 
+private const val PER_OPTION_OVERRIDES = 1
+
 class PotionEffectsHud : Hud(
     id = "potion_effects.json",
     title = "Potion Effects",
@@ -117,15 +122,10 @@ class PotionEffectsHud : Hud(
             Example("strength", "Strength", 140, 0),
         )
 
-        val ALL_LEAF_FIELDS: List<String> by lazy {
-            EffectComponentSettings::class.java.declaredFields
-                .filter { field ->
-                    field.declaredAnnotations.any { ann ->
-                        (ann as java.lang.annotation.Annotation).annotationType().isAnnotationPresent(Option::class.java)
-                    }
-                }
-                .map { it.name }
-        }
+        private val EFFECT_STRIPPED_FIELDS = setOf("categoryFilter")
+
+        private val PROPERTY_CONDITIONS = Property::class.java.getDeclaredField("conditions").apply { setAccessible() }
+        private val PROPERTY_CALLBACKS = Property::class.java.getDeclaredField("callbacks").apply { setAccessible() }
 
         private val iconPaint = Paint()
         //~ if = 1.8.9 'ResourceLocation' -> 'Int'
@@ -287,6 +287,9 @@ class PotionEffectsHud : Hud(
     )
     var hideVanillaEffects = false
 
+    @Include
+    var overrideOptionsVersion = 0
+
     private var rows = mutableStateOf<List<Row>>(emptyList())
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
@@ -301,22 +304,121 @@ class PotionEffectsHud : Hud(
                 }
             }
 
-            for (scope in categoryScopes.scopeDefs) {
-                if (!scope.isOverride) continue
-                val check = { scope.title !in overrides }
-                for (field in ALL_LEAF_FIELDS) {
-                    if (field in scope.strippedFields) continue
-                    hideIf("${scope.key}.$field", check)
+            val scopes = buildList {
+                for (scope in categoryScopes.scopeDefs) {
+                    if (!scope.isOverride) continue
+                    val key = scope.key
+                    val category = key.takeIf { scope.title != AMBIENT_EFFECTS }
+                    add(OverrideScope(key, scope.title, scope.strippedFields, category, isEffect = false) { categoryScopes[key] })
+                }
+                for (entry in EffectCatalog.ENTRIES) {
+                    val path = entry.path
+                    add(OverrideScope(path, entry.title, EFFECT_STRIPPED_FIELDS, entry.category, isEffect = true) { effectScopes.byPath.getValue(path) })
                 }
             }
 
-            for (entry in EffectCatalog.ENTRIES) {
-                val check = { entry.title !in overrides }
-                for (field in ALL_LEAF_FIELDS) {
-                    if (field == "categoryFilter") continue
-                    hideIf("${entry.path}.$field", check)
-                }
+            migrateLegacyEffectKeys()
+
+            if (overrideOptionsVersion < PER_OPTION_OVERRIDES) {
+                migrateLegacyOverrides(scopes)
+                overrideOptionsVersion = PER_OPTION_OVERRIDES
             }
+
+            val scoped = scopes.flatMap(::setupOverrideScope)
+
+            val overridesProp = claim(getProperty("overrides"))
+            overridesProp.addCallback(OwnedCallback(this) { for (prop in scoped) prop.revaluateDisplay() })
+        }
+    }
+
+    private fun claim(prop: Property<*>): Property<Any?> {
+        @Suppress("UNCHECKED_CAST")
+        (PROPERTY_CONDITIONS.get(prop) as MutableList<Any>?)?.removeIf { it is OwnedCondition && it.owner !== this }
+        @Suppress("UNCHECKED_CAST")
+        (PROPERTY_CALLBACKS.get(prop) as MutableList<Any>?)?.removeIf { it is OwnedCallback<*> && it.owner !== this }
+        return Property.recast(prop)
+    }
+
+    private class OverrideScope(
+        val key: String,
+        val title: String,
+        val stripped: Set<String>,
+        val category: String?,
+        val isEffect: Boolean,
+        val settings: () -> EffectComponentSettings,
+    ) {
+        fun overlaps(other: OverrideScope): Boolean = when {
+            category == null || other.category == null -> true
+            isEffect && other.isEffect -> false
+            else -> category == other.category
+        }
+    }
+
+    private fun setupOverrideScope(scope: OverrideScope): List<Property<*>> {
+        val key = scope.key
+        val title = scope.title
+        val settings = scope.settings
+        val listProp = claim(getProperty("$key.$OVERRIDDEN_OPTIONS"))
+        listProp.addDisplayCondition(OwnedCondition(this) { title !in overrides })
+
+        val fieldProps = EffectComponentSettings.LEAF_FIELDS.filter { it !in scope.stripped }.map { field ->
+            claim(getProperty("$key.$field")).also { prop ->
+                prop.addDisplayCondition(OwnedCondition(this) { title !in overrides || field !in settings().overriddenOptions })
+            }
+        }
+
+        var previous = settings().overriddenOptions.toSet()
+        listProp.addCallback(OwnedCallback(this) { next ->
+            val target = settings()
+            val current = (next as? Array<*>)?.filterIsInstance<String>().orEmpty().toSet()
+            for (field in current - previous) target.copyField(field, categoryScopes.global)
+            for (field in previous - current) target.copyField(field, EffectComponentSettings.DEFAULTS)
+            previous = current
+            for (prop in fieldProps) prop.revaluateDisplay()
+        })
+
+        return fieldProps + listProp
+    }
+
+    private class OwnedCondition(val owner: PotionEffectsHud, private val hidden: () -> Boolean) : Supplier<Property.Display> {
+        override fun get(): Property.Display = if (hidden()) Property.Display.HIDDEN else Property.Display.SHOWN
+    }
+
+    private class OwnedCallback<T>(val owner: PotionEffectsHud, private val action: (T) -> Unit) : Predicate<T> {
+        override fun test(t: T): Boolean {
+            action(t)
+            return false
+        }
+    }
+
+    private fun migrateLegacyEffectKeys() {
+        val tree = tree ?: return
+        for ((legacy, path) in EffectCatalog.LEGACY_IDS) {
+            val old = tree.get(legacy) as? Tree ?: continue
+            val target = tree.get(path) as? Tree
+            val settings = effectScopes.byPath[path]
+            if (target != null && settings != null && settings.isDefault()) target.overwrite(old, false, false, null)
+            stripProperty(tree, legacy)
+        }
+    }
+
+    private fun migrateLegacyOverrides(scopes: List<OverrideScope>) {
+        val global = categoryScopes.global
+        val byTitle = scopes.associateBy { it.title }
+        val enabled = overrides.mapNotNull { byTitle[it] }
+        for (scope in scopes) {
+            val settings = scope.settings()
+            if (settings.overriddenOptions.isNotEmpty()) continue
+            val priority = enabled.indexOf(scope)
+            val fallbacks = if (priority < 0) emptyList() else {
+                listOf(global) + enabled.drop(priority + 1).filter(scope::overlaps).map { it.settings() }
+            }
+            settings.overriddenOptions = EffectComponentSettings.LEAF_FIELDS
+                .filter { field ->
+                    field !in scope.stripped &&
+                        (!settings.matches(field, EffectComponentSettings.DEFAULTS) || fallbacks.any { !settings.matches(field, it) })
+                }
+                .toTypedArray()
         }
     }
 
@@ -397,7 +499,7 @@ class PotionEffectsHud : Hud(
                 //? if > 1.8.9 {
                 effects.sortedByDescending { BuiltInRegistries.MOB_EFFECT.getKey(it.effect.value())?.path == path }
                 //?} else
-                //effects.sortedByDescending { it.id.toString() == path }
+                //effects.sortedByDescending { EffectCatalog.pathOf(it.id) == path }
             }
         }
     }
@@ -758,12 +860,20 @@ class PotionEffectsHud : Hud(
         val ambient = EffectComponentSettings()
 
         val scopeDefs: List<ScopeDef> get() = listOf(
-            ScopeDef("global", "Global", global, isOverride = false),
+            ScopeDef("global", "Global", global, strippedFields = setOf(OVERRIDDEN_OPTIONS), isOverride = false),
             ScopeDef("beneficial", BENEFICIAL_EFFECTS, beneficial, strippedFields = setOf("categoryFilter")),
             ScopeDef("neutral", NEUTRAL_EFFECTS, neutral, strippedFields = setOf("categoryFilter")),
             ScopeDef("harmful", HARMFUL_EFFECTS, harmful, strippedFields = setOf("categoryFilter")),
             ScopeDef("ambient", AMBIENT_EFFECTS, ambient, strippedFields = setOf("ambientFilter", "categoryFilter", "permanentEffects", "emittingParticleEffects")),
         )
+
+        operator fun get(key: String): EffectComponentSettings = when (key) {
+            "beneficial" -> beneficial
+            "neutral" -> neutral
+            "harmful" -> harmful
+            "ambient" -> ambient
+            else -> global
+        }
 
         fun copyFrom(other: PerCategoryEffectSettings) {
             global.copyFrom(other.global)
@@ -797,6 +907,7 @@ class PotionEffectsHud : Hud(
             ))
             collector.handle(t, scope.settings, 0)
             for (field in scope.strippedFields) stripProperty(t, field)
+            if (scope.isOverride) describeOverrideOptions(t, scope.strippedFields)
             tree.put(t)
         }
 
@@ -810,7 +921,8 @@ class PotionEffectsHud : Hud(
                 "collapsed" to true
             ))
             collector.handle(t, settings, 0)
-            stripProperty(t, "categoryFilter")
+            for (field in EFFECT_STRIPPED_FIELDS) stripProperty(t, field)
+            describeOverrideOptions(t, EFFECT_STRIPPED_FIELDS)
             tree.put(t)
         }
 
@@ -835,12 +947,12 @@ class PotionEffectsHud : Hud(
         //?} else {
         /*val statusEffect = StatusEffect.BY_ID[effect.id]
         val harmful = statusEffect.isHarmful
-        val id = effect.id.toString()
+        val id = EffectCatalog.pathOf(effect.id)
         val categoryScope = if (harmful) categoryScopes.harmful else categoryScopes.beneficial
         *///?}
 
-        for (entry in overrides) {
-            val resolved = when (entry) {
+        val layers = overrides.mapNotNull { entry ->
+            when (entry) {
                 //? if > 1.8.9 {
                 BENEFICIAL_EFFECTS -> categoryScope.takeIf { mobEffect.category == MobEffectCategory.BENEFICIAL }
                 NEUTRAL_EFFECTS -> categoryScope.takeIf { mobEffect.category == MobEffectCategory.NEUTRAL }
@@ -852,14 +964,13 @@ class PotionEffectsHud : Hud(
                 //?}
                 AMBIENT_EFFECTS -> categoryScopes.ambient.takeIf { effect.isAmbient }
                 else -> {
-                    val path = EffectCatalog.titleToPath[entry] ?: continue
+                    val path = EffectCatalog.titleToPath[entry]
                     //~ if = 1.8.9 'id != null && id.path == path' -> 'id == path'
-                    effectScopes.byPath[path]?.takeIf { id != null && id.path == path }
+                    if (path == null) null else effectScopes.byPath[path]?.takeIf { id != null && id.path == path }
                 }
             }
-            if (resolved != null) return resolved
         }
-        return categoryScopes.global
+        return if (layers.isEmpty()) categoryScopes.global else LayeredEffectValues(layers, categoryScopes.global)
     }
 
     private class PerEffectSettings {
@@ -871,6 +982,13 @@ class PotionEffectsHud : Hud(
                 copy.byPath[path]?.copyFrom(settings)
             }
         }
+    }
+
+    private fun describeOverrideOptions(t: Tree, stripped: Set<String>) {
+        val fields = EffectComponentSettings.LEAF_FIELDS.filter { it !in stripped }
+        val prop = t.getProp(OVERRIDDEN_OPTIONS) ?: throw IllegalStateException("$OVERRIDDEN_OPTIONS property not found on ${t.id}")
+        prop.addMetadata("options", fields.toTypedArray())
+        prop.addMetadata("labels", fields.associateWith { t.getProp(it)?.title ?: it })
     }
 
     @Suppress("UNCHECKED_CAST")
