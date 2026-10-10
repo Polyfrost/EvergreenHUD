@@ -33,7 +33,7 @@ class BatteryHud : Hud(
     }
 
     private fun snapshot(): Battery = Battery.get().let {
-        Battery.ManualBattery(it.percentage, it.isCharging, it.lifetimeRemaining, it.isBatterySaverEnabled)
+        Battery.ManualBattery(it.percentage, it.isCharging, -1, it.isBatterySaverEnabled)
     }
 
 }
