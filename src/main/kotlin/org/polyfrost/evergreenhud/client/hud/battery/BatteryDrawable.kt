@@ -17,7 +17,7 @@ const val LOW_BATTERY_THRESHOLD = 20
 
 @Composable
 fun BatteryDrawable(
-    battery: Battery = Battery.get(),
+    battery: Battery,
 ) {
     val percent = battery.percentage.coerceIn(0, 100)
     val (backgroundColor, innerColor) = when {
