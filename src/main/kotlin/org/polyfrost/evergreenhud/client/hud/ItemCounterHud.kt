@@ -102,7 +102,7 @@ class ItemCounterHud : Hud(
     private var resolvedQuery: String? = null
     private var resolved: Item? = null
 
-    private class Display(val stack: ItemStack, val text: String)
+    private class Display(val stack: ItemStack, val text: String, val showIcon: Boolean)
 
     private var display = mutableStateOf<Display?>(null)
 
@@ -125,6 +125,7 @@ class ItemCounterHud : Hud(
         applyPotionOptions()
         updateWhenChanged("item")
         updateWhenChanged("potion")
+        updateWhenChanged("showIcon")
         hideIf("potion") { currentItem()?.hasPotionContents != true }
     }
 
@@ -142,7 +143,8 @@ class ItemCounterHud : Hud(
         val current = display.value
         if (next == null && current == null) return false
         if (next != null && current != null &&
-            next.text == current.text && ItemStack.matches(next.stack, current.stack)
+            next.text == current.text && next.showIcon == current.showIcon &&
+            ItemStack.matches(next.stack, current.stack)
         ) return false
         display.value = next
         return true
@@ -231,14 +233,14 @@ class ItemCounterHud : Hud(
             if (showName) append(stack.hoverName.string).append(variant?.suffix.orEmpty()).append(": ")
             append(countText(count, target))
         }
-        return Display(stack, text)
+        return Display(stack, text, showIcon)
     }
 
     @Composable
     override fun Content() {
         val current = display.value ?: return
         val scale = textScale.coerceAtLeast(0.01f)
-        val basePaddingRight = if (showIcon) TEXT_GAP else BASE_PADDING
+        val basePaddingRight = if (current.showIcon) TEXT_GAP else BASE_PADDING
         val modifier = hudBackground().padding(
             padLeft + BASE_PADDING * scale,
             padTop + BASE_PADDING * scale,
@@ -246,11 +248,11 @@ class ItemCounterHud : Hud(
             padBottom + BASE_PADDING * scale,
         )
 
-        val iconSize = if (showIcon) ITEM_SIZE * scale else 0f
+        val iconSize = if (current.showIcon) ITEM_SIZE * scale else 0f
 
         PolyBox(modifier = modifier) {
-            PolyRow(gap = if (showIcon) TEXT_GAP * scale else 0f) {
-                if (showIcon) {
+            PolyRow(gap = if (current.showIcon) TEXT_GAP * scale else 0f) {
+                if (current.showIcon) {
                     ItemIcon(
                         current.stack,
                         size = iconSize,

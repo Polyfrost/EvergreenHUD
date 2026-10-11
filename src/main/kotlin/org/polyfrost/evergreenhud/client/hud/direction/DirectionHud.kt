@@ -1,12 +1,7 @@
 package org.polyfrost.evergreenhud.client.hud.direction
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameMillis
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyMcText
@@ -79,6 +74,17 @@ class DirectionHud : Hud(
     @Color(title = "Tick Color")
     var tickColor = PolyColor(0xFFAAAAAA.toInt())
 
+    private data class View(
+        val bearing: Float,
+        val span: Float,
+        val showIntercardinals: Boolean,
+        val showTicks: Boolean,
+        val showHeading: Boolean,
+        val fadeEdges: Boolean,
+    )
+
+    private var view = mutableStateOf(View(PREVIEW_BEARING, span, showIntercardinals, showTicks, showHeading, fadeEdges))
+
     private var _staticW = mutableStateOf(DEFAULT_WIDTH)
     override var staticW: Float get() = _staticW.value; set(v) { _staticW.value = v }
 
@@ -102,9 +108,16 @@ class DirectionHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
-    override fun update(): Boolean = false
+    override fun update(): Boolean {
+        val bearing = cameraYaw?.let { Facing.bearingOf(it) } ?: view.value.bearing
+        val next = View(bearing, span, showIntercardinals, showTicks, showHeading, fadeEdges)
+        if (next == view.value) return false
+        view.value = next
+        return true
+    }
 
     override fun clone(): Hud = (super.clone() as DirectionHud).apply {
+        view = mutableStateOf(this@DirectionHud.view.value)
         _staticW = mutableStateOf(this@DirectionHud.staticW)
         _staticH = mutableStateOf(this@DirectionHud.staticH)
         markerColor = markerColor.copy()
@@ -113,52 +126,42 @@ class DirectionHud : Hud(
 
     @Composable
     override fun Content() {
-        val bearingState = remember { mutableFloatStateOf(PREVIEW_BEARING) }
-        LaunchedEffect(Unit) {
-            while (true) {
-                withFrameMillis {
-                    val yaw = cameraYaw ?: return@withFrameMillis
-                    bearingState.floatValue = Facing.bearingOf(yaw)
-                }
-            }
-        }
-        val bearing by bearingState
-
         val modifier = hudBackground(PolyModifier.size(compassWidth, compassHeight))
         PolyBox(modifier = modifier.clip(bgRadius)) {
-            Compass(bearing)
+            Compass(view.value)
         }
     }
 
     @Composable
-    private fun Compass(bearing: Float) {
+    private fun Compass(view: View) {
+        val bearing = view.bearing
         val width = compassWidth
         val fg = PolyColor(textColor, textChroma, textChromaSpeed)
 
-        val headingHeight = if (showHeading) LINE * textScale else 0f
+        val headingHeight = if (view.showHeading) LINE * textScale else 0f
         val ribbonHeight = compassHeight - headingHeight
-        val tickStrip = if (showTicks) ribbonHeight * TICK_STRIP else 0f
+        val tickStrip = if (view.showTicks) ribbonHeight * TICK_STRIP else 0f
 
-        if (showHeading) {
+        if (view.showHeading) {
             Label("${bearing.roundToInt() % 360}°", fg, width, headingHeight, 0f, 0f)
         }
 
-        Ticks(bearing, width, ribbonHeight, headingHeight, tickStrip)
+        Ticks(view, width, ribbonHeight, headingHeight, tickStrip)
 
         val centreX = width / 2f
-        val pixelsPerDegree = width / span
-        val halfSpan = span / 2f
+        val pixelsPerDegree = width / view.span
+        val halfSpan = view.span / 2f
         val labelWidth = LABEL * textScale
 
         for (facing in Facing.entries) {
-            if (!showIntercardinals && !facing.isCardinal) continue
+            if (!view.showIntercardinals && !facing.isCardinal) continue
 
             val delta = Facing.wrapDegrees(facing.bearing - bearing)
             if (abs(delta) > halfSpan) continue
 
             Label(
                 text = facing.abbreviated,
-                color = fg.faded(delta, halfSpan),
+                color = fg.faded(delta, halfSpan, view.fadeEdges),
                 width = labelWidth,
                 height = ribbonHeight - tickStrip,
                 x = centreX + delta * pixelsPerDegree - labelWidth / 2f,
@@ -168,21 +171,21 @@ class DirectionHud : Hud(
     }
 
     @Composable
-    private fun Ticks(bearing: Float, width: Float, height: Float, top: Float, tickStrip: Float) {
+    private fun Ticks(view: View, width: Float, height: Float, top: Float, tickStrip: Float) {
         PolyCanvas(PolyModifier.size(width, height).absoluteAt(0f, top)) { x, y, w, h ->
             val centreX = x + w / 2f
             val bottom = y + h
-            val halfSpan = span / 2f
-            val pixelsPerDegree = w / span
+            val halfSpan = view.span / 2f
+            val pixelsPerDegree = w / view.span
 
-            if (showTicks) {
+            if (view.showTicks) {
                 var heading = 0
                 while (heading < 360) {
-                    val delta = Facing.wrapDegrees(heading - bearing)
+                    val delta = Facing.wrapDegrees(heading - view.bearing)
                     if (abs(delta) <= halfSpan) {
                         val tickHeight = if (heading % 45 == 0) tickStrip else tickStrip * MINOR_TICK
                         val tickX = centreX + delta * pixelsPerDegree
-                        line(tickX, bottom - tickHeight, tickX, bottom, tickColor.faded(delta, halfSpan), 1f)
+                        line(tickX, bottom - tickHeight, tickX, bottom, tickColor.faded(delta, halfSpan, view.fadeEdges), 1f)
                     }
                     heading += TICK_INTERVAL
                 }
@@ -218,7 +221,7 @@ class DirectionHud : Hud(
         }
     }
 
-    private fun PolyColor.faded(delta: Float, halfSpan: Float): PolyColor {
+    private fun PolyColor.faded(delta: Float, halfSpan: Float, fadeEdges: Boolean): PolyColor {
         if (!fadeEdges || halfSpan <= 0f) return this
         val distance = abs(delta) / halfSpan
         if (distance <= FADE_START) return this

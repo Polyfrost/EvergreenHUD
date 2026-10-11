@@ -16,9 +16,9 @@ abstract class CachedTextHud(
 ) : SpacedTextHud(id, title, category, prefix, suffix) {
     protected var currentText: String = defaultText
 
-    private var valueColorState: MutableState<PolyColor?> = mutableStateOf(null)
+    private var lastValue: String = defaultText
 
-    private var lastValueState: MutableState<String> = mutableStateOf(defaultText)
+    private var styledLinesState: MutableState<List<List<StyledRun>>?> = mutableStateOf(null)
 
     fun updateWithText(text: Any?) {
         this.currentText = text?.toString() ?: defaultText
@@ -32,24 +32,24 @@ abstract class CachedTextHud(
     protected open fun valueColor(): PolyColor? = null
 
     override fun concat(prefix: String, value: String?, suffix: String): String {
-        lastValueState.value = value.orEmpty()
+        lastValue = value.orEmpty()
         return super.concat(prefix, value, suffix)
     }
 
     override fun update(): Boolean {
         val result = super.update()
-        valueColorState.value = valueColor()
+        styledLinesState.value = valueColor()?.let(::styledLines)
         return result
     }
 
     @Composable
     override fun Content() {
-        val color = valueColorState.value ?: return super.Content()
-        HudStyledLines(styledLines(color))
+        val lines = styledLinesState.value ?: return super.Content()
+        HudStyledLines(lines)
     }
 
     private fun styledLines(color: PolyColor): List<List<StyledRun>> {
-        val value = lastValueState.value
+        val value = lastValue
         if (value.isEmpty()) {
             val bare = listOfNotNull(prefix.takeIf { it.isNotEmpty() }, suffix.takeIf { it.isNotEmpty() }).joinToString(concatString)
             return listOf(listOf(run(decorate(bare))))
@@ -70,7 +70,7 @@ abstract class CachedTextHud(
     private fun run(text: String, color: PolyColor? = null) = StyledRun(text, color, false, false)
 
     override fun clone(): Hud = (super.clone() as CachedTextHud).also {
-        it.valueColorState = mutableStateOf(null)
-        it.lastValueState = mutableStateOf(defaultText)
+        it.lastValue = defaultText
+        it.styledLinesState = mutableStateOf(null)
     }
 }

@@ -292,6 +292,10 @@ class PotionEffectsHud : Hud(
 
     private var rows = mutableStateOf<List<Row>>(emptyList())
 
+    private data class Layout(val spacing: Float, val horizontal: Boolean, val mode: Int, val align: PolyAlign)
+
+    private var layoutState = mutableStateOf(Layout(spacing, false, MODE_FULL, PolyAlign.Left))
+
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
     override fun setup() {
@@ -425,6 +429,7 @@ class PotionEffectsHud : Hud(
     override fun canMergeBackground(): Boolean = true
 
     override fun update(): Boolean {
+        layoutState.value = Layout(spacing, direction(), layoutMode(), autoTextAlign())
         val next = buildRows()
         if (next == rows.value) return false
         rows.value = next
@@ -690,12 +695,13 @@ class PotionEffectsHud : Hud(
 
     @Composable
     override fun Content() {
+        val layout = layoutState.value
         val list = rows.value
         if (list.isEmpty()) return
         val scale = textScale.coerceAtLeast(0.01f)
 
-        val maxRowWidth = remember(list, scale, font, layoutMode()) {
-            val mode = layoutMode()
+        val maxRowWidth = remember(list, scale, font, layout.mode) {
+            val mode = layout.mode
             val hasAnyIcon = list.any { it.icon != null }
             val iconWidth = ICON * scale
             val iconGap = ICON_GAP * scale
@@ -715,32 +721,32 @@ class PotionEffectsHud : Hud(
             }
         }
 
-        val horizontal = direction()
+        val horizontal = layout.horizontal
         val modifier = hudBackground().padding(padLeft, padTop, padRight, padBottom)
 
         PolyBox(modifier = modifier) {
             if (horizontal) {
-                PolyRow(gap = spacing * scale) {
-                    for (row in list) Effect(row, scale, maxRowWidth)
+                PolyRow(gap = layout.spacing * scale) {
+                    for (row in list) Effect(row, scale, maxRowWidth, layout)
                 }
             } else {
-                PolyColumn(gap = spacing * scale) {
-                    for (row in list) Effect(row, scale, maxRowWidth)
+                PolyColumn(gap = layout.spacing * scale) {
+                    for (row in list) Effect(row, scale, maxRowWidth, layout)
                 }
             }
         }
     }
 
     @Composable
-    private fun Effect(row: Row, scale: Float, maxRowWidth: Float) {
-        val mode = layoutMode()
+    private fun Effect(row: Row, scale: Float, maxRowWidth: Float, layout: Layout) {
+        val mode = layout.mode
         if (mode == MODE_STACKED) {
             StackedEffect(row, scale, maxRowWidth)
             return
         }
 
         val style = styleFor(row)
-        val align = autoTextAlign()
+        val align = layout.align
 
         val iconBlock: @Composable () -> Unit = {
             if (row.icon != null) Icon(row.icon, ICON * scale, style.iconAlpha)
@@ -845,6 +851,7 @@ class PotionEffectsHud : Hud(
     override fun clone(): Hud = (super.clone() as PotionEffectsHud).also {
         it.sorting = sorting.copyOf()
         it.overrides = overrides.copyOf()
+        it.layoutState = mutableStateOf(layoutState.value)
 
         it.categoryScopes = categoryScopes.deepCopy()
         it.effectScopes = effectScopes.deepCopy()
