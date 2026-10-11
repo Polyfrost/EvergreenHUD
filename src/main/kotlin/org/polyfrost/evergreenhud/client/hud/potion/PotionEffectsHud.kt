@@ -1,8 +1,11 @@
 package org.polyfrost.evergreenhud.client.hud.potion
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameMillis
 //? if > 1.8.9 {
 import net.minecraft.core.registries.BuiltInRegistries
 //? if < 1.21.11
@@ -231,7 +234,7 @@ class PotionEffectsHud : Hud(
         val icon: Image?,
         val name: String?,
         val duration: String?,
-        val fade: Float,
+        val blinking: Boolean,
         val iconBlink: Boolean,
         val nameBlink: Boolean,
         val nameColor: PolyColor,
@@ -296,6 +299,8 @@ class PotionEffectsHud : Hud(
     private data class Layout(val spacing: Float, val horizontal: Boolean, val mode: Int, val align: PolyAlign)
 
     private var layoutState = mutableStateOf(Layout(spacing, false, MODE_FULL, PolyAlign.Left))
+
+    private var blinkFade = mutableFloatStateOf(1f)
 
     private var tickHandler: EventHandler<*>? = null
 
@@ -598,7 +603,7 @@ class PotionEffectsHud : Hud(
             icon = if (values.iconEnabled && id != null) iconFor(id) else null,
             name = title,
             duration = time,
-            fade = fade(ticks, infinite, values.blinkThreshold),
+            blinking = isBlinking(ticks, infinite, values.blinkThreshold),
             iconBlink = values.iconBlink,
             nameBlink = values.nameBlink,
             nameColor = values.nameColor,
@@ -608,8 +613,10 @@ class PotionEffectsHud : Hud(
         )
     }
 
-    private fun fade(ticks: Int, infinite: Boolean, blinkThreshold: Float): Float {
-        if (infinite || blinkThreshold <= 0f || ticks > blinkThreshold * 20f) return 1f
+    private fun isBlinking(ticks: Int, infinite: Boolean, blinkThreshold: Float): Boolean =
+        !infinite && blinkThreshold > 0f && ticks <= blinkThreshold * 20f
+
+    private fun currentBlinkFade(): Float {
         val phase = (System.currentTimeMillis() % BLINK_PERIOD).toFloat() / BLINK_PERIOD
         return BLINK_MIN_FADE + (1f - BLINK_MIN_FADE) * ((cos(phase * 2f * PI.toFloat()) + 1f) / 2f)
     }
@@ -691,9 +698,10 @@ class PotionEffectsHud : Hud(
 
     private fun styleFor(row: Row): RowStyle {
         val dimAlpha = if (row.dimmed) EDITOR_DIM_ALPHA else 1f
-        val iconAlpha = (if (row.iconBlink) row.fade else 1f) * dimAlpha
-        val nameFade = (if (row.nameBlink) row.fade else 1f) * dimAlpha
-        val durationFade = (if (row.durationBlink) row.fade else 1f) * dimAlpha
+        val fade = if (row.blinking) blinkFade.floatValue else 1f
+        val iconAlpha = (if (row.iconBlink) fade else 1f) * dimAlpha
+        val nameFade = (if (row.nameBlink) fade else 1f) * dimAlpha
+        val durationFade = (if (row.durationBlink) fade else 1f) * dimAlpha
         return RowStyle(
             iconAlpha = iconAlpha,
             nameFade = nameFade,
@@ -709,6 +717,12 @@ class PotionEffectsHud : Hud(
         val list = rows.value
         if (list.isEmpty()) return
         val scale = textScale.coerceAtLeast(0.01f)
+
+        if (list.any { it.blinking }) {
+            LaunchedEffect(Unit) {
+                while (true) withFrameMillis { blinkFade.floatValue = currentBlinkFade() }
+            }
+        }
 
         val maxRowWidth = remember(list, scale, font, layout.mode) {
             val mode = layout.mode
@@ -862,6 +876,7 @@ class PotionEffectsHud : Hud(
         it.sorting = sorting.copyOf()
         it.overrides = overrides.copyOf()
         it.layoutState = mutableStateOf(layoutState.value)
+        it.blinkFade = mutableFloatStateOf(1f)
         it.tickHandler = null
 
         it.categoryScopes = categoryScopes.deepCopy()

@@ -1,7 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud.clock
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -103,10 +102,14 @@ class ClockHud : Hud(
         val timeState = remember { mutableLongStateOf(millisOfDay(zone)) }
         LaunchedEffect(zone) {
             while (true) {
-                withFrameMillis { timeState.longValue = millisOfDay(zone) }
+                withFrameMillis {
+                    val millis = millisOfDay(zone)
+                    timeState.longValue = if (ticking) millis - millis % 1000 else millis
+                }
             }
         }
-        val timeMillis by timeState
+        val timeMillis = { timeState.longValue }
+        if (!isReal) timeState.longValue
         val fiveMinuteMarks = detailEnabled(DETAIL_FIVE_MINUTE_MARKS)
         val minuteMarks = detailEnabled(DETAIL_MINUTE_MARKS)
         val numbers = detailEnabled(DETAIL_NUMBERS)

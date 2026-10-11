@@ -2,7 +2,7 @@ package org.polyfrost.evergreenhud.client.hud.mouse
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameMillis
@@ -30,6 +30,8 @@ import kotlin.math.abs
 import kotlin.math.exp
 
 private const val DECAY_RATE = 6f
+
+private const val SETTLED = 0.001f
 
 private const val MAX_FRAME_SECONDS = 0.1f
 
@@ -126,6 +128,9 @@ class MouseStrokesHud : Hud(
     @Transient
     private var lastFrameMs = 0L
 
+    @Transient
+    private var lastMovedMs = 0L
+
     private var _staticW = mutableStateOf(DEFAULT_SIDE)
     override var staticW: Float get() = _staticW.value; set(v) { _staticW.value = v }
 
@@ -171,25 +176,30 @@ class MouseStrokesHud : Hud(
 
     @Composable
     override fun Content() {
-        val position = remember { mutableStateOf(if (isReal) Offset(0f, 0f) else Offset(PREVIEW_X, PREVIEW_Y)) }
+        val frame = remember { mutableLongStateOf(0L) }
         if (isReal) {
             LaunchedEffect(Unit) {
                 while (true) {
-                    withFrameMillis { nowMs -> position.value = step(nowMs) }
+                    withFrameMillis { nowMs ->
+                        step(nowMs)
+                        if (nowMs - lastMovedMs <= repaintWindow()) frame.longValue = nowMs
+                    }
                 }
             }
         }
-        val offset by position
 
         val modifier = hudBackground(PolyModifier.size(scaledWidth, scaledHeight))
         PolyBox(modifier = modifier.clip(bgRadius)) {
             PolyCanvas(PolyModifier.size(scaledWidth, scaledHeight)) { x, y, w, h ->
-                draw(offset, x, y, w, h)
+                frame.longValue
+                draw(x, y, w, h)
             }
         }
     }
 
-    private fun step(nowMs: Long): Offset {
+    private fun repaintWindow(): Float = if (dotType == SNAKE) snakeMs else 0f
+
+    private fun step(nowMs: Long) {
         val deltaSeconds = if (lastFrameMs == 0L) 0f else ((nowMs - lastFrameMs) / 1000f).coerceIn(0f, MAX_FRAME_SECONDS)
         lastFrameMs = nowMs
 
@@ -208,19 +218,21 @@ class MouseStrokesHud : Hud(
 
         val decay = exp(-DECAY_RATE * deltaSeconds)
         val last = trail.lastOrNull()
-        val x = ((last?.x ?: 0f) * scale * decay + deltaYaw * sensitivity).coerceIn(-scale, scale) / scale
-        val y = ((last?.y ?: 0f) * scale * decay + deltaPitch * sensitivity).coerceIn(-scale, scale) / scale
+        val x = settle(((last?.x ?: 0f) * scale * decay + deltaYaw * sensitivity).coerceIn(-scale, scale) / scale)
+        val y = settle(((last?.y ?: 0f) * scale * decay + deltaPitch * sensitivity).coerceIn(-scale, scale) / scale)
+        if (x != (last?.x ?: 0f) || y != (last?.y ?: 0f)) lastMovedMs = nowMs
+        else if (x == 0f && y == 0f && nowMs - lastMovedMs > snakeMs) return
 
         trail.addLast(TrailPoint(x, y, nowMs))
         val oldest = nowMs - snakeMs.toLong()
         while (trail.size > 1 && (trail.first().timeMs < oldest || trail.size > MAX_TRAIL_POINTS)) {
             trail.removeFirst()
         }
-
-        return Offset(x, y)
     }
 
-    private fun RenderContext.draw(offset: Offset, x: Float, y: Float, w: Float, h: Float) {
+    private fun settle(value: Float): Float = if (abs(value) < SETTLED) 0f else value
+
+    private fun RenderContext.draw(x: Float, y: Float, w: Float, h: Float) {
         if (w <= 0f || h <= 0f) return
 
         val side = minOf(w, h)
@@ -231,20 +243,22 @@ class MouseStrokesHud : Hud(
         val usableX = (w / 2f - radius).coerceAtLeast(0f)
         val usableY = (h / 2f - radius).coerceAtLeast(0f)
         val fg = PolyColor(textColor, textChroma, textChromaSpeed)
+        val head = trail.lastOrNull()
+        val dotX = if (isReal) head?.x ?: 0f else PREVIEW_X
+        val dotY = if (isReal) head?.y ?: 0f else PREVIEW_Y
 
         if (snake) {
             snake(centreX, centreY, usableX, usableY, radius * 2f, fg)
             if (drawSnakeHead) {
-                val head = trail.lastOrNull()
                 dot(
-                    centreX + (head?.x ?: offset.x) * usableX,
-                    centreY + (head?.y ?: offset.y) * usableY,
+                    centreX + dotX * usableX,
+                    centreY + dotY * usableY,
                     side * snakeHeadRadius / 100f,
                     snakeHeadColor,
                 )
             }
         } else {
-            dot(centreX + offset.x * usableX, centreY + offset.y * usableY, radius, fg)
+            dot(centreX + dotX * usableX, centreY + dotY * usableY, radius, fg)
         }
 
         if (drawMiddleDot) {
@@ -341,8 +355,6 @@ class MouseStrokesHud : Hud(
         val alpha = (((rawArgb ushr 24) and 0xFF) * factor.coerceIn(0f, 1f)).toInt().coerceIn(0, 255)
         return PolyColor((rawArgb and 0x00FFFFFF) or (alpha shl 24), chroma, chromaSpeed)
     }
-
-    private data class Offset(val x: Float, val y: Float)
 
     private data class TrailPoint(val x: Float, val y: Float, val timeMs: Long)
 
