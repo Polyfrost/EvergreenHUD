@@ -43,6 +43,9 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Button
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.ItemList
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
+import org.polyfrost.oneconfig.api.event.v1.eventHandler
+import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
@@ -106,6 +109,8 @@ class ItemCounterHud : Hud(
 
     private var display = mutableStateOf<Display?>(null)
 
+    private var tickHandler: EventHandler<*>? = null
+
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
     override fun canMergeBackground(): Boolean = true
@@ -127,6 +132,14 @@ class ItemCounterHud : Hud(
         updateWhenChanged("potion")
         updateWhenChanged("showIcon")
         hideIf("potion") { currentItem()?.hasPotionContents != true }
+        tickHandler = eventHandler { _: TickEvent.End -> if (!hidden || HudManager.isEditing) updateAndRecalculate() }
+    }
+
+    override fun updateFrequency(): Long = Long.MAX_VALUE
+
+    override fun remove() {
+        tickHandler?.unregister()
+        tickHandler = null
     }
 
     private fun applyPotionOptions() {
@@ -296,5 +309,6 @@ class ItemCounterHud : Hud(
     override fun clone(): Hud = (super.clone() as ItemCounterHud).also {
         it.item = item.copyOf()
         it.display = mutableStateOf(null)
+        it.tickHandler = null
     }
 }

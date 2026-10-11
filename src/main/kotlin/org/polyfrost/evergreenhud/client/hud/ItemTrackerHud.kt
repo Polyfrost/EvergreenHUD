@@ -28,6 +28,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
@@ -102,16 +103,28 @@ class ItemTrackerHud : Hud(
 
     private var rev = mutableStateOf(0)
 
+    private var tickHandler: EventHandler<*>? = null
+
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
     override fun canMergeBackground(): Boolean = true
 
     override fun setup() {
         if (!isReal) return
-        eventHandler { _: TickEvent.End -> track() }
+        tickHandler = eventHandler { _: TickEvent.End ->
+            track()
+            if (!hidden || HudManager.isEditing) updateAndRecalculate()
+        }
         for (option in listOf("spacing", "textPosition", "showIcon")) {
             addCallback(option) { rev.value++ }
         }
+    }
+
+    override fun updateFrequency(): Long = Long.MAX_VALUE
+
+    override fun remove() {
+        tickHandler?.unregister()
+        tickHandler = null
     }
 
     private fun track() {
@@ -290,6 +303,7 @@ class ItemTrackerHud : Hud(
         it.changes = ArrayList()
         it.counts = null
         it.trackedPlayer = null
+        it.tickHandler = null
         it.entries = mutableStateOf(emptyList())
         it.rev = mutableStateOf(0)
     }

@@ -56,6 +56,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
 import org.polyfrost.oneconfig.api.config.v1.collect.impl.OneConfigCollector
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.hud.v1.HudAnchor
@@ -296,16 +297,17 @@ class PotionEffectsHud : Hud(
 
     private var layoutState = mutableStateOf(Layout(spacing, false, MODE_FULL, PolyAlign.Left))
 
+    private var tickHandler: EventHandler<*>? = null
+
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
     override fun setup() {
         super.setup()
         if (isReal) {
             hideIf("hideVanillaEffects") { !VanillaHudCompat.isPresent }
-            if (VanillaHudCompat.isPresent) {
-                eventHandler { _: TickEvent.End ->
-                    VanillaHudCompat.hideStatusEffects(hideVanillaEffects && !hidden)
-                }
+            tickHandler = eventHandler { _: TickEvent.End ->
+                if (VanillaHudCompat.isPresent) VanillaHudCompat.hideStatusEffects(hideVanillaEffects && !hidden)
+                if (!hidden || HudManager.isEditing) updateAndRecalculate()
             }
 
             val scopes = buildList {
@@ -333,6 +335,14 @@ class PotionEffectsHud : Hud(
             val overridesProp = claim(getProperty("overrides"))
             overridesProp.addCallback(OwnedCallback(this) { for (prop in scoped) prop.revaluateDisplay() })
         }
+    }
+
+    override fun updateFrequency(): Long = Long.MAX_VALUE
+
+    override fun remove() {
+        tickHandler?.unregister()
+        tickHandler = null
+        if (VanillaHudCompat.isPresent) VanillaHudCompat.hideStatusEffects(false)
     }
 
     private fun claim(prop: Property<*>): Property<Any?> {
@@ -852,6 +862,7 @@ class PotionEffectsHud : Hud(
         it.sorting = sorting.copyOf()
         it.overrides = overrides.copyOf()
         it.layoutState = mutableStateOf(layoutState.value)
+        it.tickHandler = null
 
         it.categoryScopes = categoryScopes.deepCopy()
         it.effectScopes = effectScopes.deepCopy()
