@@ -359,6 +359,7 @@ class ArmorHud : Hud(
      */
     @Composable
     private fun VanillaContent(list: List<Entry>, scale: Float) {
+        rev.value
         val horizontal = direction == HORIZONTAL
         val length = hotbarStripLength(list.size) * scale
         val thickness = HOTBAR_THICKNESS * scale
@@ -443,6 +444,7 @@ class ArmorHud : Hud(
 
     @Composable
     private fun Entry(entry: Entry, scale: Float, align: PolyAlign) {
+        rev.value
         val gap = if (entry.text.isEmpty()) 0f else TEXT_GAP * scale
         val modifier = PolyModifier.align(align)
         val textFirst = textPosition == LEFT || textPosition == ABOVE

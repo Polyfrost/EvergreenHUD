@@ -170,8 +170,7 @@ class ItemTrackerHud : Hud(
             }
         }
         changes.add(Change(item, ItemStack(item), delta, now))
-        val limit = maxEntries.coerceAtLeast(1)
-        while (changes.size > limit) changes.removeAt(0)
+        trim()
     }
 
     private fun prune() {
@@ -179,6 +178,12 @@ class ItemTrackerHud : Hud(
         val now = System.nanoTime()
         val lifetime = (displayTime.coerceAtLeast(0f) * 1_000_000_000L).toLong()
         changes.fastRemoveIfReversed { now - it.time > lifetime }
+        trim()
+    }
+
+    private fun trim() {
+        val limit = maxEntries.coerceAtLeast(1)
+        while (changes.size > limit) changes.removeAt(0)
     }
 
     override fun update(): Boolean {
@@ -235,6 +240,7 @@ class ItemTrackerHud : Hud(
 
     @Composable
     private fun Entry(entry: Entry, scale: Float, align: PolyAlign) {
+        rev.value
         PolyRow(gap = if (showIcon) TEXT_GAP * scale else 0f, modifier = PolyModifier.align(align)) {
             if (textPosition != RIGHT) Text(entry, scale)
             if (showIcon) {

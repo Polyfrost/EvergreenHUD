@@ -427,6 +427,7 @@ class KeystrokesHud : Hud(
 
     @Composable
     private fun KeyBackground(progress: Float, w: Float, h: Float) {
+        keys.rev.value
         val color = keyBg(progress)
         val radius = keyRadius
         if (color.alpha == 0) return
@@ -443,6 +444,7 @@ class KeystrokesHud : Hud(
 
     @Composable
     private fun ClickKey(label: String, progress: Float, cps: Int, w: Float, h: Float) {
+        keys.rev.value
         when (cpsMode) {
             CPS_SMALL -> Key(label, progress, w, h, sub = "$cps CPS")
             CPS_LARGE -> Key(if (cps > 0) cps.toString() else label, progress, w, h)
@@ -452,6 +454,7 @@ class KeystrokesHud : Hud(
 
     @Composable
     private fun Key(label: String, progress: Float, w: Float, h: Float, align: PolyAlign? = null, sub: String? = null) {
+        keys.rev.value
         val fg = keyFg(progress)
         PolyBox(modifier = keyModifier(progress, w, h, align)) {
             KeyBackground(progress, w, h)
@@ -500,6 +503,7 @@ class KeystrokesHud : Hud(
 
     @Composable
     private fun SpaceKey(progress: Float, w: Float, h: Float) {
+        keys.rev.value
         val fg = keyFg(progress)
         PolyBox(modifier = keyModifier(progress, w, h)) {
             KeyBackground(progress, w, h)
