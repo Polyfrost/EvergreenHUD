@@ -12,6 +12,7 @@ deps.fabric_language_kotlin = "1.13.13+kotlin.2.4.10"
 loomx.loom_version = "1.17-SNAPSHOT"
 
 publish.modrinth = "1yIQcc2b"
+publish.curseforge = "460419"
 
 ["1.8.9"]
 mod.mc_compat = "1.8.9"
