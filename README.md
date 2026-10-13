@@ -5,6 +5,8 @@
 
 EvergreenHUD adds around 40 HUD elements to the OneConfig HUD editor. Place, scale and style whichever ones you want.
 
+![HUD in game](.github/images/hud.gif)
+
 ### Elements
 
 - Combat: CPS, Keystrokes, Mouse Strokes, Combo, Reach, Block Place Count
@@ -25,7 +27,13 @@ EvergreenHUD adds around 40 HUD elements to the OneConfig HUD editor. Place, sca
 - Combo and Reach for your last hits
 - A compass strip that scrolls as you turn
 
+![Moving and scaling](.github/images/hud-editor.gif)
+
+![Armor Status options](.github/images/armor-status.gif)
+
 Font, colors, background, corner radius, shadow and padding can be set for every element at once from the EvergreenHUD settings page.
+
+![Settings](.github/images/settings.gif)
 
 ## Compatibility
 
