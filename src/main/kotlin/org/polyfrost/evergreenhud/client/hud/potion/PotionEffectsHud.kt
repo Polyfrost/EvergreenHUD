@@ -48,7 +48,6 @@ import org.polyfrost.compose.mc.McFontQueue.measureWidth
 import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
-import org.polyfrost.evergreenhud.client.utils.rebindButtons
 import org.polyfrost.oneconfig.api.config.v1.Node
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Tree
@@ -412,8 +411,6 @@ class PotionEffectsHud : Hud(
 
             val overridesProp = claim(getProperty("overrides"))
             overridesProp.addCallback(OwnedCallback(this) { for (prop in scoped) prop.revaluateDisplay() })
-
-            rebindButtons()
         }
     }
 
