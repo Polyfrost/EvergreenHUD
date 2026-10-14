@@ -52,6 +52,8 @@ class PlayerHeadHud : Hud(
         get() = _staticH.value
         set(v) { _staticH.value = v.coerceAtLeast(MIN_SIDE) }
 
+    private var headImage = mutableStateOf<Image?>(null)
+
     init {
         showBackground = false
     }
@@ -69,20 +71,25 @@ class PlayerHeadHud : Hud(
 
     override fun minimumSize(): Pair<Float, Float> = MIN_SIDE to MIN_SIDE
 
-    override val alwaysRedraw: Boolean get() = true
-
-    override fun update(): Boolean = false
+    override fun update(): Boolean {
+        val next = PlayerHeadTexture.current()
+        if (next === headImage.value) return false
+        headImage.value = next
+        return true
+    }
 
     override fun clone(): Hud = (super.clone() as PlayerHeadHud).apply {
         _staticW = mutableStateOf(this@PlayerHeadHud.staticW)
         _staticH = mutableStateOf(this@PlayerHeadHud.staticH)
+        headImage = mutableStateOf(null)
     }
 
     @Composable
     override fun Content() {
+        if (!isReal) headImage.value
         PolyBox(modifier = hudBackground().size(staticW, staticH)) {
             PolyCanvas(PolyModifier.size(staticW, staticH)) { x, y, w, h ->
-                val head = PlayerHeadTexture.current() ?: return@PolyCanvas
+                val head = headImage.value ?: return@PolyCanvas
                 val side = min(w, h)
                 val left = x + (w - side) / 2f
                 val top = y + (h - side) / 2f
