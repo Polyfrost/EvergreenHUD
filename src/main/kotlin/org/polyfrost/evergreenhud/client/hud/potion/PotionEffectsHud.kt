@@ -118,9 +118,25 @@ class PotionEffectsHud : Hud(
             measureWidth?.invoke(" ", scale) ?: (FONT_SIZE * scale * 0.5f)
 
         private val EXAMPLES = listOf(
-            Example("speed", "Speed", 1200, 1),
-            Example("strength", "Strength", 140, 0),
+            Example("speed", 1200, 1),
+            Example("strength", 140, 0),
+            Example("slowness", 840, 0),
+            Example("glowing", 500, 0),
+            Example("regeneration", 60, 1, ambient = true),
         )
+
+        private val EXAMPLE_EFFECTS: List<MobEffectInstance> by lazy {
+            EXAMPLES.mapNotNull { example ->
+                //? if > 1.8.9 {
+                val registry = BuiltInRegistries.MOB_EFFECT
+                val effect = registry.firstOrNull { registry.getKey(it)?.path == example.id } ?: return@mapNotNull null
+                MobEffectInstance(registry.wrapAsHolder(effect), example.ticks, example.amplifier, example.ambient, true)
+                //?} else {
+                /*val effect = StatusEffect.get(example.id) ?: return@mapNotNull null
+                MobEffectInstance(effect.id, example.ticks, example.amplifier, example.ambient, true)
+                *///?}
+            }
+        }
 
         private val EFFECT_STRIPPED_FIELDS = setOf("categoryFilter")
 
@@ -224,7 +240,7 @@ class PotionEffectsHud : Hud(
         }
     }
 
-    private class Example(val id: String, val name: String, val ticks: Int, val amplifier: Int)
+    private class Example(val id: String, val ticks: Int, val amplifier: Int, val ambient: Boolean = false)
 
     private data class Row(
         val icon: Image?,
@@ -437,39 +453,20 @@ class PotionEffectsHud : Hud(
     }
 
     private fun buildRows(): List<Row> {
-        if (!isReal) {
-            return exampleRows()
-        }
+        val editing = HudManager.isEditing || !isReal
 
         //? if > 1.8.9 {
-        val active = mc.player?.activeEffects?.filter { it.showIcon() }.orEmpty()
+        val active = if (!isReal) emptyList() else mc.player?.activeEffects?.filter { it.showIcon() }.orEmpty()
         //?} else
-        //val active = mc.player?.activeEffects?.filter { StatusEffect.BY_ID.getOrNull(it.id)?.hasIcon() == true }.orEmpty()
-        if (active.isEmpty()) {
-            return if (HudManager.isEditing) exampleRows()
-            else emptyList()
-        }
+        //val active = if (!isReal) emptyList() else mc.player?.activeEffects?.filter { StatusEffect.BY_ID.getOrNull(it.id)?.hasIcon() == true }.orEmpty()
+        val effects = active.ifEmpty { if (editing) EXAMPLE_EFFECTS else return emptyList() }
 
-        val editing = HudManager.isEditing
-        val visible = if (editing) active else active.filter(::shouldDisplayEffect)
+        val visible = if (editing) effects else effects.filter(::shouldDisplayEffect)
         if (visible.isEmpty()) return emptyList()
 
         val ordered = sortEffects(visible, sorting, reversed)
         return ordered.map { effect -> row(effect, dimmed = editing && !shouldDisplayEffect(effect)) }
     }
-
-    private fun exampleRows(): List<Row> =
-        EXAMPLES.map {
-            row(
-                //~ if = 1.8.9 'ResourceLocation.withDefaultNamespace(it.id)' -> 'StatusEffect.get(it.id)'
-                ResourceLocation.withDefaultNamespace(it.id),
-                it.name,
-                it.ticks,
-                it.amplifier,
-                false,
-                categoryScopes.global
-            )
-        }
 
     private fun sortEffects(effects: List<MobEffectInstance>, sortingStack: Array<String>, reversed: Boolean): List<MobEffectInstance> {
         var sorted = effects
