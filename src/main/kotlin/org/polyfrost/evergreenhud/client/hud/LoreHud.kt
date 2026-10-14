@@ -18,6 +18,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Number
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.evergreenhud.client.utils.SpacedTextHud
 
@@ -52,6 +53,8 @@ class LoreHud : SpacedTextHud(
     private var hasLore = false
     private var linesState: MutableState<List<List<StyledRun>>> = mutableStateOf(emptyList())
 
+    private var tickHandler: EventHandler<*>? = null
+
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
     override fun setup() {
@@ -60,10 +63,17 @@ class LoreHud : SpacedTextHud(
             updateWhenChanged("showName")
             updateWhenChanged("removeEmptyLines")
             updateWhenChanged("maxLines")
-            eventHandler { _: TickEvent.End ->
+            tickHandler = eventHandler { _: TickEvent.End ->
                 theItem = Minecraft.getInstance().player?.mainHandItem
             }
         }
+    }
+
+    override fun updateFrequency(): Long = if (isReal) Long.MAX_VALUE else -1L
+
+    override fun remove() {
+        tickHandler?.unregister()
+        tickHandler = null
     }
 
     var theItem: ItemStack? = null
@@ -129,5 +139,6 @@ class LoreHud : SpacedTextHud(
 
     override fun clone(): Hud = (super.clone() as LoreHud).also {
         it.linesState = mutableStateOf(emptyList())
+        it.tickHandler = null
     }
 }

@@ -14,6 +14,9 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Checkbox
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
+import org.polyfrost.oneconfig.api.event.v1.eventHandler
+import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
@@ -89,6 +92,8 @@ class PositionHud : GenericNumberHud(
     private var linesState: MutableState<List<List<StyledCell>>> = mutableStateOf(emptyList())
     private var alignState: MutableState<Boolean> = mutableStateOf(false)
 
+    private var tickHandler: EventHandler<*>? = null
+
     override fun setup() {
         super.setup()
         if (isReal) {
@@ -102,6 +107,7 @@ class PositionHud : GenericNumberHud(
             updateWhenChanged("showAxis")
             updateWhenChanged("displayMode")
             updateWhenChanged("perAxisColors")
+            tickHandler = eventHandler { _: TickEvent.End -> updateAndRecalculate() }
 
             hideIf("alignDirection") { !showDirection || displayMode != 0 }
             hideIf("perAxisColors") { !showAxis }
@@ -113,21 +119,31 @@ class PositionHud : GenericNumberHud(
         }
     }
 
+    override fun updateFrequency(): Long = if (isReal) Long.MAX_VALUE else -1L
+
+    override fun remove() {
+        tickHandler?.unregister()
+        tickHandler = null
+    }
+
     @Composable
     override fun Content() = HudStyledCells(linesState.value, alignColumns = alignState.value)
 
     override fun update(): Boolean {
+        val player = mc.player
+        if (player != null) {
+            val camera = mc.cameraEntity ?: player
+            this.px = player.x
+            this.py = player.y
+            this.pz = player.z
+            this.yaw = Facing.wrapDegrees(camera.yRot).toDouble()
+            this.pitch = camera.xRot.toDouble()
+        }
+
         val entries = createEntries()
         currentText = entries.joinToString(separator) { it.plain }
         val result = super.update()
-
-        val player = mc.player ?: return result
-        val camera = mc.cameraEntity ?: player
-        this.px = player.x
-        this.py = player.y
-        this.pz = player.z
-        this.yaw = Facing.wrapDegrees(camera.yRot).toDouble()
-        this.pitch = camera.xRot.toDouble()
+        if (player == null) return result
 
         linesState.value = buildLines(entries)
         alignState.value = alignDirection && showDirection && displayMode == 0
@@ -224,9 +240,8 @@ class PositionHud : GenericNumberHud(
     override fun clone(): Hud = (super.clone() as PositionHud).also {
         it.linesState = mutableStateOf(emptyList())
         it.alignState = mutableStateOf(false)
+        it.tickHandler = null
     }
 
     override fun defaultPosition(): Pair<Float, Float> = 10f to 30f
-
-    override fun updateFrequency(): Long = 50L
 }

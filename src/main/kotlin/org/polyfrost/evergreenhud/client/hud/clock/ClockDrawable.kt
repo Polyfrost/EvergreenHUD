@@ -40,7 +40,7 @@ private class Outline(val hw: Float, val hh: Float, val cornerRadius: Float?) {
 
 @Composable
 fun Clock(
-    millisOfDay: Long,
+    millisOfDay: () -> Long,
     handWidth: Float = 2f,
     ticking: Boolean = false,
     fiveMinuteMarks: Boolean = false,
@@ -67,7 +67,8 @@ fun Clock(
         }
         if (numbers) numbers(cx, cy, radius, outline, fiveMinuteMarks || minuteMarks, detailColor, fontName)
 
-        val secs = if (ticking) floor(millisOfDay / 1000.0) else millisOfDay / 1000.0
+        val millis = millisOfDay()
+        val secs = if (ticking) floor(millis / 1000.0) else millis / 1000.0
 
         val secondAngle = (2 * PI * (secs % 60.0 / 60.0) - PI / 2).toFloat()
 
