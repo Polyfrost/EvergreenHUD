@@ -14,6 +14,7 @@ import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import org.polyfrost.compose.composables.PolyBox
+import org.polyfrost.evergreenhud.client.utils.rebindButtons
 import org.polyfrost.compose.composables.PolyMcText
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.PolyRow
@@ -126,6 +127,7 @@ class ItemCounterHud : Hud(
     override fun setup() {
         super.setup()
         if (!isReal) return
+        rebindButtons()
 
         applyPotionOptions()
         updateWhenChanged("item")

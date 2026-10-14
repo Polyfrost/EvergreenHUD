@@ -7,8 +7,10 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.entity.living.effect.StatusEffect
 *///?}
 
+private const val OPAQUE = 0xFF000000.toInt()
+
 object EffectCatalog {
-    data class Entry(val path: String, val title: String, val category: String)
+    data class Entry(val path: String, val title: String, val category: String, val color: Int)
 
     val LEGACY_IDS: Map<String, String> = mapOf(
         "1" to "speed",
@@ -54,11 +56,11 @@ object EffectCatalog {
         //? if > 1.8.9 {
         for (effect in BuiltInRegistries.MOB_EFFECT) {
             val id = BuiltInRegistries.MOB_EFFECT.getKey(effect) ?: continue
-            entries += Entry(id.path, effect.displayName.string, effect.category.name.lowercase())
+            entries += Entry(id.path, effect.displayName.string, effect.category.name.lowercase(), effect.color or OPAQUE)
         }
         //?} else {
         /*for (effect in StatusEffect.BY_ID.filterNotNull()) {
-            entries += Entry(pathOf(effect.id), I18n.translate(effect.translationKey), if (effect.isHarmful) "harmful" else "beneficial")
+            entries += Entry(pathOf(effect.id), I18n.translate(effect.translationKey), if (effect.isHarmful) "harmful" else "beneficial", effect.potionColor or OPAQUE)
         }
         *///?}
         return entries
