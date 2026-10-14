@@ -117,7 +117,7 @@ class MouseStrokesHud : Hud(
     var snakeHeadColor = PolyColor(0xFF55FFFF.toInt())
 
     @Transient
-    private val trail = ArrayDeque<TrailPoint>()
+    private var trail = ArrayDeque<TrailPoint>()
 
     @Transient
     private var lastYaw = Float.NaN
@@ -172,6 +172,7 @@ class MouseStrokesHud : Hud(
         _staticH = mutableStateOf(this@MouseStrokesHud.staticH)
         dotColor = dotColor.copy()
         snakeHeadColor = snakeHeadColor.copy()
+        trail = ArrayDeque()
     }
 
     @Composable
