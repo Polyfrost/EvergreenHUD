@@ -18,7 +18,6 @@ import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
 import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Hud
-import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
 private const val NO_SIGN = ' '
@@ -108,7 +107,7 @@ class PositionHud : GenericNumberHud(
             updateWhenChanged("showAxis")
             updateWhenChanged("displayMode")
             updateWhenChanged("perAxisColors")
-            tickHandler = eventHandler { _: TickEvent.End -> if (!hidden || HudManager.isEditing) updateAndRecalculate() }
+            tickHandler = eventHandler { _: TickEvent.End -> updateAndRecalculate() }
 
             hideIf("alignDirection") { !showDirection || displayMode != 0 }
             hideIf("perAxisColors") { !showAxis }

@@ -132,10 +132,10 @@ class ItemCounterHud : Hud(
         updateWhenChanged("potion")
         updateWhenChanged("showIcon")
         hideIf("potion") { currentItem()?.hasPotionContents != true }
-        tickHandler = eventHandler { _: TickEvent.End -> if (!hidden || HudManager.isEditing) updateAndRecalculate() }
+        tickHandler = eventHandler { _: TickEvent.End -> updateAndRecalculate() }
     }
 
-    override fun updateFrequency(): Long = Long.MAX_VALUE
+    override fun updateFrequency(): Long = if (isReal) Long.MAX_VALUE else -1L
 
     override fun remove() {
         tickHandler?.unregister()

@@ -69,7 +69,7 @@ class LoreHud : SpacedTextHud(
         }
     }
 
-    override fun updateFrequency(): Long = Long.MAX_VALUE
+    override fun updateFrequency(): Long = if (isReal) Long.MAX_VALUE else -1L
 
     override fun remove() {
         tickHandler?.unregister()

@@ -113,14 +113,14 @@ class ItemTrackerHud : Hud(
         if (!isReal) return
         tickHandler = eventHandler { _: TickEvent.End ->
             track()
-            if (!hidden || HudManager.isEditing) updateAndRecalculate()
+            updateAndRecalculate()
         }
         for (option in listOf("spacing", "textPosition", "showIcon")) {
             addCallback(option) { rev.value++ }
         }
     }
 
-    override fun updateFrequency(): Long = Long.MAX_VALUE
+    override fun updateFrequency(): Long = if (isReal) Long.MAX_VALUE else -1L
 
     override fun remove() {
         tickHandler?.unregister()

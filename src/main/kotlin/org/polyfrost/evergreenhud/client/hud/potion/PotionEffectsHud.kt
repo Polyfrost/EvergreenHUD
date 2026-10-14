@@ -312,7 +312,7 @@ class PotionEffectsHud : Hud(
             hideIf("hideVanillaEffects") { !VanillaHudCompat.isPresent }
             tickHandler = eventHandler { _: TickEvent.End ->
                 if (VanillaHudCompat.isPresent) VanillaHudCompat.hideStatusEffects(hideVanillaEffects && !hidden)
-                if (!hidden || HudManager.isEditing) updateAndRecalculate()
+                updateAndRecalculate()
             }
 
             val scopes = buildList {
@@ -342,7 +342,7 @@ class PotionEffectsHud : Hud(
         }
     }
 
-    override fun updateFrequency(): Long = Long.MAX_VALUE
+    override fun updateFrequency(): Long = if (isReal) Long.MAX_VALUE else -1L
 
     override fun remove() {
         tickHandler?.unregister()
