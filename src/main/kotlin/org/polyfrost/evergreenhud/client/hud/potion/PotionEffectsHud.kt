@@ -509,8 +509,15 @@ class PotionEffectsHud : Hud(
             val current = (next as? Array<*>)?.filterIsInstance<String>().orEmpty().toSet()
             for (field in current - previous) target.copyField(field, categoryScopes.global)
             for (field in previous - current) target.copyField(field, EffectComponentSettings.DEFAULTS)
+            val emptied = current.isEmpty() && previous.isNotEmpty()
             previous = current
             for (prop in fieldProps) prop.revaluateDisplay()
+
+            if (emptied && title in overrides) {
+                val overridesProp = Property.recast<Any?>(getProperty("overrides"))
+                overridesProp.set(overrides.filter { it != title }.toTypedArray())
+                bumpResetEpoch(overridesProp)
+            }
         })
 
         return fieldProps + listProp
