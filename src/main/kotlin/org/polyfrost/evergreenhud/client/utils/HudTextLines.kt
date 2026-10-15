@@ -25,7 +25,7 @@ private const val LINE_GAP = 2f
 
 private const val POPPINS_SIZE = 8f
 
-fun Hud.applyCase(text: String): String = when (caseType) {
+fun Hud.applyCase(text: String, caseType: Int = this.caseType): String = when (caseType) {
     1 -> text.uppercase()
     2 -> text.lowercase()
     else -> text
