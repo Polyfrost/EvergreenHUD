@@ -117,8 +117,8 @@ private val SECTION_GRID = arrayOf(
 
 private const val PER_OPTION_OVERRIDES = 1
 
-const val POTION_COLORS = 0
-const val POTION_CATEGORY = 1
+private const val POTION_COLORS = 0
+private const val POTION_CATEGORY = 1
 
 val CATEGORY_COLORS: Map<String, Int> = mapOf(
     "beneficial" to 0xFF109010.toInt(),
@@ -414,15 +414,17 @@ class PotionEffectsHud : Hud(
         }
     }
 
+    private data class PresetTarget(val key: String, val title: String, val color: Int)
+
     private fun applyColorPreset(field: String) {
-        val targets: List<Triple<String, String, Int>> = if (colorPreset == POTION_CATEGORY) {
+        val targets: List<PresetTarget> = if (colorPreset == POTION_CATEGORY) {
             val present = EffectCatalog.ENTRIES.mapTo(HashSet()) { it.category }
             categoryScopes.scopeDefs.mapNotNull { scope ->
                 val color = CATEGORY_COLORS[scope.key]?.takeIf { scope.key in present } ?: return@mapNotNull null
-                Triple(scope.key, scope.title, color)
+                PresetTarget(scope.key, scope.title, color)
             }
         } else {
-            EffectCatalog.ENTRIES.map { entry -> Triple(entry.path, entry.title, entry.color) }
+            EffectCatalog.ENTRIES.map { entry -> PresetTarget(entry.path, entry.title, entry.color) }
         }
         if (targets.isEmpty()) return
 
@@ -433,7 +435,7 @@ class PotionEffectsHud : Hud(
             if ((field in current) == overridden) return
             listProp.set(EffectComponentSettings.LEAF_FIELDS.filter { if (it == field) overridden else it in current }.toTypedArray())
             changed += listProp
-            changed += getProperty("$key.$field")
+            if (!overridden) changed += getProperty("$key.$field")
         }
 
         for ((key, _, color) in targets) {
@@ -443,11 +445,11 @@ class PotionEffectsHud : Hud(
             changed += colorProp
         }
 
-        val targetKeys = targets.mapTo(HashSet()) { it.first }
+        val targetKeys = targets.mapTo(HashSet()) { it.key }
         val scopeKeys = categoryScopes.scopeDefs.filter { it.isOverride }.map { it.key } + EffectCatalog.ENTRIES.map { it.path }
         for (key in scopeKeys) if (key !in targetKeys) setOverridden(key, false)
 
-        val missing = targets.map { it.second }.filter { it !in overrides }
+        val missing = targets.map { it.title }.filter { it !in overrides }
         if (missing.isNotEmpty()) {
             val overridesProp = Property.recast<Any?>(getProperty("overrides"))
             overridesProp.set(overrides + missing)
@@ -456,7 +458,7 @@ class PotionEffectsHud : Hud(
 
         for (prop in changed) bumpResetEpoch(prop)
     }
-    
+
     override fun updateFrequency(): Long = if (isReal) Long.MAX_VALUE else -1L
 
     override fun remove() {
