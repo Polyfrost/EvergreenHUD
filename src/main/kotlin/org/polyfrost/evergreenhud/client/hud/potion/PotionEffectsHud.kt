@@ -44,7 +44,9 @@ import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.composables.width
 import org.polyfrost.compose.layout.PolyAlign
+import org.polyfrost.compose.mc.McFontQueue
 import org.polyfrost.compose.mc.McFontQueue.measureWidth
+import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
@@ -65,6 +67,7 @@ import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.hud.v1.HudAnchor
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.hud.v1.Section
+import org.polyfrost.oneconfig.api.hud.v1.Weight
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import org.polyfrost.oneconfig.utils.v1.MHUtils.setAccessible
 import org.slf4j.LoggerFactory
@@ -89,6 +92,14 @@ private const val NEUTRAL_EFFECTS = "Neutral Effects"
 private const val HARMFUL_EFFECTS = "Harmful Effects"
 
 private const val INFINITE = "**:**"
+
+private const val BOLD = 1
+private const val ITALIC = 2
+private const val UNDERLINE = 4
+
+private const val MC_ITALIC_SHEAR = 0.25f
+
+private val FORMATTING_CODE = Regex("§.?")
 
 private const val BLINK_PERIOD = 1000L
 private const val BLINK_MIN_FADE = 0.25f
@@ -262,8 +273,10 @@ class PotionEffectsHud : Hud(
         val iconBlink: Boolean,
         val nameBlink: Boolean,
         val nameColor: PolyColor,
+        val nameStyle: Int,
         val durationBlink: Boolean,
         val durationColor: PolyColor,
+        val durationStyle: Int,
         val dimmed: Boolean,
     )
 
@@ -372,6 +385,7 @@ class PotionEffectsHud : Hud(
             }
 
             val scoped = scopes.flatMap(::setupOverrideScope)
+            setupGlobalFormatting()
 
             val overridesProp = claim(getProperty("overrides"))
             overridesProp.addCallback(OwnedCallback(this) { for (prop in scoped) prop.revaluateDisplay() })
@@ -409,6 +423,34 @@ class PotionEffectsHud : Hud(
         }
     }
 
+    private fun setupGlobalFormatting() {
+        val global = { categoryScopes.global }
+        val fieldProps = EffectComponentSettings.FORMATTING_FIELDS.map { field ->
+            claim(getProperty("global.$field")).also { prop ->
+                prop.addDisplayCondition(OwnedCondition(this) { !global().separateFormatting })
+            }
+        }
+        claim(getProperty("global.$SEPARATE_FORMATTING")).addCallback(OwnedCallback(this) { separate ->
+            val settings = global()
+            if (separate == true && !settings.nameFormatting.any { it } && !settings.durationFormatting.any { it }) {
+                for (prop in fieldProps) prop.set(hudFormatting())
+            }
+            for (prop in fieldProps) prop.revaluateDisplay()
+        })
+    }
+
+    private fun hudFormatting(): BooleanArray = booleanArrayOf(textBold, textItalic, textUnderline)
+
+    private fun resolvedGlobal(): EffectComponentSettings {
+        val global = categoryScopes.global
+        if (global.separateFormatting) return global
+        return EffectComponentSettings().also {
+            it.copyFrom(global)
+            it.nameFormatting = hudFormatting()
+            it.durationFormatting = hudFormatting()
+        }
+    }
+
     private fun setupOverrideScope(scope: OverrideScope): List<Property<*>> {
         val key = scope.key
         val title = scope.title
@@ -426,7 +468,11 @@ class PotionEffectsHud : Hud(
         listProp.addCallback(OwnedCallback(this) { next ->
             val target = settings()
             val current = (next as? Array<*>)?.filterIsInstance<String>().orEmpty().toSet()
-            for (field in current - previous) target.copyField(field, categoryScopes.global)
+            val added = current - previous
+            if (added.isNotEmpty()) {
+                val global = resolvedGlobal()
+                for (field in added) target.copyField(field, global)
+            }
             for (field in previous - current) target.copyField(field, EffectComponentSettings.DEFAULTS)
             previous = current
             for (prop in fieldProps) prop.revaluateDisplay()
@@ -676,9 +722,10 @@ class PotionEffectsHud : Hud(
             if (values.amplifierStyle == ROMAN) roman(level) else level.toString()
         } else null
 
+        val plainName = FORMATTING_CODE.replace(name, "")
         val title = when {
-            values.nameEnabled && amplifierText != null -> "$name $amplifierText"
-            values.nameEnabled -> name
+            values.nameEnabled && amplifierText != null -> "$plainName $amplifierText"
+            values.nameEnabled -> plainName
             amplifierText != null -> amplifierText
             else -> null
         }
@@ -696,10 +743,20 @@ class PotionEffectsHud : Hud(
             iconBlink = values.iconBlink,
             nameBlink = values.nameBlink,
             nameColor = values.nameColor,
+            nameStyle = styleFlags(values.nameFormatting),
             durationBlink = values.durationBlink,
             durationColor = values.durationColor,
+            durationStyle = styleFlags(values.durationFormatting),
             dimmed = dimmed,
         )
+    }
+
+    private fun styleFlags(formatting: BooleanArray): Int {
+        var flags = 0
+        if (formatting.getOrElse(0) { false }) flags = flags or BOLD
+        if (formatting.getOrElse(1) { false }) flags = flags or ITALIC
+        if (formatting.getOrElse(2) { false }) flags = flags or UNDERLINE
+        return flags
     }
 
     private fun isBlinking(ticks: Int, infinite: Boolean, blinkThreshold: Float): Boolean =
@@ -813,15 +870,15 @@ class PotionEffectsHud : Hud(
             }
         }
 
-        val maxRowWidth = remember(list, scale, font, layout.mode) {
+        val maxRowWidth = remember(list, scale, font, textWeight, layout.mode) {
             val mode = layout.mode
             val hasAnyIcon = list.any { it.icon != null }
             val iconWidth = ICON * scale
             val iconGap = ICON_GAP * scale
 
             list.maxOf { row ->
-                val nameWidth = row.name?.let { measureWidth?.invoke(it, scale) ?: 0f } ?: 0f
-                val durationWidth = row.duration?.let { measureWidth?.invoke(it, scale) ?: 0f } ?: 0f
+                val nameWidth = row.name?.let { textWidth(it, row.nameStyle, scale) } ?: 0f
+                val durationWidth = row.duration?.let { textWidth(it, row.durationStyle, scale) } ?: 0f
                 when (mode) {
                     MODE_STACKED -> maxOf(if (row.icon != null) iconWidth else 0f, nameWidth, durationWidth)
                     MODE_SINGLE_LINE -> {
@@ -883,11 +940,11 @@ class PotionEffectsHud : Hud(
     private fun CompactText(row: Row, scale: Float, style: RowStyle, align: PolyAlign) {
         PolyRow(gap = charWidth(scale), modifier = PolyModifier.align(PolyAlign.Center)) {
             if (align == PolyAlign.Right) {
-                if (row.duration != null) Line(row.duration, scale, style.durationFade, style.durationColor)
-                if (row.name != null) Line(row.name, scale, style.nameFade, style.nameColor)
+                if (row.duration != null) Line(row.duration, scale, style.durationFade, style.durationColor, row.durationStyle)
+                if (row.name != null) Line(row.name, scale, style.nameFade, style.nameColor, row.nameStyle)
             } else {
-                if (row.name != null) Line(row.name, scale, style.nameFade, style.nameColor)
-                if (row.duration != null) Line(row.duration, scale, style.durationFade, style.durationColor)
+                if (row.name != null) Line(row.name, scale, style.nameFade, style.nameColor, row.nameStyle)
+                if (row.duration != null) Line(row.duration, scale, style.durationFade, style.durationColor, row.durationStyle)
             }
         }
     }
@@ -895,8 +952,8 @@ class PotionEffectsHud : Hud(
     @Composable
     private fun FullText(row: Row, scale: Float, style: RowStyle, align: PolyAlign) {
         PolyColumn(gap = LINE_GAP * scale, modifier = PolyModifier.align(PolyAlign.Center)) {
-            if (row.name != null) Line(row.name, scale, style.nameFade, style.nameColor, modifier = PolyModifier.align(align))
-            if (row.duration != null) Line(row.duration, scale, style.durationFade, style.durationColor, modifier = PolyModifier.align(align))
+            if (row.name != null) Line(row.name, scale, style.nameFade, style.nameColor, row.nameStyle, modifier = PolyModifier.align(align))
+            if (row.duration != null) Line(row.duration, scale, style.durationFade, style.durationColor, row.durationStyle, modifier = PolyModifier.align(align))
         }
     }
 
@@ -909,10 +966,10 @@ class PotionEffectsHud : Hud(
             if (row.icon != null) Icon(row.icon, ICON * scale, style.iconAlpha, modifier = PolyModifier.align(PolyAlign.Center))
         }
         val nameBlock: @Composable () -> Unit = {
-            if (row.name != null) Line(row.name, scale, style.nameFade, style.nameColor, modifier = PolyModifier.align(PolyAlign.Center))
+            if (row.name != null) Line(row.name, scale, style.nameFade, style.nameColor, row.nameStyle, modifier = PolyModifier.align(PolyAlign.Center))
         }
         val durationBlock: @Composable () -> Unit = {
-            if (row.duration != null) Line(row.duration, scale, style.durationFade, style.durationColor, modifier = PolyModifier.align(PolyAlign.Center))
+            if (row.duration != null) Line(row.duration, scale, style.durationFade, style.durationColor, row.durationStyle, modifier = PolyModifier.align(PolyAlign.Center))
         }
 
         PolyBox(modifier = PolyModifier.width(maxWidth)) {
@@ -937,23 +994,96 @@ class PotionEffectsHud : Hud(
         }
     }
 
-    @Composable
-    private fun Line(text: String, scale: Float, fade: Float, color: PolyColor, modifier: PolyModifier = PolyModifier) {
-        if (font == Font.Minecraft) {
-            PolyMcText(text, color, shadow = showShadow, scale = scale, modifier = modifier)
-        } else {
-            PolyText(
-                text,
-                color,
-                fontSize = FONT_SIZE * scale,
-                shadow = showShadow,
-                shadowColor = PolyColor(faded(shadowColor, fade), shadowChroma, shadowChromaSpeed),
-                shadowOffset = shadowOffsetX,
-                font = getPoppinsFontName(),
-                modifier = modifier,
-            )
+    private fun mcText(text: String, style: Int): String {
+        if ((style and (BOLD or ITALIC)) == 0) return text
+        return buildString(text.length + 4) {
+            if ((style and BOLD) != 0) append("§l")
+            if ((style and ITALIC) != 0) append("§o")
+            append(text)
         }
     }
+
+    private fun poppinsFont(style: Int): String {
+        val base = when {
+            (style and BOLD) != 0 || textWeight == Weight.Bold -> "poppins-bold"
+            textWeight == Weight.Thin -> "poppins-thin"
+            textWeight == Weight.Medium -> "poppins-medium"
+            textWeight == Weight.Black -> "poppins-black"
+            else -> "poppins"
+        }
+        return if ((style and ITALIC) != 0) "$base-italic" else base
+    }
+
+    private fun textWidth(text: String, style: Int, scale: Float): Float =
+        if (font == Font.Minecraft) McFontQueue.measureTextWidth(mcText(text, style), scale)
+        else FontManager.getFont(FONT_SIZE * scale, poppinsFont(style)).measureTextWidth(text)
+
+    @Composable
+    private fun Line(text: String, scale: Float, fade: Float, color: PolyColor, style: Int, modifier: PolyModifier = PolyModifier) {
+        val underline = (style and UNDERLINE) != 0
+        if (font == Font.Minecraft) {
+            val formatted = mcText(text, style)
+            val italic = (style and ITALIC) != 0
+            if (!underline && !italic) {
+                PolyMcText(formatted, color, shadow = showShadow, scale = scale, modifier = modifier)
+                return
+            }
+
+            val width = McFontQueue.measureTextWidth(formatted, scale)
+            val height = McFontQueue.measureTextHeight(scale)
+            PolyCanvas(modifier.size(width, if (underline) height + scale else height)) { x, y, w, _ ->
+                val renderer = McFontQueue.renderer ?: return@PolyCanvas
+                if (underline) {
+                    val lineY = y + height + scale / 2f
+                    if (showShadow) line(x + scale, lineY + scale, x + w + scale, lineY + scale, PolyColor(mcShadowColor(color.argb)), scale)
+                    line(x, lineY, x + w, lineY, color, scale)
+                }
+                save()
+                try {
+                    translate(if (italic) x + MC_ITALIC_SHEAR * height / 2f else x, y)
+                    renderer(canvas, formatted, 0f, 0f, color.argb, showShadow, scale)
+                } finally {
+                    restore()
+                }
+            }
+        } else {
+            val fontName = poppinsFont(style)
+            val shadow = PolyColor(faded(shadowColor, fade), shadowChroma, shadowChromaSpeed)
+            if (!underline) {
+                PolyText(
+                    text,
+                    color,
+                    fontSize = FONT_SIZE * scale,
+                    shadow = showShadow,
+                    shadowColor = shadow,
+                    shadowOffset = shadowOffsetX,
+                    font = fontName,
+                    modifier = modifier,
+                )
+                return
+            }
+
+            val skiaFont = FontManager.getFont(FONT_SIZE * scale, fontName)
+            val metrics = skiaFont.metrics
+            val width = skiaFont.measureTextWidth(text)
+            val height = metrics.descent - metrics.ascent
+            val position = metrics.underlinePosition ?: (FONT_SIZE * scale * 0.08f)
+            val thickness = metrics.underlineThickness ?: (FONT_SIZE * scale * 0.06f)
+            PolyCanvas(modifier.size(width, height)) { x, y, w, _ ->
+                val baseline = y - metrics.ascent
+                if (showShadow) {
+                    val sx = x + shadowOffsetX
+                    val sy = baseline + shadowOffsetX
+                    text(text, sx, sy, shadow, skiaFont)
+                    line(sx, sy + position, sx + w, sy + position, shadow, thickness)
+                }
+                text(text, x, baseline, color, skiaFont)
+                line(x, baseline + position, x + w, baseline + position, color, thickness)
+            }
+        }
+    }
+
+    private fun mcShadowColor(color: Int): Int = (color and 0xFCFCFC shr 2) or (color and 0xFF000000.toInt())
 
     private fun faded(color: Int, fade: Float): Int {
         if (fade >= 1f) return color
@@ -1030,7 +1160,10 @@ class PotionEffectsHud : Hud(
             ))
             collector.handle(t, scope.settings, 0)
             for (field in scope.strippedFields) stripProperty(t, field)
-            if (scope.isOverride) describeOverrideOptions(t, scope.strippedFields)
+            if (scope.isOverride) {
+                stripProperty(t, SEPARATE_FORMATTING)
+                describeOverrideOptions(t, scope.strippedFields)
+            }
             tree.put(t)
         }
 
@@ -1045,6 +1178,7 @@ class PotionEffectsHud : Hud(
             ))
             collector.handle(t, settings, 0)
             for (field in EFFECT_STRIPPED_FIELDS) stripProperty(t, field)
+            stripProperty(t, SEPARATE_FORMATTING)
             describeOverrideOptions(t, EFFECT_STRIPPED_FIELDS)
             tree.put(t)
         }
@@ -1093,7 +1227,8 @@ class PotionEffectsHud : Hud(
                 }
             }
         }
-        return if (layers.isEmpty()) categoryScopes.global else LayeredEffectValues(layers, categoryScopes.global)
+        val global = GlobalEffectValues(categoryScopes.global, ::hudFormatting)
+        return if (layers.isEmpty()) global else LayeredEffectValues(layers, global)
     }
 
     private class PerEffectSettings {
