@@ -8,7 +8,8 @@ import net.minecraft.entity.living.effect.StatusEffect
 *///?}
 
 object EffectCatalog {
-    data class Entry(val path: String, val title: String, val category: String)
+    /** [id] is the namespaced registry ID such as `minecraft:speed` and [path] the part after the namespace */
+    data class Entry(val id: String, val path: String, val title: String, val category: String)
 
     val LEGACY_IDS: Map<String, String> = mapOf(
         "1" to "speed",
@@ -47,6 +48,8 @@ object EffectCatalog {
     }
 
     fun pathOf(id: Int): String = pathById[id] ?: id.toString()
+
+    fun idOf(id: Int): String = "minecraft:${pathOf(id)}"
     *///?}
 
     private fun buildEntries(): List<Entry> {
@@ -54,15 +57,19 @@ object EffectCatalog {
         //? if > 1.8.9 {
         for (effect in BuiltInRegistries.MOB_EFFECT) {
             val id = BuiltInRegistries.MOB_EFFECT.getKey(effect) ?: continue
-            entries += Entry(id.path, effect.displayName.string, effect.category.name.lowercase())
+            entries += Entry(id.toString(), id.path, effect.displayName.string, effect.category.name.lowercase())
         }
         //?} else {
         /*for (effect in StatusEffect.BY_ID.filterNotNull()) {
-            entries += Entry(pathOf(effect.id), I18n.translate(effect.translationKey), if (effect.isHarmful) "harmful" else "beneficial")
+            entries += Entry(idOf(effect.id), pathOf(effect.id), I18n.translate(effect.translationKey), if (effect.isHarmful) "harmful" else "beneficial")
         }
         *///?}
         return entries
     }
 
     val titleToPath: Map<String, String> by lazy { ENTRIES.associate { it.title to it.path } }
+
+    val byPath: Map<String, Entry> by lazy { ENTRIES.associateBy { it.path } }
+
+    val byId: Map<String, Entry> by lazy { ENTRIES.associateBy { it.id } }
 }

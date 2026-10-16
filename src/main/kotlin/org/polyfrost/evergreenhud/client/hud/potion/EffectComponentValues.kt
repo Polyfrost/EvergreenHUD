@@ -20,9 +20,6 @@ interface EffectComponentValues {
     val durationFormatting: BooleanArray
 
     val showEffects: Boolean
-    val ambientFilter: BooleanArray
-    val categoryFilter: BooleanArray
-    val permanentEffects: BooleanArray
     val durationRange: FloatArray
     val amplifierRange: FloatArray
     val blinkThreshold: Float
@@ -62,9 +59,6 @@ class LayeredEffectValues(
     override val durationFormatting get() = source(EffectComponentSettings::durationFormatting.name).durationFormatting
 
     override val showEffects get() = source(EffectComponentSettings::showEffects.name).showEffects
-    override val ambientFilter get() = source(EffectComponentSettings::ambientFilter.name).ambientFilter
-    override val categoryFilter get() = source(EffectComponentSettings::categoryFilter.name).categoryFilter
-    override val permanentEffects get() = source(EffectComponentSettings::permanentEffects.name).permanentEffects
     override val durationRange get() = source(EffectComponentSettings::durationRange.name).durationRange
     override val amplifierRange get() = source(EffectComponentSettings::amplifierRange.name).amplifierRange
     override val blinkThreshold get() = source(EffectComponentSettings::blinkThreshold.name).blinkThreshold
