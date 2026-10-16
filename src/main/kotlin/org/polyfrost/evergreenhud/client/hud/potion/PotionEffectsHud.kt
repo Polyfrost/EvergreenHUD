@@ -614,10 +614,9 @@ class PotionEffectsHud : Hud(
 
     private fun sortByRule(effects: List<MobEffectInstance>, rule: String): List<MobEffectInstance> {
         return when (rule) {
-            //? if > 1.8.9 {
-            NAME -> effects.sortedBy { it.effect.value().displayName.string }
-            //?} else
-            //NAME -> effects.sortedBy { I18n.translate(it.name) }
+            NAME -> effects.map { it to displayNameOf(it) }
+                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.second })
+                .map { it.first }
             DURATION -> effects.sortedBy { if (it.isInfiniteDuration) Int.MAX_VALUE else it.duration }
             AMPLIFIER -> effects.sortedByDescending { amplifierOf(it) }
             AMBIENT_EFFECTS -> effects.sortedBy { it.isAmbient }
@@ -646,6 +645,19 @@ class PotionEffectsHud : Hud(
         //?} else
         //return effect.amplifier and 0xFF
     }
+
+    private fun localizedNameOf(effect: MobEffectInstance): String {
+        //? if > 1.8.9 {
+        return effect.effect.value().displayName.string
+        //?} else
+        //return I18n.translate(StatusEffect.BY_ID[effect.id].translationKey)
+    }
+
+    private fun displayNameOf(effect: MobEffectInstance): String =
+        resolveName(valuesFor(effect), localizedNameOf(effect))
+
+    private fun resolveName(values: EffectComponentValues, name: String): String =
+        values.customName.ifBlank { EFFECT_PLACEHOLDER }.replace(EFFECT_PLACEHOLDER, name)
 
     private fun shouldDisplayEffect(effect: MobEffectInstance): Boolean {
         val values = valuesFor(effect)
@@ -680,7 +692,7 @@ class PotionEffectsHud : Hud(
         val mobEffect = effect.effect.value()
         return row(
             BuiltInRegistries.MOB_EFFECT.getKey(mobEffect),
-            mobEffect.displayName.string,
+            localizedNameOf(effect),
             effect.duration,
             amplifierOf(effect),
             effect.isInfiniteDuration,
@@ -691,7 +703,7 @@ class PotionEffectsHud : Hud(
         /*val statusEffect = StatusEffect.BY_ID[effect.id]
         return row(
             statusEffect,
-            I18n.translate(statusEffect.translationKey),
+            localizedNameOf(effect),
             effect.duration,
             amplifierOf(effect),
             effect.isInfiniteDuration,
@@ -708,9 +720,10 @@ class PotionEffectsHud : Hud(
             if (values.amplifierStyle == ROMAN) roman(level) else level.toString()
         } else null
 
+        val displayName = resolveName(values, name)
         val title = when {
-            values.nameEnabled && amplifierText != null -> "$name $amplifierText"
-            values.nameEnabled -> name
+            values.nameEnabled && amplifierText != null -> "$displayName $amplifierText"
+            values.nameEnabled -> displayName
             amplifierText != null -> amplifierText
             else -> null
         }?.let { applyCase(it, values.caseType) }
