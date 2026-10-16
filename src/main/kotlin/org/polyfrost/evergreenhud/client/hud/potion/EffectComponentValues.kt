@@ -6,6 +6,7 @@ interface EffectComponentValues {
     val iconEnabled: Boolean
     val iconBlink: Boolean
     val nameEnabled: Boolean
+    val customName: String
     val nameBlink: Boolean
     val nameColor: PolyColor
     val showAmplifier: Boolean
@@ -33,6 +34,7 @@ class LayeredEffectValues(
     override val iconEnabled get() = source(EffectComponentSettings::iconEnabled.name).iconEnabled
     override val iconBlink get() = source(EffectComponentSettings::iconBlink.name).iconBlink
     override val nameEnabled get() = source(EffectComponentSettings::nameEnabled.name).nameEnabled
+    override val customName get() = source(EffectComponentSettings::customName.name).customName
     override val nameBlink get() = source(EffectComponentSettings::nameBlink.name).nameBlink
     override val nameColor get() = source(EffectComponentSettings::nameColor.name).nameColor
     override val showAmplifier get() = source(EffectComponentSettings::showAmplifier.name).showAmplifier
