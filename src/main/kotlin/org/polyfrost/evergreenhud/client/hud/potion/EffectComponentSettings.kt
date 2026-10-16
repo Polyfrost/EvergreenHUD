@@ -9,10 +9,12 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
 import org.polyfrost.oneconfig.api.config.v1.annotations.RangeSlider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
+import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import java.lang.reflect.Field
 import java.util.Objects
 
 const val OVERRIDDEN_OPTIONS = "overriddenOptions"
+const val EFFECT_PLACEHOLDER = "#effect"
 
 class EffectComponentSettings : EffectComponentValues {
     @OverrideOptions(
@@ -29,6 +31,8 @@ class EffectComponentSettings : EffectComponentValues {
 
     @Switch(title = "Show Name", subcategory = "Name")
     override var nameEnabled = true
+    @Text(title = "Custom Name", description = "Use #effect for the effect's name.", subcategory = "Name")
+    override var customName = EFFECT_PLACEHOLDER
     @Switch(title = "Blink Name", subcategory = "Name")
     override var nameBlink = true
     @Color(title = "Name Color", subcategory = "Name")
