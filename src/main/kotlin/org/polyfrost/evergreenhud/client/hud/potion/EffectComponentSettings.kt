@@ -6,13 +6,16 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.MultiSelectDropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.Option
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
-import org.polyfrost.oneconfig.api.config.v1.annotations.RangeSlider
+import org.polyfrost.oneconfig.api.config.v1.annotations.RangeNumberList
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import java.lang.reflect.Field
 import java.util.Objects
 
 const val OVERRIDDEN_OPTIONS = "overriddenOptions"
+
+private const val MAX_DURATION_SECONDS = 16_777_216F
+private const val MAX_AMPLIFIER = 255F
 
 class EffectComponentSettings : EffectComponentValues {
     @OverrideOptions(
@@ -57,11 +60,27 @@ class EffectComponentSettings : EffectComponentValues {
     @MultiSelectDropdown(title = "Permanent Effects", subcategory = "Filtering", options = ["Show all permanent", "Show all finite"])
     override var permanentEffects = booleanArrayOf(true, true)
 
-    @RangeSlider(title = "Duration Range", subcategory = "Filtering", min = 0F, max = 500F, step = 1F)
-    override var durationRange = floatArrayOf(0f, 0f)
+    @RangeNumberList(
+        title = "Duration Ranges",
+        description = "Only show effects with this many seconds left, in any of these ranges. Leave empty to show every duration.",
+        subcategory = "Filtering",
+        min = 0F,
+        max = MAX_DURATION_SECONDS,
+        reorderable = false,
+        addText = "Add duration range",
+    )
+    override var durationRange = floatArrayOf()
 
-    @RangeSlider(title = "Amplifier Range", subcategory = "Filtering", min = 0F, max = 10F, step = 1F)
-    override var amplifierRange = floatArrayOf(0f, 0f)
+    @RangeNumberList(
+        title = "Amplifier Ranges",
+        description = "Only show effects with an amplifier in any of these ranges, where 0 is level I. Leave empty to show every amplifier.",
+        subcategory = "Filtering",
+        min = 0F,
+        max = MAX_AMPLIFIER,
+        reorderable = false,
+        addText = "Add amplifier range",
+    )
+    override var amplifierRange = floatArrayOf()
 
     @Slider(title = "Blink Threshold (s)", subcategory = "Blinking", min = 0F, max = 60F, step = 1F)
     override var blinkThreshold = 10f
