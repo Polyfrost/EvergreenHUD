@@ -113,6 +113,7 @@ private val SECTION_GRID = arrayOf(
 )
 
 private const val PER_OPTION_OVERRIDES = 1
+private const val RANGE_LISTS = 2
 
 class PotionEffectsHud : Hud(
     id = "potion_effects.json",
@@ -366,10 +367,12 @@ class PotionEffectsHud : Hud(
 
             migrateLegacyEffectKeys()
 
+            if (overrideOptionsVersion < RANGE_LISTS) migrateRangeLists()
+
             if (overrideOptionsVersion < PER_OPTION_OVERRIDES) {
                 migrateLegacyOverrides(scopes)
-                overrideOptionsVersion = PER_OPTION_OVERRIDES
             }
+            overrideOptionsVersion = RANGE_LISTS
 
             val scoped = scopes.flatMap(::setupOverrideScope)
 
@@ -456,6 +459,16 @@ class PotionEffectsHud : Hud(
             stripProperty(tree, legacy)
         }
     }
+
+    private fun migrateRangeLists() {
+        val all = categoryScopes.scopeDefs.map { it.settings } + effectScopes.byPath.values
+        for (settings in all) {
+            if (settings.durationRange.isLegacyOff()) settings.durationRange = floatArrayOf()
+            if (settings.amplifierRange.isLegacyOff()) settings.amplifierRange = floatArrayOf()
+        }
+    }
+
+    private fun FloatArray.isLegacyOff(): Boolean = size == 2 && this[0] == 0f && this[1] == 0f
 
     private fun migrateLegacyOverrides(scopes: List<OverrideScope>) {
         val global = categoryScopes.global
@@ -623,11 +636,11 @@ class PotionEffectsHud : Hud(
         if (!values.permanentEffects[0] && effect.isInfiniteDuration) return false
         if (!values.permanentEffects[1] && !effect.isInfiniteDuration) return false
 
-        val min = values.durationRange[0]
-        val max = values.durationRange[1]
-        if (min != 0f || max != 0f) {
-            if (!effect.isInfiniteDuration && effect.duration / 20f !in min..max) return false
-        }
+        val durations = values.durationRange
+        if (durations.isNotEmpty() && !effect.isInfiniteDuration && !durations.anyRangeContains(effect.duration / 20f)) return false
+
+        val amplifiers = values.amplifierRange
+        if (amplifiers.isNotEmpty() && !amplifiers.anyRangeContains(effect.amplifier.toFloat())) return false
 
         //? if > 1.8.9 {
         val category = effect.effect.value().category
@@ -642,6 +655,9 @@ class PotionEffectsHud : Hud(
 
         return true
     }
+
+    private fun FloatArray.anyRangeContains(value: Float): Boolean =
+        (0 until size / 2).any { value in this[it * 2]..this[it * 2 + 1] }
 
     private fun row(effect: MobEffectInstance, dimmed: Boolean = false): Row {
         //? if > 1.8.9 {
