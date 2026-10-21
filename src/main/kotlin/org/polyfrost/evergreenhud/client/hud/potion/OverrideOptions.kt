@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud.potion
 
 import androidx.compose.animation.animateColorAsState
@@ -29,6 +31,9 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -38,14 +43,15 @@ import androidx.compose.ui.window.PopupProperties
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Visualizer
 import org.polyfrost.oneconfig.api.config.v1.annotations.Option
-import org.polyfrost.oneconfig.internal.ui.components.Icon
-import org.polyfrost.oneconfig.internal.ui.components.Text
-import org.polyfrost.oneconfig.internal.ui.components.fadingEdges
-import org.polyfrost.oneconfig.internal.ui.components.onClick
-import org.polyfrost.oneconfig.internal.ui.components.rememberInteractionSource
-import org.polyfrost.oneconfig.internal.ui.components.settings.LocalOptionWidth
-import org.polyfrost.oneconfig.internal.ui.themes.LocalTheme
-import org.polyfrost.oneconfig.internal.ui.themes.concentric
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
+import org.polyfrost.oneconfig.api.ui.v1.components.Icon
+import org.polyfrost.oneconfig.api.ui.v1.components.Text
+import org.polyfrost.oneconfig.api.ui.v1.components.currentOptionWidth
+import org.polyfrost.oneconfig.api.ui.v1.components.fadingEdges
+import org.polyfrost.oneconfig.api.ui.v1.components.onClick
+import org.polyfrost.oneconfig.api.ui.v1.components.rememberInteractionSource
+import org.polyfrost.oneconfig.api.ui.v1.theme.OneConfigTheme
+import org.polyfrost.oneconfig.api.ui.v1.theme.concentric
 
 @Option(display = OverrideOptionsVisualizer::class)
 @Target(AnnotationTarget.FIELD)
@@ -65,7 +71,7 @@ class OverrideOptionsVisualizer : Visualizer {
     @Suppress("UNCHECKED_CAST")
     @Composable
     override fun visualize(prop: Property<*>) {
-        val theme = LocalTheme.current
+        val theme = OneConfigTheme.current
         val options = prop.getMetadata<Array<String>>("options").orEmpty()
         val labels = prop.getMetadata<Map<String, Any>>("labels").orEmpty()
         val containerShape = theme.modCardShape
@@ -83,7 +89,7 @@ class OverrideOptionsVisualizer : Visualizer {
 
         Column(
             modifier = Modifier
-                .width(LocalOptionWidth.current)
+                .width(currentOptionWidth)
                 .clip(containerShape)
                 .background(theme.componentBackground, containerShape)
                 .border(1.dp, theme.borderColor, containerShape)
@@ -112,6 +118,10 @@ class OverrideOptionsVisualizer : Visualizer {
                         modifier = Modifier.weight(1f),
                         color = contentColor,
                         fontSize = 13.sp,
+                        lineHeight = null,
+                        shift = BaselineShift.None,
+                        fontWeight = FontWeight.Normal,
+                        textAlign = TextAlign.Start,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -139,7 +149,7 @@ class OverrideOptionsVisualizer : Visualizer {
         entryShape: Shape,
         onAdd: (String) -> Unit,
     ) {
-        val theme = LocalTheme.current
+        val theme = OneConfigTheme.current
         var expanded by remember { mutableStateOf(false) }
         var buttonHeightPx by remember { mutableStateOf(0) }
         val interaction = rememberInteractionSource()
@@ -162,7 +172,18 @@ class OverrideOptionsVisualizer : Visualizer {
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Icon("plus", modifier = Modifier.size(16.dp), color = contentColor)
-                Text("Add option", color = contentColor, fontSize = 13.sp, maxLines = 1)
+                Text(
+                    "Add option",
+                    modifier = Modifier,
+                    color = contentColor,
+                    fontSize = 13.sp,
+                    lineHeight = null,
+                    shift = BaselineShift.None,
+                    fontWeight = FontWeight.Normal,
+                    textAlign = TextAlign.Start,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                )
             }
 
             if (expanded) {
@@ -177,7 +198,7 @@ class OverrideOptionsVisualizer : Visualizer {
                     val itemShape = menuShape.concentric(4.dp)
                     Box(
                         modifier = Modifier
-                            .width(LocalOptionWidth.current)
+                            .width(currentOptionWidth)
                             .clip(menuShape)
                             .background(theme.componentBackground, menuShape)
                             .border(1.dp, theme.borderColor, menuShape)
@@ -209,7 +230,7 @@ class OverrideOptionsVisualizer : Visualizer {
                                         .pointerHoverIcon(PointerIcon.Hand)
                                         .padding(horizontal = 12.dp, vertical = 8.dp)
                                 ) {
-                                    Text(labels[field] ?: field, color = theme.textColor, fontSize = 13.sp)
+                                    Text(labels[field] ?: field, modifier = Modifier, color = theme.textColor, fontSize = 13.sp)
                                 }
                             }
                         }
