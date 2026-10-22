@@ -45,7 +45,9 @@ import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.platform.v1.Platform
 import org.polyfrost.oneconfig.api.ui.v1.keybind.KeyModifiers
 import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindHelper
+import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindManager
 import org.polyfrost.oneconfig.api.ui.v1.keybind.OneConfigKeybind
+import org.polyfrost.oneconfig.internal.ui.keybind.MinecraftKeybindRegistrar
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.experimental.or
 
@@ -200,6 +202,8 @@ class KeystrokesHud : Hud(
     override fun setup() {
         super.setup()
         if (isReal) {
+            tree?.getProp("customBind")?.addMetadata(MinecraftKeybindRegistrar.NO_MIRROR_METADATA, true)
+            KeybindManager.unregister(customBind)
             addDependency("arrows", null) {
                 if (isCustom || font != Font.Minecraft) Property.Display.DISABLED else Property.Display.SHOWN
             }
