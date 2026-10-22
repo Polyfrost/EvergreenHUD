@@ -3,6 +3,7 @@ package org.polyfrost.evergreenhud.client.hud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import net.minecraft.world.level.Level
 import org.polyfrost.evergreenhud.client.utils.Facing
 import org.polyfrost.evergreenhud.client.utils.GenericNumberHud
 import org.polyfrost.evergreenhud.client.utils.HudStyledCells
@@ -39,6 +40,12 @@ class PositionHud : GenericNumberHud(
         options = ["Vertical", "Horizontal"]
     )
     var displayMode = 0
+
+    @RadioButton(
+        title = "Dimension",
+        options = ["Overworld", "Nether", "Current"]
+    )
+    var dimensionMode = 2
 
     @Switch(title = "Show Axis")
     var showAxis = true
@@ -106,6 +113,7 @@ class PositionHud : GenericNumberHud(
             updateWhenChanged("showPitch")
             updateWhenChanged("showAxis")
             updateWhenChanged("displayMode")
+            updateWhenChanged("dimensionMode")
             updateWhenChanged("perAxisColors")
             tickHandler = eventHandler { _: TickEvent.End -> updateAndRecalculate() }
 
@@ -133,9 +141,10 @@ class PositionHud : GenericNumberHud(
         val player = mc.player
         if (player != null) {
             val camera = mc.cameraEntity ?: player
-            this.px = player.x
+            val scale = dimensionScale()
+            this.px = player.x * scale
             this.py = player.y
-            this.pz = player.z
+            this.pz = player.z * scale
             this.yaw = Facing.wrapDegrees(camera.yRot).toDouble()
             this.pitch = camera.xRot.toDouble()
         }
@@ -148,6 +157,22 @@ class PositionHud : GenericNumberHud(
         linesState.value = buildLines(entries)
         alignState.value = alignDirection && showDirection && displayMode == 0
         return result
+    }
+
+    private fun dimensionScale(): Double {
+        val level = mc.level ?: return 1.0
+        //? if > 1.8.9 {
+        val nether = level.dimension() == Level.NETHER
+        val overworld = level.dimension() == Level.OVERWORLD
+        //?} else {
+        /*val nether = level.dimension.id == -1
+        val overworld = level.dimension.id == 0
+        *///?}
+        return when {
+            dimensionMode == 0 && nether -> 8.0
+            dimensionMode == 1 && overworld -> 0.125
+            else -> 1.0
+        }
     }
 
     private val separator get() = if (displayMode == 0) "\n" else ", "
