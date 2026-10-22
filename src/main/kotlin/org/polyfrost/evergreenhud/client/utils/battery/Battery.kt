@@ -8,6 +8,8 @@ sealed interface Battery {
         fun get(): Battery {
             return when {
                 SystemUtils.IS_OS_WINDOWS -> WindowsBattery.obtain()
+                SystemUtils.IS_OS_MAC -> MacBattery.obtain()
+                SystemUtils.IS_OS_LINUX -> LinuxBattery.obtain()
                 else -> UnknownBattery
             }
         }
