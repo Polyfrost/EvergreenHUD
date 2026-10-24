@@ -2,7 +2,10 @@ package org.polyfrost.evergreenhud.client.utils.media
 
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Canvas
+import org.jetbrains.skia.ColorAlphaType
+import org.jetbrains.skia.ColorType
 import org.jetbrains.skia.Image
+import org.jetbrains.skia.ImageInfo
 import org.jetbrains.skia.Rect
 import java.net.URI
 import java.util.concurrent.Executors
@@ -42,6 +45,10 @@ object MediaService {
     var artAccent: Int? = null
         private set
 
+    @Volatile
+    var artAverage: Int? = null
+        private set
+
     fun isSupported(): Boolean = backend != null
 
     @Synchronized
@@ -60,6 +67,7 @@ object MediaService {
         current = null
         art = null
         artAccent = null
+        artAverage = null
         artKey = null
     }
 
@@ -84,12 +92,14 @@ object MediaService {
         artKey = key
         art = null
         artAccent = null
+        artAverage = null
         if (info == null || key == null) return
         val image = runCatching {
             val bytes = info.artBytes ?: fetch(info.artUrl!!)
             Image.makeFromEncoded(bytes)
         }.getOrNull()
         artAccent = image?.let(::vividColor)
+        artAverage = image?.let(::averageColor)
         art = image
     }
 
@@ -103,13 +113,32 @@ object MediaService {
         return connection.getInputStream().use { it.readNBytes(MAX_ART_BYTES) }
     }
 
-    private fun vividColor(image: Image): Int? {
+    private fun averageColor(image: Image): Int? {
+        val info = ImageInfo(image.width, image.height, ColorType.RGBA_8888, ColorAlphaType.UNPREMUL)
+        val pixels = Bitmap.makeFromImage(image).use { it.readPixels(info, image.width * 4, 0, 0) } ?: return null
+        var r = 0L
+        var g = 0L
+        var b = 0L
+        for (i in pixels.indices step 4) {
+            r += pixels[i].toInt() and 0xFF
+            g += pixels[i + 1].toInt() and 0xFF
+            b += pixels[i + 2].toInt() and 0xFF
+        }
+        val count = pixels.size / 4L
+        if (count == 0L) return null
+        return 0xFF shl 24 or ((r / count).toInt() shl 16) or ((g / count).toInt() shl 8) or (b / count).toInt()
+    }
+
+    private fun vividColor(image: Image): Int {
         val bitmap = Bitmap().apply { allocN32Pixels(SAMPLE, SAMPLE) }
         Canvas(bitmap).drawImageRect(image, Rect.makeWH(SAMPLE.toFloat(), SAMPLE.toFloat()))
         var r = 0.0
         var g = 0.0
         var b = 0.0
         var total = 0.0
+        var plainR = 0.0
+        var plainG = 0.0
+        var plainB = 0.0
         for (y in 0 until SAMPLE) for (x in 0 until SAMPLE) {
             val c = bitmap.getColor(x, y)
             val cr = c shr 16 and 0xFF
@@ -121,13 +150,17 @@ object MediaService {
             g += cg * w
             b += cb * w
             total += w
+            plainR += cr
+            plainG += cg
+            plainB += cb
         }
-        if (total < MIN_VIVID) return null
-        var rf = r / total
-        var gf = g / total
-        var bf = b / total
+        val vivid = total >= MIN_VIVID
+        val divisor = if (vivid) total else SAMPLE * SAMPLE.toDouble()
+        var rf = (if (vivid) r else plainR) / divisor
+        var gf = (if (vivid) g else plainG) / divisor
+        var bf = (if (vivid) b else plainB) / divisor
         val brightest = maxOf(rf, gf, bf)
-        if (brightest < MIN_BRIGHTNESS) {
+        if (brightest > 0.0 && brightest < MIN_BRIGHTNESS) {
             val lift = MIN_BRIGHTNESS / brightest
             rf *= lift
             gf *= lift

@@ -31,6 +31,7 @@ private const val SNAP_DISTANCE_MS = 2_000.0
 private const val SMOOTHING_MS = 250.0
 private const val SCROLL_STEP_MS = 16L
 private const val ACCENT_ALBUM_ART = 1
+private const val ACCENT_ALBUM_AVERAGE = 2
 private const val SCROLL_BOUNCE = 1
 
 private fun mediaBind(command: MediaCommand, allowed: (MediaInfo) -> Boolean): OneConfigKeybind =
@@ -75,8 +76,8 @@ class MediaHud : Hud(
 
     @Dropdown(
         title = "Accent Source",
-        description = "Where the play button and progress bar get their color. Album Art falls back to the accent color when there is no usable cover.",
-        options = ["Accent Color", "Album Art"],
+        description = "Where the play button and progress bar get their color.",
+        options = ["Accent Color", "Album Art", "Album Art Average"],
     )
     var accentSource = ACCENT_ALBUM_ART
 
@@ -175,7 +176,13 @@ class MediaHud : Hud(
             canNext = info.canNext,
             canToggle = info.canToggle,
             art = if (showAlbumArt && isReal && live != null) MediaService.art else null,
-            artAccent = if (accentSource == ACCENT_ALBUM_ART && isReal && live != null) MediaService.artAccent else null,
+            artAccent = if (isReal && live != null) {
+                when (accentSource) {
+                    ACCENT_ALBUM_ART -> MediaService.artAccent
+                    ACCENT_ALBUM_AVERAGE -> MediaService.artAverage
+                    else -> null
+                }
+            } else null,
         )
     }
 
