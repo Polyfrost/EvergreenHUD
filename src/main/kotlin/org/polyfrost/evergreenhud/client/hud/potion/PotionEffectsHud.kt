@@ -563,7 +563,7 @@ class PotionEffectsHud : Hud(
         val editing = HudManager.isEditing || !isReal
 
         //? if > 1.8.9 {
-        val active = if (!isReal) emptyList() else mc.player?.activeEffects?.filter { it.showIcon() }.orEmpty()
+        val active = if (!isReal) emptyList() else mc.player?.activeEffects?.toList().orEmpty()
         //?} else
         //val active = if (!isReal) emptyList() else mc.player?.activeEffects?.filter { StatusEffect.BY_ID.getOrNull(it.id)?.hasIcon() == true }.orEmpty()
         val effects = active.ifEmpty { if (editing) EXAMPLE_EFFECTS else return emptyList() }
