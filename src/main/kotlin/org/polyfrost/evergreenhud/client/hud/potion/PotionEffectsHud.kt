@@ -51,7 +51,9 @@ import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
 import org.polyfrost.oneconfig.api.config.v1.Node
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Tree
+import org.polyfrost.oneconfig.api.config.v1.annotations.Button
 import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
+import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.Include
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
@@ -65,6 +67,7 @@ import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.hud.v1.HudAnchor
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.hud.v1.Section
+import org.polyfrost.oneconfig.internal.ui.components.settings.bumpResetEpoch
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import org.polyfrost.oneconfig.utils.v1.MHUtils.setAccessible
 import org.slf4j.LoggerFactory
@@ -113,6 +116,15 @@ private val SECTION_GRID = arrayOf(
 )
 
 private const val PER_OPTION_OVERRIDES = 1
+
+private const val POTION_COLORS = 0
+private const val POTION_CATEGORY = 1
+
+val CATEGORY_COLORS: Map<String, Int> = mapOf(
+    "beneficial" to 0xFF109010.toInt(),
+    "neutral" to 0xFFAAAAAA.toInt(),
+    "harmful" to 0xFF901010.toInt(),
+)
 
 class PotionEffectsHud : Hud(
     id = "potion_effects.json",
@@ -315,6 +327,30 @@ class PotionEffectsHud : Hud(
     )
     var hideVanillaEffects = false
 
+    @Dropdown(
+        title = "Color Preset",
+        options = ["Potion Colors", "Beneficial/Harmful"],
+        category = "Presets",
+        subcategory = "Color Presets",
+    )
+    var colorPreset = 0
+
+    @Button(
+        title = "Apply To Names",
+        text = "Apply",
+        category = "Presets",
+        subcategory = "Color Presets",
+    )
+    fun applyNameColorPreset() = applyColorPreset(EffectComponentSettings::nameColor.name)
+
+    @Button(
+        title = "Apply To Durations",
+        text = "Apply",
+        category = "Presets",
+        subcategory = "Color Presets",
+    )
+    fun applyDurationColorPreset() = applyColorPreset(EffectComponentSettings::durationColor.name)
+
     @Include
     var overrideOptionsVersion = 0
 
@@ -378,6 +414,51 @@ class PotionEffectsHud : Hud(
         }
     }
 
+    private data class PresetTarget(val key: String, val title: String, val color: Int)
+
+    private fun applyColorPreset(field: String) {
+        val targets: List<PresetTarget> = if (colorPreset == POTION_CATEGORY) {
+            val present = EffectCatalog.ENTRIES.mapTo(HashSet()) { it.category }
+            categoryScopes.scopeDefs.mapNotNull { scope ->
+                val color = CATEGORY_COLORS[scope.key]?.takeIf { scope.key in present } ?: return@mapNotNull null
+                PresetTarget(scope.key, scope.title, color)
+            }
+        } else {
+            EffectCatalog.ENTRIES.map { entry -> PresetTarget(entry.path, entry.title, entry.color) }
+        }
+        if (targets.isEmpty()) return
+
+        val changed = ArrayList<Property<*>>()
+        fun setOverridden(key: String, overridden: Boolean) {
+            val listProp = Property.recast<Any?>(getProperty("$key.$OVERRIDDEN_OPTIONS"))
+            val current = (listProp.get() as? Array<*>)?.filterIsInstance<String>().orEmpty()
+            if ((field in current) == overridden) return
+            listProp.set(EffectComponentSettings.LEAF_FIELDS.filter { if (it == field) overridden else it in current }.toTypedArray())
+            changed += listProp
+            if (!overridden) changed += getProperty("$key.$field")
+        }
+
+        for ((key, _, color) in targets) {
+            setOverridden(key, true)
+            val colorProp = Property.recast<Any?>(getProperty("$key.$field"))
+            colorProp.set(PolyColor(color))
+            changed += colorProp
+        }
+
+        val targetKeys = targets.mapTo(HashSet()) { it.key }
+        val scopeKeys = categoryScopes.scopeDefs.filter { it.isOverride }.map { it.key } + EffectCatalog.ENTRIES.map { it.path }
+        for (key in scopeKeys) if (key !in targetKeys) setOverridden(key, false)
+
+        val missing = targets.map { it.title }.filter { it !in overrides }
+        if (missing.isNotEmpty()) {
+            val overridesProp = Property.recast<Any?>(getProperty("overrides"))
+            overridesProp.set(overrides + missing)
+            changed += overridesProp
+        }
+
+        for (prop in changed) bumpResetEpoch(prop)
+    }
+
     override fun updateFrequency(): Long = if (isReal) Long.MAX_VALUE else -1L
 
     override fun remove() {
@@ -428,8 +509,15 @@ class PotionEffectsHud : Hud(
             val current = (next as? Array<*>)?.filterIsInstance<String>().orEmpty().toSet()
             for (field in current - previous) target.copyField(field, categoryScopes.global)
             for (field in previous - current) target.copyField(field, EffectComponentSettings.DEFAULTS)
+            val emptied = current.isEmpty() && previous.isNotEmpty()
             previous = current
             for (prop in fieldProps) prop.revaluateDisplay()
+
+            if (emptied && title in overrides) {
+                val overridesProp = Property.recast<Any?>(getProperty("overrides"))
+                overridesProp.set(overrides.filter { it != title }.toTypedArray())
+                bumpResetEpoch(overridesProp)
+            }
         })
 
         return fieldProps + listProp
