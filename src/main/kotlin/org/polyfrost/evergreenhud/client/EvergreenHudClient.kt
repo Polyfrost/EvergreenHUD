@@ -23,6 +23,8 @@ import org.polyfrost.evergreenhud.client.hud.clock.ClockHud
 import org.polyfrost.evergreenhud.client.hud.clock.DigitalClockHud
 import org.polyfrost.evergreenhud.client.hud.direction.DirectionHud
 import org.polyfrost.evergreenhud.client.hud.keystrokes.KeystrokesHud
+import org.polyfrost.evergreenhud.client.hud.media.MediaHud
+import org.polyfrost.evergreenhud.client.utils.media.MediaService
 import org.polyfrost.evergreenhud.client.hud.mouse.MouseStrokesHud
 import org.polyfrost.evergreenhud.client.hud.potion.PotionEffectsHud
 import org.polyfrost.evergreenhud.client.hud.shape.ShapeHud
@@ -87,6 +89,7 @@ object EvergreenHudClient : ClientModInitializer {
         huds.forEach(::register)
 
         registerIfSupported(Battery.isSupported(), ::BatteryHud)
+        registerIfSupported(MediaService.isSupported(), ::MediaHud)
         registerIfSupported(ShaderMod.isSupported(), ::ShaderHud)
 
         BlockChangeEvent()
