@@ -178,10 +178,14 @@ class InventoryHud : Hud(
         //?} else
         //get() = true
 
+    override fun shouldShow(): Boolean =
+        super.shouldShow() && inventoryHudAllowedOnServer(mc.currentServer?.ip)
+
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
     // the container is the background in the vanilla style, so OneConfig has none to draw or to fuse
-    override fun hasBackground(): Boolean = style != VANILLA
+    override fun hasBackground(): Boolean =
+        inventoryHudAllowedOnServer(mc.currentServer?.ip) && style != VANILLA
 
     override fun canMergeBackground(): Boolean = true
 
@@ -207,7 +211,7 @@ class InventoryHud : Hud(
 
     override fun update(): Boolean {
         val next = whenItemsReady(null) {
-            if (visible) Grid(if (showTitle) titleText() else null, contents().orEmpty()) else null
+            if (inventoryHudAllowedOnServer(mc.currentServer?.ip) && visible) Grid(if (showTitle) titleText() else null, contents().orEmpty()) else null
         }
         publishSlots(next)
         keepScaleAcrossNaturalHeight()
@@ -314,7 +318,10 @@ class InventoryHud : Hud(
     @Composable
     override fun Content() {
         rev.value
-        val current = grid.value ?: return
+        val observedGrid = grid.value
+        // The editor can render Content directly, so enforce the server restriction here too.
+        if (!inventoryHudAllowedOnServer(mc.currentServer?.ip)) return
+        val current = observedGrid ?: return
         val top = gridTop()
         val content = contentScale
         val originX = offsetX(content)
@@ -396,3 +403,7 @@ class InventoryHud : Hud(
         it.sizedForHeight = sizedForHeight
     }
 }
+
+/** Applies to every inventory type without changing the user's enabled preference. */
+internal fun inventoryHudAllowedOnServer(address: String?): Boolean =
+    address?.contains("hoplite", ignoreCase = true) != true
