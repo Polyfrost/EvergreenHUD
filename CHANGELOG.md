@@ -1,6 +1,4 @@
-## 3.9.11
-- Bump OneConfig to 1.5.0.
-- Added Media Player HUD.
-- Redesign Battery HUD, which now supports Linux and macOS.
-- Add option to show coordinates in another dimension.
-- Stop mirroring the custom keybinds to Minecraft.
+## 3.9.12
+- Media Player HUD is now shown by default, below the vanilla potion effect.
+- Add "Album Art Average" accent source to the Media Player HUD.
+- Potion Effects HUD now shows effects even when the server hides their icon.
