@@ -2,13 +2,18 @@ package org.polyfrost.evergreenhud.client.hud.media
 
 import androidx.compose.runtime.Composable
 import org.jetbrains.skia.FilterMipmap
+import org.jetbrains.skia.FilterTileMode
 import org.jetbrains.skia.Font
 import org.jetbrains.skia.FilterMode
 import org.jetbrains.skia.Image
+import org.jetbrains.skia.ImageFilter
 import org.jetbrains.skia.MipmapMode
+import org.jetbrains.skia.Paint
 import org.jetbrains.skia.PaintMode
+import org.jetbrains.skia.PaintStrokeCap
 import org.jetbrains.skia.PaintStrokeJoin
 import org.jetbrains.skia.PathBuilder
+import org.jetbrains.skia.RRect
 import org.jetbrains.skia.Rect
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
@@ -17,11 +22,25 @@ import org.polyfrost.compose.mc.McFontQueue
 import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.RenderContext
+import kotlin.math.PI
 import kotlin.math.hypot
+import kotlin.math.roundToInt
+import kotlin.math.sin
 
 const val BUTTON_PREVIOUS = 0
 const val BUTTON_TOGGLE = 1
 const val BUTTON_NEXT = 2
+
+const val SEEK_BELOW = 0
+const val SEEK_ABOVE = 1
+const val SEEK_HIDDEN = 2
+
+const val SEEK_ROUNDED = 0
+const val SEEK_SQUARE = 1
+const val SEEK_WAVE = 2
+
+const val BUTTONS_CLASSIC = 0
+const val BUTTONS_MATERIAL = 1
 
 data class MediaCardState(
     val title: String,
@@ -36,17 +55,46 @@ data class MediaCardState(
     val artAccent: Int?,
 )
 
+data class MediaCardColors(
+    val title: PolyColor,
+    val artist: PolyColor,
+    val time: PolyColor,
+    val controls: PolyColor,
+    val glyph: PolyColor,
+    val accent: PolyColor,
+)
+
+data class MediaCardStyle(
+    val showArt: Boolean,
+    val showTimes: Boolean,
+    val seekPosition: Int,
+    val seekWidth: Float,
+    val seekStyle: Int,
+    val buttonStyle: Int,
+    val bounce: Boolean,
+    val artRadius: Float,
+    val colors: MediaCardColors,
+)
+
+data class MediaCardBackdrop(
+    val bounds: Rect,
+    val radius: Float,
+    val color: PolyColor?,
+    val art: Image?,
+    val artBlur: Float,
+    val artAlpha: Float,
+)
+
 object MediaCardLayout {
     const val INSET = 6f
     const val ART_SIZE = 38f
     const val ART_RADIUS = 6f
     const val MIN_TEXT_WIDTH = 72f
     const val MAX_TEXT_WIDTH = 160f
-    const val PROGRESS_TOP = ART_SIZE + 7f
     const val PROGRESS_HEIGHT = 6f
-    const val HEIGHT = PROGRESS_TOP + PROGRESS_HEIGHT
     const val BUTTON_RADIUS = 9f
 
+    private const val PROGRESS_GAP = 7f
     private const val ART_GAP = 8f
     private const val BUTTON_SPACING = 24f
     private const val HIT_RADIUS = 11.5f
@@ -55,14 +103,20 @@ object MediaCardLayout {
 
     fun width(showArt: Boolean, textWidth: Float): Float = textX(showArt) + textWidth
 
-    fun buttonY(): Float = ART_SIZE - BUTTON_RADIUS
+    fun contentTop(seek: Int): Float = if (seek == SEEK_ABOVE) PROGRESS_HEIGHT + PROGRESS_GAP else 0f
+
+    fun progressTop(seek: Int): Float = if (seek == SEEK_ABOVE) 0f else ART_SIZE + PROGRESS_GAP
+
+    fun height(seek: Int): Float = if (seek == SEEK_HIDDEN) ART_SIZE else ART_SIZE + PROGRESS_GAP + PROGRESS_HEIGHT
+
+    fun buttonY(seek: Int): Float = contentTop(seek) + ART_SIZE - BUTTON_RADIUS
 
     fun buttonX(button: Int, showArt: Boolean, textWidth: Float): Float =
         textX(showArt) + textWidth / 2f + (button - BUTTON_TOGGLE) * BUTTON_SPACING
 
-    fun buttonAt(x: Float, y: Float, showArt: Boolean, textWidth: Float): Int {
+    fun buttonAt(x: Float, y: Float, showArt: Boolean, textWidth: Float, seek: Int): Int {
         for (button in BUTTON_PREVIOUS..BUTTON_NEXT) {
-            if (hypot(x - buttonX(button, showArt, textWidth), y - buttonY()) <= HIT_RADIUS) return button
+            if (hypot(x - buttonX(button, showArt, textWidth), y - buttonY(seek)) <= HIT_RADIUS) return button
         }
         return -1
     }
@@ -81,49 +135,124 @@ private const val BAR_HEIGHT = 2.5f
 private const val KNOB_RADIUS = 2.2f
 private const val DISABLED_ALPHA = 0.3f
 private const val HOVER_ALPHA = 0.16f
-private const val DIM_ALPHA = 0.6f
+const val DIM_ALPHA = 0.6f
 private const val TRACK_ALPHA = 0.2f
-private val PLAY_GLYPH = PolyColor(0xFF101014.toInt())
+private const val WAVE_STROKE = 1.6f
+private const val WAVE_AMPLITUDE = 1.3f
+private const val WAVE_LENGTH = 8f
+private const val WAVE_PERIOD_MS = 1600f
+private const val WAVE_STEP = 0.5f
+private const val POP_FROM_SCALE = 0.9f
+private const val MATERIAL_PLAYING_RADIUS = 5f
+private const val TONAL_ALPHA = 0.22f
+private const val TONAL_HOVER_ALPHA = 0.34f
+private const val MATERIAL_SKIP_RADIUS = 7.5f
+private const val MATERIAL_TOGGLE_ICON = 14f / 24f
+private const val MATERIAL_SKIP_ICON = 12f / 24f
+private const val ICON_STROKE = 1f
+private const val ICON_INSET = ICON_STROKE / 2f
+private const val ICON_TIP_INSET = 0.8f
+val PLAY_GLYPH = PolyColor(0xFF101014.toInt())
 private val ART_SAMPLING = FilterMipmap(FilterMode.LINEAR, MipmapMode.NONE)
+private val layerPaint = Paint()
+private val backdropPaint = Paint()
+private var blurFilter: ImageFilter? = null
+private var blurSigma = -1f
 
 @Composable
 fun MediaCard(
     state: MediaCardState,
-    showArt: Boolean,
-    showTimes: Boolean,
-    text: PolyColor,
-    accent: PolyColor,
+    style: MediaCardStyle,
     fontName: String?,
     shadow: Boolean,
     hovered: Int,
     scrollMs: Long,
-    bounce: Boolean,
     scale: Float,
-    artRadius: Float = MediaCardLayout.ART_RADIUS,
     textWidth: Float = textWidth(state, fontName),
+    backdrop: MediaCardBackdrop? = null,
+    pop: Float = 1f,
 ) {
-    val width = MediaCardLayout.width(showArt, textWidth)
-    PolyCanvas(PolyModifier.size(width * scale, MediaCardLayout.HEIGHT * scale)) { x, y, _, height ->
-        val unit = height / MediaCardLayout.HEIGHT
+    val width = MediaCardLayout.width(style.showArt, textWidth)
+    val height = MediaCardLayout.height(style.seekPosition)
+    PolyCanvas(PolyModifier.size(width * scale, height * scale)) { x, y, _, h ->
+        val unit = h / height
         save()
         translate(x, y)
         scale(unit, unit)
         paint.isAntiAlias = true
 
-        if (showArt) drawArt(state.art, text, artRadius)
-        val left = MediaCardLayout.textX(showArt)
-        drawLabels(state, left, textWidth, text, fontName, shadow, scrollMs, bounce)
+        val popping = pop < 1f
+        if (popping) beginPop(pop, backdrop?.bounds ?: Rect.makeWH(width, height))
+        if (backdrop != null) drawBackdrop(backdrop)
+
+        val colors = style.colors
+        save()
+        translate(0f, MediaCardLayout.contentTop(style.seekPosition))
+        if (style.showArt) drawArt(state.art, colors.title, style.artRadius)
+        val left = MediaCardLayout.textX(style.showArt)
+        drawLabels(state, left, textWidth, colors, fontName, shadow, scrollMs, style.bounce)
         for (button in BUTTON_PREVIOUS..BUTTON_NEXT) {
             val enabled = when (button) {
                 BUTTON_PREVIOUS -> state.canPrevious
                 BUTTON_NEXT -> state.canNext
                 else -> state.canToggle
             }
-            drawButton(button, MediaCardLayout.buttonX(button, showArt, textWidth), MediaCardLayout.buttonY(), state.playing, enabled, hovered == button, text, accent)
+            drawButton(button, MediaCardLayout.buttonX(button, style.showArt, textWidth), MediaCardLayout.buttonY(SEEK_BELOW), state.playing, enabled, hovered == button, colors, style.buttonStyle == BUTTONS_MATERIAL)
         }
-        drawProgress(state, width, showTimes, text, accent, fontName, shadow)
-
         restore()
+        if (style.seekPosition != SEEK_HIDDEN) drawProgress(state, width, MediaCardLayout.progressTop(style.seekPosition), style, fontName, shadow)
+
+        if (popping) canvas.restore()
+        restore()
+    }
+}
+
+private fun RenderContext.beginPop(progress: Float, bounds: Rect) {
+    val inverse = 1f - progress.coerceIn(0f, 1f)
+    val eased = 1f - inverse * inverse * inverse
+    layerPaint.alpha = (eased * 255f).roundToInt()
+    canvas.saveLayer(bounds, layerPaint)
+    val s = POP_FROM_SCALE + (1f - POP_FROM_SCALE) * eased
+    canvas.translate(bounds.left + bounds.width / 2f, bounds.top + bounds.height / 2f)
+    canvas.scale(s, s)
+    canvas.translate(-(bounds.left + bounds.width / 2f), -(bounds.top + bounds.height / 2f))
+}
+
+private fun RenderContext.drawBackdrop(backdrop: MediaCardBackdrop) {
+    val bounds = backdrop.bounds
+    val art = backdrop.art
+    if (art != null && backdrop.artAlpha > 0f) {
+        canvas.save()
+        canvas.clipRRect(RRect.makeLTRB(bounds.left, bounds.top, bounds.right, bounds.bottom, backdrop.radius), true)
+        val bleed = backdrop.artBlur * 3f
+        val target = Rect.makeLTRB(bounds.left - bleed, bounds.top - bleed, bounds.right + bleed, bounds.bottom + bleed)
+        backdropPaint.alpha = (backdrop.artAlpha * 255f).roundToInt()
+        backdropPaint.imageFilter = blur(backdrop.artBlur)
+        canvas.drawImageRect(art, coverCrop(art, target.width / target.height), target, ART_SAMPLING, backdropPaint, true)
+        canvas.restore()
+    }
+    backdrop.color?.let { rect(bounds.left, bounds.top, bounds.width, bounds.height, it, backdrop.radius) }
+}
+
+private fun blur(sigma: Float): ImageFilter? {
+    if (sigma <= 0f) return null
+    if (sigma != blurSigma) {
+        blurFilter?.close()
+        blurFilter = ImageFilter.makeBlur(sigma, sigma, FilterTileMode.CLAMP)
+        blurSigma = sigma
+    }
+    return blurFilter
+}
+
+private fun coverCrop(art: Image, aspect: Float): Rect {
+    val w = art.width.toFloat()
+    val h = art.height.toFloat()
+    return if (w / h > aspect) {
+        val cw = h * aspect
+        Rect.makeXYWH((w - cw) / 2f, 0f, cw, h)
+    } else {
+        val ch = w / aspect
+        Rect.makeXYWH(0f, (h - ch) / 2f, w, ch)
     }
 }
 
@@ -189,12 +318,13 @@ private fun RenderContext.drawLabels(
     state: MediaCardState,
     left: Float,
     textWidth: Float,
-    text: PolyColor,
+    colors: MediaCardColors,
     fontName: String?,
     shadow: Boolean,
     scrollMs: Long,
     bounce: Boolean,
 ) {
+    val text = colors.title
     val title = Label(TITLE_SIZE, fontName, shadow)
     val titleWidth = title.width(state.title)
     if (titleWidth <= textWidth) {
@@ -220,7 +350,7 @@ private fun RenderContext.drawLabels(
     }
     if (state.artist.isEmpty()) return
     val artist = Label(ARTIST_SIZE, fontName, shadow)
-    with(artist) { draw(fit(state.artist, artist, textWidth), left, ARTIST_BASELINE, text.multiplyAlpha(DIM_ALPHA)) }
+    with(artist) { draw(fit(state.artist, artist, textWidth), left, ARTIST_BASELINE, colors.artist) }
 }
 
 private fun fit(text: String, font: Label, width: Float): String {
@@ -233,43 +363,95 @@ private fun fit(text: String, font: Label, width: Float): String {
 private fun RenderContext.drawProgress(
     state: MediaCardState,
     width: Float,
-    showTimes: Boolean,
-    text: PolyColor,
-    accent: PolyColor,
+    top: Float,
+    style: MediaCardStyle,
     fontName: String?,
     shadow: Boolean,
 ) {
-    val top = MediaCardLayout.PROGRESS_TOP
+    val colors = style.colors
     val mid = top + MediaCardLayout.PROGRESS_HEIGHT / 2f
     val font = Label(TIME_SIZE, fontName, shadow)
     val known = state.lengthMs > 0
-    val dim = text.multiplyAlpha(DIM_ALPHA)
 
-    var barLeft = 0f
-    var barRight = width
-    if (showTimes) {
+    val span = width * style.seekWidth.coerceIn(0f, 1f)
+    val start = (width - span) / 2f
+    var barLeft = start
+    var barRight = start + span
+    if (style.showTimes) {
         val left = formatTime(state.positionMs)
         val right = if (known) formatTime(state.lengthMs) else "--:--"
         val baseline = mid + font.capHeight / 2f
         with(font) {
-            draw(left, 0f, baseline, dim)
-            draw(right, width - width(right), baseline, dim)
+            draw(left, barLeft, baseline, colors.time)
+            draw(right, barRight - width(right), baseline, colors.time)
         }
-        barLeft = font.width(left) + TIME_GAP
-        barRight = width - font.width(right) - TIME_GAP
+        barLeft += font.width(left) + TIME_GAP
+        barRight -= font.width(right) + TIME_GAP
     }
 
     val barWidth = (barRight - barLeft).coerceAtLeast(0f)
-    val barTop = mid - BAR_HEIGHT / 2f
-    rect(barLeft, barTop, barWidth, BAR_HEIGHT, text.multiplyAlpha(TRACK_ALPHA), BAR_HEIGHT / 2f)
-    if (known) {
-        val fraction = (state.positionMs.toFloat() / state.lengthMs).coerceIn(0f, 1f)
-        val filled = barWidth * fraction
-        if (filled > 0f) rect(barLeft, barTop, filled, BAR_HEIGHT, accent, BAR_HEIGHT / 2f)
-        paint.color = accent.argb
-        paint.mode = PaintMode.FILL
-        canvas.drawCircle(barLeft + filled, mid, KNOB_RADIUS, paint)
+    val track = colors.title.multiplyAlpha(TRACK_ALPHA)
+    val fraction = if (known) (state.positionMs.toFloat() / state.lengthMs).coerceIn(0f, 1f) else 0f
+    val filled = barWidth * fraction
+    when (style.seekStyle) {
+        SEEK_WAVE -> drawWave(state, barLeft, barWidth, filled, mid, known, track, colors.accent)
+        else -> {
+            val radius = if (style.seekStyle == SEEK_SQUARE) 0f else BAR_HEIGHT / 2f
+            val barTop = mid - BAR_HEIGHT / 2f
+            rect(barLeft, barTop, barWidth, BAR_HEIGHT, track, radius)
+            if (!known) return
+            if (filled > 0f) rect(barLeft, barTop, filled, BAR_HEIGHT, colors.accent, radius)
+            if (style.seekStyle == SEEK_SQUARE) {
+                rect(barLeft + filled - KNOB_RADIUS, mid - KNOB_RADIUS, KNOB_RADIUS * 2f, KNOB_RADIUS * 2f, colors.accent)
+            } else {
+                paint.color = colors.accent.argb
+                paint.mode = PaintMode.FILL
+                canvas.drawCircle(barLeft + filled, mid, KNOB_RADIUS, paint)
+            }
+        }
     }
+}
+
+private fun RenderContext.drawWave(
+    state: MediaCardState,
+    left: Float,
+    width: Float,
+    filled: Float,
+    mid: Float,
+    known: Boolean,
+    track: PolyColor,
+    accent: PolyColor,
+) {
+    paint.mode = PaintMode.STROKE
+    paint.strokeWidth = WAVE_STROKE
+    paint.strokeCap = PaintStrokeCap.ROUND
+    if (filled < width) {
+        paint.color = track.argb
+        canvas.drawLine(left + filled, mid, left + width, mid, paint)
+    }
+    if (known && filled > 0f) {
+        val amplitude = if (state.playing) WAVE_AMPLITUDE else 0f
+        val phase = state.positionMs / WAVE_PERIOD_MS * 2f * PI.toFloat()
+        PathBuilder().use { builder ->
+            var dx = 0f
+            while (true) {
+                val px = left + dx
+                val py = mid + amplitude * sin(dx / WAVE_LENGTH * 2f * PI.toFloat() - phase)
+                if (dx == 0f) builder.moveTo(px, py) else builder.lineTo(px, py)
+                if (dx >= filled) break
+                dx = (dx + WAVE_STEP).coerceAtMost(filled)
+            }
+            builder.detach().use { path ->
+                paint.color = accent.argb
+                canvas.drawPath(path, paint)
+            }
+        }
+    }
+    paint.strokeCap = PaintStrokeCap.BUTT
+    paint.mode = PaintMode.FILL
+    if (!known) return
+    val knobHeight = MediaCardLayout.PROGRESS_HEIGHT
+    rect(left + filled - WAVE_STROKE / 2f, mid - knobHeight / 2f, WAVE_STROKE, knobHeight, accent, WAVE_STROKE / 2f)
 }
 
 private fun RenderContext.drawButton(
@@ -279,21 +461,41 @@ private fun RenderContext.drawButton(
     playing: Boolean,
     enabled: Boolean,
     hovered: Boolean,
-    text: PolyColor,
-    accent: PolyColor,
+    colors: MediaCardColors,
+    material: Boolean,
 ) {
+    val radius = MediaCardLayout.BUTTON_RADIUS
     val fade = if (enabled) 1f else DISABLED_ALPHA
     if (button == BUTTON_TOGGLE) {
+        val accent = colors.accent
+        val glyph = colors.glyph.multiplyAlpha(fade)
         val fill = (if (hovered && enabled) accent.lighten(0.18f) else accent).multiplyAlpha(fade)
-        paint.color = fill.argb
-        paint.mode = PaintMode.FILL
-        canvas.drawCircle(cx, cy, MediaCardLayout.BUTTON_RADIUS, paint)
-        if (playing) {
-            rect(cx - 3.4f, cy - 4f, 2.6f, 8f, PLAY_GLYPH, 1f)
-            rect(cx + 0.8f, cy - 4f, 2.6f, 8f, PLAY_GLYPH, 1f)
+        if (material) {
+            rect(cx - radius, cy - radius, 2f * radius, 2f * radius, fill, if (playing) MATERIAL_PLAYING_RADIUS else radius)
+        } else {
+            paint.color = fill.argb
+            paint.mode = PaintMode.FILL
+            canvas.drawCircle(cx, cy, radius, paint)
+        }
+        if (material) {
+            val u = MATERIAL_TOGGLE_ICON
+            if (playing) {
+                rect(cx - 6f * u, cy - 7f * u, 4f * u, 14f * u, glyph, u)
+                rect(cx + 2f * u, cy - 7f * u, 4f * u, 14f * u, glyph, u)
+            } else {
+                path(
+                    glyph, fill = true, stroke = ICON_STROKE,
+                    cx - 4f * u + ICON_INSET, cy - 7f * u + ICON_INSET,
+                    cx - 4f * u + ICON_INSET, cy + 7f * u - ICON_INSET,
+                    cx + 7f * u - ICON_TIP_INSET, cy,
+                )
+            }
+        } else if (playing) {
+            rect(cx - 3.4f, cy - 4f, 2.6f, 8f, glyph, 1f)
+            rect(cx + 0.8f, cy - 4f, 2.6f, 8f, glyph, 1f)
         } else {
             path(
-                PLAY_GLYPH, fill = true, stroke = 1.2f,
+                glyph, fill = true, stroke = 1.2f,
                 cx - 2.6f, cy - 3.6f,
                 cx - 2.6f, cy + 3.6f,
                 cx + 3.8f, cy,
@@ -302,13 +504,29 @@ private fun RenderContext.drawButton(
         return
     }
 
-    if (hovered && enabled) {
-        paint.color = text.multiplyAlpha(HOVER_ALPHA).argb
+    val controls = colors.controls
+    if (material) {
+        val tonal = colors.accent.multiplyAlpha((if (hovered && enabled) TONAL_HOVER_ALPHA else TONAL_ALPHA) * fade)
+        val skip = MATERIAL_SKIP_RADIUS
+        rect(cx - skip, cy - skip, 2f * skip, 2f * skip, tonal, skip)
+    } else if (hovered && enabled) {
+        paint.color = controls.multiplyAlpha(HOVER_ALPHA).argb
         paint.mode = PaintMode.FILL
-        canvas.drawCircle(cx, cy, MediaCardLayout.BUTTON_RADIUS, paint)
+        canvas.drawCircle(cx, cy, radius, paint)
     }
-    val color = text.multiplyAlpha(fade)
+    val color = controls.multiplyAlpha(fade)
     val dir = if (button == BUTTON_PREVIOUS) -1f else 1f
+    if (material) {
+        val u = MATERIAL_SKIP_ICON
+        rect(cx + dir * 5f * u - u, cy - 6f * u, 2f * u, 12f * u, color, 0.4f)
+        path(
+            color, fill = true, stroke = ICON_STROKE,
+            cx - dir * (6f * u - ICON_INSET), cy - 6f * u + ICON_INSET,
+            cx - dir * (6f * u - ICON_INSET), cy + 6f * u - ICON_INSET,
+            cx + dir * (2.5f * u - ICON_TIP_INSET), cy,
+        )
+        return
+    }
     rect(cx + dir * 4.6f - 0.8f, cy - 3.8f, 1.6f, 7.6f, color, 0.8f)
     path(
         color, fill = true, stroke = 1.2f,
