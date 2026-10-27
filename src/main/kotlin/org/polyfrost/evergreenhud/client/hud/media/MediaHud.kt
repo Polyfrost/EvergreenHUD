@@ -33,6 +33,13 @@ private const val SCROLL_STEP_MS = 16L
 private const val ACCENT_ALBUM_ART = 1
 private const val ACCENT_ALBUM_AVERAGE = 2
 private const val SCROLL_BOUNCE = 1
+private const val VANILLA_EFFECTS_MARGIN = 1f
+//? if > 1.8.9 {
+private const val VANILLA_EFFECTS_BOTTOM = 51f
+private const val VANILLA_EFFECTS_GAP = 2f
+private const val DEFAULT_Y = VANILLA_EFFECTS_BOTTOM + VANILLA_EFFECTS_GAP
+//?} else
+//private const val DEFAULT_Y = VANILLA_EFFECTS_MARGIN
 
 private fun mediaBind(command: MediaCommand, allowed: (MediaInfo) -> Boolean): OneConfigKeybind =
     KeybindHelper.builder()
@@ -123,7 +130,10 @@ class MediaHud : Hud(
     @Transient
     private var acquired = false
 
-    override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
+    override fun defaultPosition(): Pair<Float, Float> =
+        HudManager.guiScreenWidth - scaledWidth - VANILLA_EFFECTS_MARGIN to DEFAULT_Y
+
+    override fun showByDefault(): Boolean = true
 
     override fun setup() {
         super.setup()
