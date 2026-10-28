@@ -32,6 +32,7 @@ import org.polyfrost.oneconfig.api.platform.v1.Platform
 import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindHelper
 import org.polyfrost.oneconfig.api.ui.v1.keybind.OneConfigKeybind
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.time.Duration.Companion.milliseconds
 
 private const val SNAP_DISTANCE_MS = 2_000.0
@@ -352,13 +353,13 @@ class MediaHud : Hud(
         val target = info.positionAt(now).toDouble()
         val dt = (now - shownAt).coerceIn(0L, 1_000L).toDouble()
         shownAt = now
-        val jumped = info.title != shownTitle || !info.playing || kotlin.math.abs(target - shownPosition) > SNAP_DISTANCE_MS
+        val jumped = info.title != shownTitle || !info.playing || abs(target - shownPosition) > SNAP_DISTANCE_MS
         shownTitle = info.title
         if (jumped) {
             shownPosition = target
         } else {
             val predicted = shownPosition + dt
-            val eased = predicted + (target - predicted) * (1.0 - kotlin.math.exp(-dt / SMOOTHING_MS))
+            val eased = predicted + (target - predicted) * (1.0 - exp(-dt / SMOOTHING_MS))
             shownPosition = maxOf(eased, shownPosition)
         }
         if (info.lengthMs > 0) shownPosition = shownPosition.coerceAtMost(info.lengthMs.toDouble())
