@@ -32,6 +32,7 @@ import org.polyfrost.evergreenhud.client.hud.item.VanillaTextures
 import org.polyfrost.evergreenhud.client.hud.item.containerHeight
 import org.polyfrost.evergreenhud.client.hud.item.containerTop
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
+import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Keybind
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
@@ -369,7 +370,8 @@ class InventoryHud : Hud(
     }
 
     @Composable
-    private fun Title(title: String, content: Float, originX: Float, originY: Float) {
+    private fun Title(raw: String, content: Float, originX: Float, originY: Float) {
+        val title = applyCase(raw)
         val color = PolyColor(textColor, textChroma, textChromaSpeed)
         val modifier = PolyModifier.absoluteAt(originX + EDGE * content, originY + TITLE_Y * content)
         if (font == Font.Minecraft) {

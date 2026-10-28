@@ -23,6 +23,7 @@ import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.mc.McFontQueue
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.utils.copy
 import org.polyfrost.evergreenhud.client.utils.fastRemoveIfReversed
 import org.polyfrost.evergreenhud.client.utils.matchesKeyCode
@@ -482,7 +483,8 @@ class KeystrokesHud : Hud(
     }
 
     @Composable
-    private fun McLine(text: String, color: PolyColor, w: Float, topPad: Float, scale: Float) {
+    private fun McLine(raw: String, color: PolyColor, w: Float, topPad: Float, scale: Float) {
+        val text = applyCase(raw)
         val visibleW = (McFontQueue.measureTextWidth(text, scale) - scale).coerceAtLeast(0f)
         val leftPad = ((w - visibleW) / 2f).coerceAtLeast(0f)
         PolyMcText(
@@ -495,7 +497,8 @@ class KeystrokesHud : Hud(
     }
 
     @Composable
-    private fun KeyText(text: String, color: PolyColor, scale: Float) {
+    private fun KeyText(raw: String, color: PolyColor, scale: Float) {
+        val text = applyCase(raw)
         PolyText(
             text,
             color = color,

@@ -39,6 +39,7 @@ import org.polyfrost.evergreenhud.client.hud.item.potionStack
 import org.polyfrost.evergreenhud.client.hud.item.potionVariant
 import org.polyfrost.evergreenhud.client.hud.item.potionVariants
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
+import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.oneconfig.api.config.v1.annotations.Button
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.ItemList
@@ -278,7 +279,8 @@ class ItemCounterHud : Hud(
     }
 
     @Composable
-    private fun Label(text: String, scale: Float, iconSize: Float) {
+    private fun Label(raw: String, scale: Float, iconSize: Float) {
+        val text = applyCase(raw)
         val color = PolyColor(textColor, textChroma, textChromaSpeed)
         if (font == Font.Minecraft) {
             val modifier = topAlign(inkOffset(iconSize, 0f, MC_INK_HEIGHT * scale))

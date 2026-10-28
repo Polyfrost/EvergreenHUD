@@ -15,6 +15,7 @@ import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.utils.battery.Battery
 import org.polyfrost.evergreenhud.client.utils.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
@@ -157,7 +158,8 @@ class BatteryHud : Hud(
     }
 
     @Composable
-    private fun Label(text: String, color: PolyColor, scale: Float) {
+    private fun Label(raw: String, color: PolyColor, scale: Float) {
+        val text = applyCase(raw)
         val rowHeight = CELL_HEIGHT * scale
         if (font == Font.Minecraft) {
             val modifier = topAlign(inkOffset(rowHeight, 0f, MC_INK_HEIGHT * scale))

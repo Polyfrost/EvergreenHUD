@@ -23,13 +23,15 @@ private const val LINE_GAP = 2f
 
 private const val POPPINS_SIZE = 8f
 
+fun Hud.applyCase(text: String): String = when (caseType) {
+    1 -> text.uppercase()
+    2 -> text.lowercase()
+    else -> text
+}
+
 @Composable
 fun Hud.HudTextLines(lines: List<String>) {
-    val cased = when (caseType) {
-        1 -> lines.map(String::uppercase)
-        2 -> lines.map(String::lowercase)
-        else -> lines
-    }
+    val cased = lines.map(::applyCase)
 
     val padInsets = PolyInsets(padLeft, padTop, padRight, padBottom)
     val isStaticValid = staticWidth && staticW > 0f && staticH > 0f

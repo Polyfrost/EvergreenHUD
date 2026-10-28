@@ -47,6 +47,7 @@ import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.mc.McFontQueue.measureWidth
 import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
 import org.polyfrost.oneconfig.api.config.v1.Node
 import org.polyfrost.oneconfig.api.config.v1.Property
@@ -938,7 +939,8 @@ class PotionEffectsHud : Hud(
     }
 
     @Composable
-    private fun Line(text: String, scale: Float, fade: Float, color: PolyColor, modifier: PolyModifier = PolyModifier) {
+    private fun Line(raw: String, scale: Float, fade: Float, color: PolyColor, modifier: PolyModifier = PolyModifier) {
+        val text = applyCase(raw)
         if (font == Font.Minecraft) {
             PolyMcText(text, color, shadow = showShadow, scale = scale, modifier = modifier)
         } else {

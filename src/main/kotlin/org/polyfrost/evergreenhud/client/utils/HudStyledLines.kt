@@ -28,11 +28,7 @@ fun Hud.HudStyledLines(lines: List<List<StyledRun>>, alignColumns: Boolean = fal
 
 @Composable
 fun Hud.HudStyledCells(lines: List<List<StyledCell>>, alignColumns: Boolean = false) {
-    val cased = when (caseType) {
-        1 -> lines.mapRunText(String::uppercase)
-        2 -> lines.mapRunText(String::lowercase)
-        else -> lines
-    }
+    val cased = lines.mapRunText(::applyCase)
 
     val padInsets = PolyInsets(padLeft, padTop, padRight, padBottom)
     val isStaticValid = staticWidth && staticW > 0f && staticH > 0f

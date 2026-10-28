@@ -36,6 +36,7 @@ import org.polyfrost.compose.mc.McFontQueue
 import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
@@ -272,7 +273,7 @@ class ResourcePackHud : Hud(
             if (skiaFont != null) skiaFont::measureTextWidth
             else { text -> McFontQueue.measureTextWidth(text, scale) }
 
-        val lines = wrap(packDescription.value, DESCRIPTION_WIDTH * scale, measure)
+        val lines = wrap(applyCase(packDescription.value), DESCRIPTION_WIDTH * scale, measure)
 
         val modifier = hudBackground().padding(padLeft, padTop, padRight, padBottom)
 
@@ -280,7 +281,7 @@ class ResourcePackHud : Hud(
             PolyRow(gap = GAP * scale) {
                 Icon(ICON * scale, if (showBackground) bgRadius else 0f)
                 PolyColumn(gap = TITLE_GAP * scale) {
-                    Line(packTitle.value, scale)
+                    Line(applyCase(packTitle.value), scale)
                     for (line in lines) Line(line, scale)
                 }
             }

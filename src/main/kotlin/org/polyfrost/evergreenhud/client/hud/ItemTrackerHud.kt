@@ -21,6 +21,7 @@ import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hud.item.ITEM_SIZE
 import org.polyfrost.evergreenhud.client.hud.item.ItemIcon
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
+import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.utils.fastRemoveIfReversed
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
@@ -280,7 +281,8 @@ class ItemTrackerHud : Hud(
     }
 
     @Composable
-    private fun Label(text: String, argb: Int, scale: Float) {
+    private fun Label(raw: String, argb: Int, scale: Float) {
+        val text = applyCase(raw)
         val color = PolyColor(argb, textChroma, textChromaSpeed)
         val modifier = PolyModifier.align(PolyAlign.Center)
         if (font == Font.Minecraft) {
