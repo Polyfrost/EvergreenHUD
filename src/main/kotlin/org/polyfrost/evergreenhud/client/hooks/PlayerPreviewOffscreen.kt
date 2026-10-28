@@ -28,6 +28,7 @@ import net.minecraft.client.renderer.state.level.CameraRenderState
 //? if >= 1.21.10
 import net.minecraft.client.renderer.entity.state.AvatarRenderState
 //? if >= 26.2 {
+import net.minecraft.client.renderer.Projection
 import net.minecraft.client.renderer.SubmitNodeStorage
 //?}
 //? if >= 26.3 {
@@ -48,6 +49,8 @@ import org.jetbrains.skia.Rect
 import org.joml.Matrix4f
 import org.joml.Quaternionf
 //?}
+//? if >= 26.2
+import org.joml.Vector4f
 import org.polyfrost.oneconfig.internal.ui.SkiaOffscreenTarget
 //? if > 1.8.9 && < 1.21.8
 //import org.polyfrost.oneconfig.internal.ui.hud.GuiTargetRedirect
@@ -223,7 +226,7 @@ object PlayerPreviewOffscreen {
 
         //? if >= 26.2 {
         RenderSystem.getDevice().createCommandEncoder()
-            .clearColorAndDepthTextures(colorTexture, org.joml.Vector4f(0f, 0f, 0f, 0f), depthTexture, 0.0)
+            .clearColorAndDepthTextures(colorTexture, Vector4f(0f, 0f, 0f, 0f), depthTexture, 0.0)
         //?} elif >= 1.21.10 {
         /*RenderSystem.getDevice().createCommandEncoder()
             .clearColorAndDepthTextures(colorTexture, 0x00000000, depthTexture, 1.0)
@@ -582,8 +585,8 @@ object PlayerPreviewOffscreen {
     }
 
     //? if >= 26.2 {
-    private fun orthoProjection(width: Int, height: Int): net.minecraft.client.renderer.Projection =
-        net.minecraft.client.renderer.Projection().apply {
+    private fun orthoProjection(width: Int, height: Int): Projection =
+        Projection().apply {
             setupOrtho(-1000f, 1000f, width.toFloat(), height.toFloat(), true)
         }
     //? } else if >= 26.1 {
