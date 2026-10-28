@@ -11,6 +11,7 @@ import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.utils.copy
 import org.polyfrost.evergreenhud.client.utils.media.MediaCommand
 import org.polyfrost.evergreenhud.client.utils.media.MediaInfo
@@ -100,6 +101,9 @@ class MediaHud : Hud(
         options = ["Classic", "Material"],
     )
     var buttonStyle = BUTTONS_CLASSIC
+
+    @Switch(title = "Cutout Play / Pause Icon", description = "Cuts the icon out of the play button so whatever is behind it shows through.")
+    var cutoutGlyph = false
 
     @Dropdown(title = "Seek Bar Position", options = ["Below", "Above", "Hidden"], subcategory = "Seek Bar")
     var seekPosition = SEEK_BELOW
@@ -231,12 +235,12 @@ class MediaHud : Hud(
         showWhen("artCornerRadius") { !concentricArt }
         for (option in listOf("titleColor", "artistColor", "timeColor")) showWhen(option, hide = true) { textSource == TEXT_CUSTOM }
         for (option in listOf("albumTextSaturation", "albumTextLightness")) showWhen(option, hide = true) { textSource == TEXT_ALBUM_ART || textSource == TEXT_ALBUM_AVERAGE }
-        for (option in listOf("controlColor", "glyphColor")) showWhen(option) { customControls }
+        for (option in listOf("controlColor", "glyphColor")) showWhen(option) { customControls && (option != "glyphColor" || !cutoutGlyph) }
         for (option in listOf("artBackgroundBlur", "artBackgroundOpacity")) showWhen(option) { artBackground }
         showWhen("popIn") { onlyInGuis }
         if (!isReal) return
         val options = listOf(
-            "showAlbumArt", "concentricArt", "artCornerRadius", "titleScroll", "buttonStyle",
+            "showAlbumArt", "concentricArt", "artCornerRadius", "titleScroll", "buttonStyle", "cutoutGlyph",
             "seekPosition", "seekWidth", "seekStyle", "showTimes",
             "accentSource", "accentColor", "textSource", "titleColor", "artistColor", "timeColor",
             "albumTextSaturation", "albumTextLightness", "customControls", "controlColor", "glyphColor",
@@ -288,8 +292,8 @@ class MediaHud : Hud(
         val info = live ?: EXAMPLE.takeIf { HudManager.isEditing } ?: return null
         val position = if (info === EXAMPLE) info.positionMs else smoothPosition(info)
         return MediaCardState(
-            title = info.title,
-            artist = info.artist,
+            title = applyCase(info.title),
+            artist = applyCase(info.artist),
             playing = info.playing,
             positionMs = position,
             lengthMs = info.lengthMs,
@@ -317,6 +321,7 @@ class MediaHud : Hud(
         seekWidth = seekWidth / 100f,
         seekStyle = seekStyle,
         buttonStyle = buttonStyle,
+        cutoutGlyph = cutoutGlyph,
         bounce = titleScroll == SCROLL_BOUNCE,
         artRadius = artRadius(cardScale),
         colors = cardColors(state),

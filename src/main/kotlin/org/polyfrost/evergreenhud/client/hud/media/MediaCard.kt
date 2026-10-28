@@ -1,6 +1,7 @@
 package org.polyfrost.evergreenhud.client.hud.media
 
 import androidx.compose.runtime.Composable
+import org.jetbrains.skia.BlendMode
 import org.jetbrains.skia.FilterMipmap
 import org.jetbrains.skia.FilterTileMode
 import org.jetbrains.skia.Font
@@ -71,6 +72,7 @@ data class MediaCardStyle(
     val seekWidth: Float,
     val seekStyle: Int,
     val buttonStyle: Int,
+    val cutoutGlyph: Boolean,
     val bounce: Boolean,
     val artRadius: Float,
     val colors: MediaCardColors,
@@ -197,7 +199,7 @@ fun MediaCard(
                 BUTTON_NEXT -> state.canNext
                 else -> state.canToggle
             }
-            drawButton(button, MediaCardLayout.buttonX(button, style.showArt, textWidth), MediaCardLayout.buttonY(SEEK_BELOW), state.playing, enabled, hovered == button, colors, style.buttonStyle == BUTTONS_MATERIAL)
+            drawButton(button, MediaCardLayout.buttonX(button, style.showArt, textWidth), MediaCardLayout.buttonY(SEEK_BELOW), state.playing, enabled, hovered == button, colors, style.buttonStyle == BUTTONS_MATERIAL, style.cutoutGlyph)
         }
         restore()
         if (style.seekPosition != SEEK_HIDDEN) drawProgress(state, width, MediaCardLayout.progressTop(style.seekPosition), style, fontName, shadow)
@@ -385,8 +387,11 @@ private fun RenderContext.drawProgress(
             draw(left, barLeft, baseline, colors.time)
             draw(right, barRight - width(right), baseline, colors.time)
         }
-        barLeft += font.width(left) + TIME_GAP
-        barRight -= font.width(right) + TIME_GAP
+        val digit = "0123456789".maxBy { font.width(it.toString()) }
+        val template = formatTime(maxOf(state.positionMs, state.lengthMs)).replace(Regex("\\d"), digit.toString())
+        val slot = maxOf(font.width(template), font.width(right))
+        barLeft += slot + TIME_GAP
+        barRight -= slot + TIME_GAP
     }
 
     val barWidth = (barRight - barLeft).coerceAtLeast(0f)
@@ -463,13 +468,15 @@ private fun RenderContext.drawButton(
     hovered: Boolean,
     colors: MediaCardColors,
     material: Boolean,
+    cutout: Boolean,
 ) {
     val radius = MediaCardLayout.BUTTON_RADIUS
     val fade = if (enabled) 1f else DISABLED_ALPHA
     if (button == BUTTON_TOGGLE) {
         val accent = colors.accent
-        val glyph = colors.glyph.multiplyAlpha(fade)
+        val glyph = if (cutout) PLAY_GLYPH else colors.glyph.multiplyAlpha(fade)
         val fill = (if (hovered && enabled) accent.lighten(0.18f) else accent).multiplyAlpha(fade)
+        if (cutout) canvas.saveLayer(Rect.makeLTRB(cx - radius - 1f, cy - radius - 1f, cx + radius + 1f, cy + radius + 1f), null)
         if (material) {
             rect(cx - radius, cy - radius, 2f * radius, 2f * radius, fill, if (playing) MATERIAL_PLAYING_RADIUS else radius)
         } else {
@@ -477,6 +484,7 @@ private fun RenderContext.drawButton(
             paint.mode = PaintMode.FILL
             canvas.drawCircle(cx, cy, radius, paint)
         }
+        if (cutout) paint.blendMode = BlendMode.DST_OUT
         if (material) {
             val u = MATERIAL_TOGGLE_ICON
             if (playing) {
@@ -500,6 +508,10 @@ private fun RenderContext.drawButton(
                 cx - 2.6f, cy + 3.6f,
                 cx + 3.8f, cy,
             )
+        }
+        if (cutout) {
+            paint.blendMode = BlendMode.SRC_OVER
+            canvas.restore()
         }
         return
     }
