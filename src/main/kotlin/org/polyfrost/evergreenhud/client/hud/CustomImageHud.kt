@@ -2,16 +2,11 @@ package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import org.jetbrains.skia.FilterMipmap
-import org.jetbrains.skia.FilterMode
-import org.jetbrains.skia.Image
-import org.jetbrains.skia.MipmapMode
-import org.jetbrains.skia.Paint
-import org.jetbrains.skia.Rect
-import org.jetbrains.skia.SamplingMode
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
+import org.polyfrost.compose.render.FilterQuality
+import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.RenderContext
 import org.polyfrost.oneconfig.api.config.v1.annotations.File
@@ -24,8 +19,6 @@ import kotlin.math.min
 private const val DEFAULT_SIDE = 48f
 
 private const val MAX_FILE_BYTES = 16L * 1024L * 1024L
-
-private val NEAREST = FilterMipmap(FilterMode.NEAREST, MipmapMode.NONE)
 
 private val PLACEHOLDER_COLOR = PolyColor(0x40FFFFFF)
 private val PLACEHOLDER_OUTLINE = PolyColor(0x80FFFFFF.toInt())
@@ -62,16 +55,13 @@ class CustomImageHud : Hud(
     override var staticH: Float get() = _staticH.value; set(v) { _staticH.value = v }
 
     @Transient
-    private var cachedImage: Image? = null
+    private var cachedImage: PolyBitmap? = null
 
     @Transient
     private var cachedPath: String? = null
 
     @Transient
     private var cachedStamp = 0L
-
-    @Transient
-    private val paint = Paint()
 
     init {
         showBackground = false
@@ -121,25 +111,28 @@ class CustomImageHud : Hud(
         val srcH = image.height.toFloat()
         if (srcW <= 0f || srcH <= 0f) return
 
-        val dst = if (keepAspect) {
+        var dstX = x
+        var dstY = y
+        var dstW = width
+        var dstH = height
+        if (keepAspect) {
             val scale = min(width / srcW, height / srcH)
-            val w = srcW * scale
-            val h = srcH * scale
-            Rect.makeXYWH(x + (width - w) / 2f, y + (height - h) / 2f, w, h)
-        } else {
-            Rect.makeXYWH(x, y, width, height)
+            dstW = srcW * scale
+            dstH = srcH * scale
+            dstX = x + (width - dstW) / 2f
+            dstY = y + (height - dstH) / 2f
         }
 
-        paint.alpha = (opacity / 100f * 255f).toInt().coerceIn(0, 255)
-        val sampling: SamplingMode = if (smooth) SamplingMode.LINEAR else NEAREST
+        val alpha = (opacity / 100f * 255f).toInt().coerceIn(0, 255)
+        val sampling = if (smooth) FilterQuality.Low else FilterQuality.None
 
         val radius = cornerRadius
         val rounded = radius > 0f
         if (rounded) {
             save()
-            clipRRect(dst.left, dst.top, dst.width, dst.height, radius)
+            clipRRect(dstX, dstY, dstW, dstH, radius)
         }
-        canvas.drawImageRect(image, Rect.makeWH(srcW, srcH), dst, sampling, paint, true)
+        this.image(image, dstX, dstY, dstW, dstH, 0f, 0f, 1f, 1f, PolyColor.WHITE.withAlpha(alpha), sampling)
         if (rounded) restore()
     }
 
@@ -149,7 +142,7 @@ class CustomImageHud : Hud(
         rectStroke(x, y, width, height, PLACEHOLDER_OUTLINE, 1f, cornerRadius)
     }
 
-    private fun image(): Image? {
+    private fun image(): PolyBitmap? {
         val path = imagePath.trim()
         if (path.isEmpty()) {
             releaseImage()
@@ -166,12 +159,11 @@ class CustomImageHud : Hud(
         cachedStamp = stamp
         if (stamp < 0L || file.length() > MAX_FILE_BYTES) return null
 
-        cachedImage = runCatching { Image.makeFromEncoded(file.readBytes()) }.getOrNull()
+        cachedImage = PolyBitmap.decode(file.readBytes())
         return cachedImage
     }
 
     private fun releaseImage() {
-        cachedImage?.close()
         cachedImage = null
     }
 }

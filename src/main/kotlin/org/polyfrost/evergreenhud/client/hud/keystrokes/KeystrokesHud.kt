@@ -7,9 +7,6 @@ import com.mojang.blaze3d.platform.InputConstants
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.client.KeyMapping
-import org.jetbrains.skia.Paint
-import org.jetbrains.skia.PaintMode
-import org.jetbrains.skia.RRect
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyColumn
@@ -80,12 +77,6 @@ private const val UP = "▲"
 private const val DOWN = "▼"
 private const val LEFT = "◀"
 private const val RIGHT = "▶"
-
-private val KEY_PAINT = Paint().apply { isAntiAlias = true }
-private val LINE_PAINT = Paint().apply {
-    isAntiAlias = false
-    mode = PaintMode.STROKE
-}
 
 private val ARROW_CODES = intArrayOf(InputConstants.KEY_UP, InputConstants.KEY_DOWN, InputConstants.KEY_LEFT, InputConstants.KEY_RIGHT)
 
@@ -437,13 +428,8 @@ class KeystrokesHud : Hud(
         val radius = keyRadius
         if (color.alpha == 0) return
         PolyCanvas(PolyModifier.size(w, h)) { x, y, cw, ch ->
-            KEY_PAINT.color = color.argb
-            val rect = snapToPixels(canvas, x, y, cw, ch)
-            if (radius > 0f) {
-                canvas.drawRRect(RRect.makeLTRB(rect.left, rect.top, rect.right, rect.bottom, radius), KEY_PAINT)
-            } else {
-                canvas.drawRect(rect, KEY_PAINT)
-            }
+            val r = snapToPixels(this, x, y, cw, ch)
+            rect(r[0], r[1], r[2] - r[0], r[3] - r[1], color, radius.coerceAtLeast(0f))
         }
     }
 
@@ -520,13 +506,10 @@ class KeystrokesHud : Hud(
                 val thickness = spaceLineH * s
                 val cx = x + cw / 2f - 0.5f * s
                 val cy = y + ch / 2f - 0.5f * s
-                LINE_PAINT.strokeWidth = thickness
                 if (showShadow && font == Font.Minecraft) {
-                    LINE_PAINT.color = fg.darken(0.75f).argb
-                    canvas.drawLine(cx - half + s, cy + s, cx + half + s, cy + s, LINE_PAINT)
+                    line(cx - half + s, cy + s, cx + half + s, cy + s, fg.darken(0.75f), thickness)
                 }
-                LINE_PAINT.color = fg.argb
-                canvas.drawLine(cx - half, cy, cx + half, cy, LINE_PAINT)
+                line(cx - half, cy, cx + half, cy, fg, thickness)
             }
         }
     }

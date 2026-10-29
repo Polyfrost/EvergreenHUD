@@ -1,12 +1,6 @@
 package org.polyfrost.evergreenhud.client.utils.media
 
-import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.Canvas
-import org.jetbrains.skia.ColorAlphaType
-import org.jetbrains.skia.ColorType
-import org.jetbrains.skia.Image
-import org.jetbrains.skia.ImageInfo
-import org.jetbrains.skia.Rect
+import org.polyfrost.compose.render.PolyBitmap
 import java.net.URI
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
@@ -38,7 +32,7 @@ object MediaService {
         private set
 
     @Volatile
-    var art: Image? = null
+    var art: PolyBitmap? = null
         private set
 
     @Volatile
@@ -96,7 +90,7 @@ object MediaService {
         if (info == null || key == null) return
         val image = runCatching {
             val bytes = info.artBytes ?: fetch(info.artUrl!!)
-            Image.makeFromEncoded(bytes)
+            PolyBitmap.decode(bytes)
         }.getOrNull()
         artAccent = image?.let(::vividColor)
         artAverage = image?.let(::averageColor)
@@ -113,9 +107,8 @@ object MediaService {
         return connection.getInputStream().use { it.readNBytes(MAX_ART_BYTES) }
     }
 
-    private fun averageColor(image: Image): Int? {
-        val info = ImageInfo(image.width, image.height, ColorType.RGBA_8888, ColorAlphaType.UNPREMUL)
-        val pixels = Bitmap.makeFromImage(image).use { it.readPixels(info, image.width * 4, 0, 0) } ?: return null
+    private fun averageColor(image: PolyBitmap): Int? {
+        val pixels = image.pixels
         var r = 0L
         var g = 0L
         var b = 0L
@@ -129,9 +122,7 @@ object MediaService {
         return 0xFF shl 24 or ((r / count).toInt() shl 16) or ((g / count).toInt() shl 8) or (b / count).toInt()
     }
 
-    private fun vividColor(image: Image): Int {
-        val bitmap = Bitmap().apply { allocN32Pixels(SAMPLE, SAMPLE) }
-        Canvas(bitmap).drawImageRect(image, Rect.makeWH(SAMPLE.toFloat(), SAMPLE.toFloat()))
+    private fun vividColor(image: PolyBitmap): Int {
         var r = 0.0
         var g = 0.0
         var b = 0.0
@@ -140,10 +131,10 @@ object MediaService {
         var plainG = 0.0
         var plainB = 0.0
         for (y in 0 until SAMPLE) for (x in 0 until SAMPLE) {
-            val c = bitmap.getColor(x, y)
-            val cr = c shr 16 and 0xFF
-            val cg = c shr 8 and 0xFF
-            val cb = c and 0xFF
+            val i = ((y * 2 + 1) * image.height / (SAMPLE * 2) * image.width + (x * 2 + 1) * image.width / (SAMPLE * 2)) * 4
+            val cr = image.pixels[i].toInt() and 0xFF
+            val cg = image.pixels[i + 1].toInt() and 0xFF
+            val cb = image.pixels[i + 2].toInt() and 0xFF
             val weight = (maxOf(cr, cg, cb) - minOf(cr, cg, cb)) / 255.0
             val w = weight * weight
             r += cr * w

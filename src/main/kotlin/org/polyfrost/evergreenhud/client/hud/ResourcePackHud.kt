@@ -21,8 +21,6 @@ import net.ornithemc.osl.resource.loader.api.resource.repository.ClientPackSourc
 import net.ornithemc.osl.resource.loader.api.resource.repository.ResourcePackRepository
 import net.ornithemc.osl.resource.loader.api.resource.repository.ResourcePackSummary as Pack
 *///?}
-import org.jetbrains.skia.Image
-import org.jetbrains.skia.Paint
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyColumn
@@ -33,8 +31,9 @@ import org.polyfrost.compose.composables.PolyText
 import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.mc.McFontQueue
-import org.polyfrost.compose.render.FontManager
+import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.ImageLoader
+import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
@@ -68,11 +67,10 @@ class ResourcePackHud : Hud(
         //?} else
         //private val DEFAULT_ICON = NamespacedIdentifiers.from("minecraft", "textures/misc/unknown_pack.png")
 
-        private val iconPaint = Paint()
-        private val iconCache = HashMap<String, Image>()
+        private val iconCache = HashMap<String, PolyBitmap>()
         private val texturedCache = HashMap<String, Boolean>()
         private var cachedIds: List<String>? = null
-        private var defaultIcon: Image? = null
+        private var defaultIcon: PolyBitmap? = null
         private var defaultIconLoaded = false
 
         private object FoundTexture : RuntimeException(null, null, false, false)
@@ -146,7 +144,7 @@ class ResourcePackHud : Hud(
             }
         }
 
-        fun iconFor(id: String?): Image? {
+        fun iconFor(id: String?): PolyBitmap? {
             if (id == null) return defaultIcon()
             iconCache[id]?.let { return it }
             val icon = loadIcon(id) ?: defaultIcon() ?: return null
@@ -154,7 +152,7 @@ class ResourcePackHud : Hud(
             return icon
         }
 
-        private fun defaultIcon(): Image? {
+        private fun defaultIcon(): PolyBitmap? {
             if (defaultIconLoaded) return defaultIcon
             defaultIconLoaded = true
             defaultIcon = try {
@@ -168,7 +166,7 @@ class ResourcePackHud : Hud(
             return defaultIcon
         }
 
-        private fun loadIcon(id: String): Image? {
+        private fun loadIcon(id: String): PolyBitmap? {
             //~ if = 1.8.9 'mc.resourcePackRepository' -> 'ResourcePackRepository.client()'
             val pack = mc.resourcePackRepository.getPack(id) ?: return null
             return try {
@@ -216,7 +214,7 @@ class ResourcePackHud : Hud(
 
     private var packTitle = mutableStateOf(DEFAULT_TITLE)
     private var packDescription = mutableStateOf(DEFAULT_DESCRIPTION)
-    private var packIcon = mutableStateOf<Image?>(null)
+    private var packIcon = mutableStateOf<PolyBitmap?>(null)
 
     init {
         padLeft = 4f
@@ -268,9 +266,9 @@ class ResourcePackHud : Hud(
     @Composable
     override fun Content() {
         val scale = textScale.coerceAtLeast(0.01f)
-        val skiaFont = if (font == Font.Poppins) FontManager.getFont(FONT_SIZE * scale, getPoppinsFontName()) else null
+        val polyFont = if (font == Font.Poppins) PolyFont(getPoppinsFontName(), FONT_SIZE * scale) else null
         val measure: (String) -> Float =
-            if (skiaFont != null) skiaFont::measureTextWidth
+            if (polyFont != null) polyFont::measureTextWidth
             else { text -> McFontQueue.measureTextWidth(text, scale) }
 
         val lines = wrap(applyCase(packDescription.value), DESCRIPTION_WIDTH * scale, measure)
@@ -294,12 +292,12 @@ class ResourcePackHud : Hud(
         PolyCanvas(PolyModifier.size(size, size)) { x, y, w, h ->
             val corner = radius.coerceIn(0f, minOf(w, h) / 2f)
             if (corner <= 0f) {
-                image(icon, x, y, w, h, iconPaint)
+                image(icon, x, y, w, h)
                 return@PolyCanvas
             }
             save()
             clipRRect(x, y, w, h, corner)
-            image(icon, x, y, w, h, iconPaint)
+            image(icon, x, y, w, h)
             restore()
         }
     }

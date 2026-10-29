@@ -22,7 +22,7 @@ import org.polyfrost.compose.composables.align
 import org.polyfrost.compose.composables.margin
 import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.layout.PolyAlign
-import org.polyfrost.compose.render.FontManager
+import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
 //? if > 1.8.9 {
@@ -40,6 +40,7 @@ import org.polyfrost.evergreenhud.client.hud.item.potionVariant
 import org.polyfrost.evergreenhud.client.hud.item.potionVariants
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
 import org.polyfrost.evergreenhud.client.utils.applyCase
+import org.polyfrost.evergreenhud.client.utils.capHeight
 import org.polyfrost.oneconfig.api.config.v1.annotations.Button
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.ItemList
@@ -286,9 +287,9 @@ class ItemCounterHud : Hud(
             val modifier = topAlign(inkOffset(iconSize, 0f, MC_INK_HEIGHT * scale))
             PolyMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
         } else {
-            val metrics = FontManager.getFont(FONT_SIZE * scale, getPoppinsFontName()).metrics
-            val inkTop = -metrics.ascent - metrics.capHeight
-            val modifier = topAlign(inkOffset(iconSize, inkTop, metrics.capHeight))
+            val polyFont = PolyFont(getPoppinsFontName(), FONT_SIZE * scale)
+            val inkTop = -polyFont.metrics.ascent - polyFont.capHeight
+            val modifier = topAlign(inkOffset(iconSize, inkTop, polyFont.capHeight))
             PolyText(
                 text,
                 color = color,

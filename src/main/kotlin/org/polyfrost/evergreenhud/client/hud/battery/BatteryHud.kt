@@ -13,9 +13,10 @@ import org.polyfrost.compose.composables.margin
 import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
-import org.polyfrost.compose.render.FontManager
+import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.utils.applyCase
+import org.polyfrost.evergreenhud.client.utils.capHeight
 import org.polyfrost.evergreenhud.client.utils.battery.Battery
 import org.polyfrost.evergreenhud.client.utils.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
@@ -165,9 +166,9 @@ class BatteryHud : Hud(
             val modifier = topAlign(inkOffset(rowHeight, 0f, MC_INK_HEIGHT * scale))
             PolyMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
         } else {
-            val metrics = FontManager.getFont(FONT_SIZE * scale, getPoppinsFontName()).metrics
-            val inkTop = -metrics.ascent - metrics.capHeight
-            val modifier = topAlign(inkOffset(rowHeight, inkTop, metrics.capHeight))
+            val polyFont = PolyFont(getPoppinsFontName(), FONT_SIZE * scale)
+            val inkTop = -polyFont.metrics.ascent - polyFont.capHeight
+            val modifier = topAlign(inkOffset(rowHeight, inkTop, polyFont.capHeight))
             PolyText(
                 text,
                 color = color,

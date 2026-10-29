@@ -41,22 +41,19 @@ import java.util.OptionalDouble
 import net.minecraft.world.entity.player.Player
 //? if >= 1.21.10
 import net.minecraft.world.phys.Vec3
-import org.jetbrains.skia.Canvas
-import org.jetbrains.skia.ContentChangeMode
-import org.jetbrains.skia.Paint
-import org.jetbrains.skia.Rect
 //? if > 1.8.9 {
 import org.joml.Matrix4f
 import org.joml.Quaternionf
 //?}
 //? if >= 26.2
 import org.joml.Vector4f
-import org.polyfrost.oneconfig.internal.ui.SkiaOffscreenTarget
+import org.polyfrost.compose.render.RenderContext
+import org.polyfrost.oneconfig.internal.ui.OffscreenTarget
+import org.polyfrost.oneconfig.internal.ui.TextureRenderer
 //? if > 1.8.9 && < 1.21.8
 //import org.polyfrost.oneconfig.internal.ui.hud.GuiTargetRedirect
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.WorldEvent
-import org.polyfrost.oneconfig.internal.ui.compose.SkiaCtx
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import org.slf4j.LoggerFactory
 
@@ -73,7 +70,6 @@ object PlayerPreviewOffscreen {
     private val LOGGER = LoggerFactory.getLogger("EvergreenHUD/Player Preview")
 
     private val client: Minecraft get() = mc
-    private val blitPaint = Paint()
 
     //? if >= 26.1 {
     private val projection by lazy { ProjectionMatrixBuffer("evergreenhud_player_preview") }
@@ -97,7 +93,7 @@ object PlayerPreviewOffscreen {
     )
 
     private class Slot {
-        val offscreen = SkiaOffscreenTarget()
+        val offscreen = OffscreenTarget()
         var boundTarget: RenderTarget? = null
         var lastWidth = -1
         var lastHeight = -1
@@ -109,7 +105,6 @@ object PlayerPreviewOffscreen {
         var lastUsedNanos = 0L
 
         val target: RenderTarget? get() = offscreen.target
-        val surface get() = offscreen.surface
 
         fun invalidate() {
             offscreen.dispose()
@@ -141,7 +136,7 @@ object PlayerPreviewOffscreen {
     fun render() {
         val requests = if (pending.isEmpty()) emptyList() else pending.entries.map { it.key to it.value }
         pending.clear()
-        if (failed || !SkiaCtx.isReady) return
+        if (failed) return
 
         val player = client.player ?: return
         val now = System.nanoTime()
@@ -151,7 +146,6 @@ object PlayerPreviewOffscreen {
             renderSlot(slot, request, player)
             if (failed) break
         }
-        if (requests.isNotEmpty()) resetSkiaContext()
         evictStale(now)
     }
 
@@ -166,8 +160,6 @@ object PlayerPreviewOffscreen {
             if (!resolveTarget(slot, width, height)) return
             val rt = slot.target ?: return
             renderInto(slot, rt, request, player, width, height, fit)
-            //? if < 1.21.10
-            //slot.offscreen.ensureSubmitted()
             slot.hasContent = true
             if (!loggedFirstFrame) {
                 loggedFirstFrame = true
@@ -190,21 +182,15 @@ object PlayerPreviewOffscreen {
         }
     }
 
-    fun drawInto(owner: Any, canvas: Canvas, width: Float, height: Float) {
+    fun drawInto(owner: Any, ctx: RenderContext, width: Float, height: Float) {
         if (client.player == null) return
         val slot = slots[owner] ?: return
         if (!slot.hasContent) return
-        val s = slot.surface ?: return
-        val w = slot.lastWidth
-        val h = slot.lastHeight
-        if (w <= 0 || h <= 0) return
+        val rt = slot.target ?: return
+        if (slot.lastWidth <= 0 || slot.lastHeight <= 0) return
+        val textures = ctx.renderer as? TextureRenderer ?: return
         try {
-            s.notifyContentWillChange(ContentChangeMode.RETAIN)
-            canvas.save()
-            canvas.clipRect(Rect.makeXYWH(0f, 0f, width, height))
-            canvas.scale(width / w, height / h)
-            s.draw(canvas, 0, 0, blitPaint)
-            canvas.restore()
+            textures.texture(rt, 0f, 0f, width, height, 0f, 1f, 1f, 0f, 1f)
         } catch (throwable: Throwable) {
             LOGGER.warn("Player preview blit failed", throwable)
         }
@@ -231,7 +217,7 @@ object PlayerPreviewOffscreen {
         /*RenderSystem.getDevice().createCommandEncoder()
             .clearColorAndDepthTextures(colorTexture, 0x00000000, depthTexture, 1.0)
         *///?} else
-        //slot.offscreen.clearTarget()
+        //slot.offscreen.clear()
 
         RenderSystem.backupProjectionMatrix()
         //? if >= 26.2 {
@@ -280,7 +266,7 @@ object PlayerPreviewOffscreen {
     }
     //? } else if > 1.8.9 {
     /*private fun renderInto(slot: Slot, rt: RenderTarget, request: Request, player: Player, width: Int, height: Int, fit: Float) {
-        slot.offscreen.clearTarget()
+        slot.offscreen.clear()
 
         val previousTarget = GuiTargetRedirect.target
         val ortho = Matrix4f().setOrtho(0f, width.toFloat(), height.toFloat(), 0f, -1000f, 1000f)
@@ -311,7 +297,7 @@ object PlayerPreviewOffscreen {
     }
     *///?} else {
     /*private fun renderInto(slot: Slot, rt: RenderTarget, request: Request, player: Player, width: Int, height: Int, fit: Float) {
-        slot.offscreen.clearTarget()
+        slot.offscreen.clear()
 
         val depthWasEnabled = GL11.glIsEnabled(GL11.GL_DEPTH_TEST)
         rt.bindWrite(true)
@@ -595,7 +581,7 @@ object PlayerPreviewOffscreen {
     *///? }
 
     private fun resolveTarget(slot: Slot, width: Int, height: Int): Boolean {
-        if (!slot.offscreen.resolveTarget(width, height)) {
+        if (!slot.offscreen.resolve(width, height)) {
             if (!loggedResolveFailure) {
                 loggedResolveFailure = true
                 LOGGER.warn("Player preview could not acquire an offscreen target")
@@ -612,11 +598,6 @@ object PlayerPreviewOffscreen {
             slot.hasContent = false
         }
         return true
-    }
-
-    private fun resetSkiaContext() {
-        if (!SkiaCtx.isReady) return
-        if (SkiaCtx.isVulkanMode) SkiaCtx.directContext.resetAll() else SkiaCtx.directContext.resetGLAll()
     }
 
     private fun invalidate() {

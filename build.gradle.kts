@@ -105,7 +105,6 @@ dependencies {
         implementation("org.polyfrost.oneconfig:$module:$oneconfigversion")
     }
 
-    compileOnly(compose.desktop.currentOs)
     modRuntimeOnly("me.djtheredstoner:DevAuth-fabric:${sc.properties.get<String>("deps.devauth")}")
 
     testImplementation("org.junit.jupiter:junit-jupiter:${sc.properties.get<String>("deps.junit")}")

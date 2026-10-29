@@ -16,18 +16,12 @@ import net.ornithemc.osl.resource.loader.api.resource.manager.ResourceManager
 import org.polyfrost.oneconfig.internal.legacy.PlayerSkin
 import javax.imageio.ImageIO
 *///?}
-import org.jetbrains.skia.ColorAlphaType
-import org.jetbrains.skia.ColorInfo
-import org.jetbrains.skia.ColorSpace
-import org.jetbrains.skia.ColorType
-import org.jetbrains.skia.Image
-import org.jetbrains.skia.ImageInfo
-import org.jetbrains.skia.Paint
-import org.jetbrains.skia.Rect
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
+import org.polyfrost.compose.render.FilterQuality
+import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.internal.ui.PlayerHeadTextureAccess
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
@@ -52,7 +46,7 @@ class PlayerHeadHud : Hud(
         get() = _staticH.value
         set(v) { _staticH.value = v.coerceAtLeast(MIN_SIDE) }
 
-    private var headImage = mutableStateOf<Image?>(null)
+    private var headImage = mutableStateOf<PolyBitmap?>(null)
 
     init {
         showBackground = false
@@ -93,13 +87,11 @@ class PlayerHeadHud : Hud(
                 val side = min(w, h)
                 val left = x + (w - side) / 2f
                 val top = y + (h - side) / 2f
-                canvas.drawImageRect(head, Rect.makeXYWH(left, top, side, side), HEAD_PAINT)
+                image(head, left, top, side, side, FilterQuality.None)
             }
         }
     }
 }
-
-private val HEAD_PAINT = Paint()
 
 //? if = 1.8.9 {
 /*private object DefaultPlayerSkin {
@@ -117,14 +109,13 @@ private object PlayerHeadTexture {
     private const val HAT_V = 8
 
     private var cachedTexture: Any? = null
-    private var image: Image? = null
+    private var image: PolyBitmap? = null
 
-    fun current(): Image? {
+    fun current(): PolyBitmap? {
         val skin = mc.player?.skin ?: DefaultPlayerSkin.get(FALLBACK_UUID)
         val texture = texturePath(skin)
         if (texture == cachedTexture) return image
 
-        image?.close()
         image = build(skin) ?: build(DefaultPlayerSkin.get(FALLBACK_UUID))
         cachedTexture = texture
         return image
@@ -137,7 +128,7 @@ private object PlayerHeadTexture {
         //return skin.texture
     }
 
-    private fun build(skin: PlayerSkin): Image? = runCatching {
+    private fun build(skin: PlayerSkin): PolyBitmap? = runCatching {
         //? if >= 1.21.10 || = 1.8.9
         val texture = skin.body().texturePath()
         //? if < 1.21.10 && > 1.8.9
@@ -156,7 +147,7 @@ private object PlayerHeadTexture {
         pixels?.let { headImage(it) }
     }.getOrNull()
 
-    private fun headImage(skin: NativeImage): Image {
+    private fun headImage(skin: NativeImage): PolyBitmap {
         val hasHat = skin.width >= HAT_U + FACE && skin.height >= HAT_V + FACE
         val bytes = ByteArray(FACE * FACE * 4)
 
@@ -173,11 +164,7 @@ private object PlayerHeadTexture {
             }
         }
 
-        return Image.makeRaster(
-            ImageInfo(ColorInfo(ColorType.RGBA_8888, ColorAlphaType.UNPREMUL, ColorSpace.sRGB), FACE, FACE),
-            bytes,
-            FACE * 4,
-        )
+        return PolyBitmap(FACE, FACE, bytes)
     }
 
     private fun pixel(image: NativeImage, x: Int, y: Int): Int {

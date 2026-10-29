@@ -1,28 +1,25 @@
 package org.polyfrost.evergreenhud.client.hud.media
 
 import androidx.compose.runtime.Composable
-import org.jetbrains.skia.BlendMode
-import org.jetbrains.skia.FilterMipmap
-import org.jetbrains.skia.FilterTileMode
-import org.jetbrains.skia.Font
-import org.jetbrains.skia.FilterMode
-import org.jetbrains.skia.Image
-import org.jetbrains.skia.ImageFilter
-import org.jetbrains.skia.MipmapMode
-import org.jetbrains.skia.Paint
-import org.jetbrains.skia.PaintMode
-import org.jetbrains.skia.PaintStrokeCap
-import org.jetbrains.skia.PaintStrokeJoin
-import org.jetbrains.skia.PathBuilder
-import org.jetbrains.skia.RRect
-import org.jetbrains.skia.Rect
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.mc.McFontQueue
-import org.polyfrost.compose.render.FontManager
+import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.compose.render.PolyFont
+import org.polyfrost.compose.render.PolyPath
+import org.polyfrost.compose.render.PolyRenderer
 import org.polyfrost.compose.render.RenderContext
+import org.polyfrost.evergreenhud.client.hud.shape.oval
+import org.polyfrost.evergreenhud.client.utils.capHeight
+import org.polyfrost.evergreenhud.client.utils.fillShape
+import java.awt.BasicStroke
+import java.awt.Shape
+import java.awt.geom.Area
+import java.awt.geom.Ellipse2D
+import java.awt.geom.Path2D
+import java.awt.geom.RoundRectangle2D
 import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.roundToInt
@@ -52,7 +49,7 @@ data class MediaCardState(
     val canPrevious: Boolean,
     val canNext: Boolean,
     val canToggle: Boolean,
-    val art: Image?,
+    val art: PolyBitmap?,
     val artAccent: Int?,
 )
 
@@ -82,10 +79,20 @@ data class MediaCardBackdrop(
     val bounds: Rect,
     val radius: Float,
     val color: PolyColor?,
-    val art: Image?,
+    val art: PolyBitmap?,
     val artBlur: Float,
     val artAlpha: Float,
 )
+
+data class Rect(val left: Float, val top: Float, val right: Float, val bottom: Float) {
+    val width: Float get() = right - left
+    val height: Float get() = bottom - top
+
+    companion object {
+        fun makeXYWH(x: Float, y: Float, w: Float, h: Float) = Rect(x, y, x + w, y + h)
+        fun makeWH(w: Float, h: Float) = Rect(0f, 0f, w, h)
+    }
+}
 
 object MediaCardLayout {
     const val INSET = 6f
@@ -155,11 +162,8 @@ private const val ICON_STROKE = 1f
 private const val ICON_INSET = ICON_STROKE / 2f
 private const val ICON_TIP_INSET = 0.8f
 val PLAY_GLYPH = PolyColor(0xFF101014.toInt())
-private val ART_SAMPLING = FilterMipmap(FilterMode.LINEAR, MipmapMode.NONE)
-private val layerPaint = Paint()
-private val backdropPaint = Paint()
-private var blurFilter: ImageFilter? = null
-private var blurSigma = -1f
+private var blurredArt: PolyBitmap? = null
+private var blurredKey: Triple<PolyBitmap, Rect, Int>? = null
 
 @Composable
 fun MediaCard(
@@ -181,7 +185,6 @@ fun MediaCard(
         save()
         translate(x, y)
         scale(unit, unit)
-        paint.isAntiAlias = true
 
         val popping = pop < 1f
         if (popping) beginPop(pop, backdrop?.bounds ?: Rect.makeWH(width, height))
@@ -204,7 +207,7 @@ fun MediaCard(
         restore()
         if (style.seekPosition != SEEK_HIDDEN) drawProgress(state, width, MediaCardLayout.progressTop(style.seekPosition), style, fontName, shadow)
 
-        if (popping) canvas.restore()
+        if (popping) restore()
         restore()
     }
 }
@@ -212,41 +215,81 @@ fun MediaCard(
 private fun RenderContext.beginPop(progress: Float, bounds: Rect) {
     val inverse = 1f - progress.coerceIn(0f, 1f)
     val eased = 1f - inverse * inverse * inverse
-    layerPaint.alpha = (eased * 255f).roundToInt()
-    canvas.saveLayer(bounds, layerPaint)
+    saveLayerAlpha(eased)
     val s = POP_FROM_SCALE + (1f - POP_FROM_SCALE) * eased
-    canvas.translate(bounds.left + bounds.width / 2f, bounds.top + bounds.height / 2f)
-    canvas.scale(s, s)
-    canvas.translate(-(bounds.left + bounds.width / 2f), -(bounds.top + bounds.height / 2f))
+    translate(bounds.left + bounds.width / 2f, bounds.top + bounds.height / 2f)
+    scale(s, s)
+    translate(-(bounds.left + bounds.width / 2f), -(bounds.top + bounds.height / 2f))
 }
 
 private fun RenderContext.drawBackdrop(backdrop: MediaCardBackdrop) {
     val bounds = backdrop.bounds
     val art = backdrop.art
     if (art != null && backdrop.artAlpha > 0f) {
-        canvas.save()
-        canvas.clipRRect(RRect.makeLTRB(bounds.left, bounds.top, bounds.right, bounds.bottom, backdrop.radius), true)
+        save()
+        clipRRect(bounds.left, bounds.top, bounds.width, bounds.height, backdrop.radius)
         val bleed = backdrop.artBlur * 3f
-        val target = Rect.makeLTRB(bounds.left - bleed, bounds.top - bleed, bounds.right + bleed, bounds.bottom + bleed)
-        backdropPaint.alpha = (backdrop.artAlpha * 255f).roundToInt()
-        backdropPaint.imageFilter = blur(backdrop.artBlur)
-        canvas.drawImageRect(art, coverCrop(art, target.width / target.height), target, ART_SAMPLING, backdropPaint, true)
-        canvas.restore()
+        val target = Rect(bounds.left - bleed, bounds.top - bleed, bounds.right + bleed, bounds.bottom + bleed)
+        val crop = coverCrop(art, target.width / target.height)
+        val tint = PolyColor.WHITE.withAlpha((backdrop.artAlpha * 255f).roundToInt())
+        image(blurred(art, crop, backdrop.artBlur * crop.width / target.width), target.left, target.top, target.width, target.height, 0f, 0f, 1f, 1f, tint)
+        restore()
     }
     backdrop.color?.let { rect(bounds.left, bounds.top, bounds.width, bounds.height, it, backdrop.radius) }
 }
 
-private fun blur(sigma: Float): ImageFilter? {
-    if (sigma <= 0f) return null
-    if (sigma != blurSigma) {
-        blurFilter?.close()
-        blurFilter = ImageFilter.makeBlur(sigma, sigma, FilterTileMode.CLAMP)
-        blurSigma = sigma
+private fun blurred(art: PolyBitmap, crop: Rect, sigma: Float): PolyBitmap {
+    val left = crop.left.roundToInt().coerceIn(0, art.width - 1)
+    val top = crop.top.roundToInt().coerceIn(0, art.height - 1)
+    val width = crop.width.roundToInt().coerceIn(1, art.width - left)
+    val height = crop.height.roundToInt().coerceIn(1, art.height - top)
+    val key = Triple(art, Rect.makeXYWH(left.toFloat(), top.toFloat(), width.toFloat(), height.toFloat()), (sigma * 4f).roundToInt())
+    if (key == blurredKey) blurredArt?.let { return it }
+    val pixels = FloatArray(width * height * 4)
+    for (y in 0 until height) for (x in 0 until width) {
+        val src = ((top + y) * art.width + left + x) * 4
+        val dst = (y * width + x) * 4
+        val alpha = (art.pixels[src + 3].toInt() and 0xFF) / 255f
+        for (c in 0..2) pixels[dst + c] = (art.pixels[src + c].toInt() and 0xFF) * alpha
+        pixels[dst + 3] = alpha * 255f
     }
-    return blurFilter
+    if (key.third > 0) {
+        val radius = ((kotlin.math.sqrt(4f * sigma * sigma + 1f) - 1f) / 2f).roundToInt().coerceAtLeast(1)
+        val scratch = FloatArray(pixels.size)
+        repeat(3) {
+            boxBlur(pixels, scratch, width, height, radius, 4, width * 4)
+            boxBlur(scratch, pixels, height, width, radius, width * 4, 4)
+        }
+    }
+    val out = ByteArray(width * height * 4)
+    for (i in 0 until width * height) {
+        val alpha = pixels[i * 4 + 3]
+        if (alpha <= 0f) continue
+        for (c in 0..2) out[i * 4 + c] = (pixels[i * 4 + c] * 255f / alpha).roundToInt().coerceIn(0, 255).toByte()
+        out[i * 4 + 3] = alpha.roundToInt().coerceIn(0, 255).toByte()
+    }
+    return PolyBitmap(width, height, out).also {
+        blurredArt = it
+        blurredKey = key
+    }
 }
 
-private fun coverCrop(art: Image, aspect: Float): Rect {
+private fun boxBlur(src: FloatArray, dst: FloatArray, lines: Int, length: Int, radius: Int, lineStride: Int, step: Int) {
+    val window = radius * 2 + 1
+    for (line in 0 until lines) {
+        val base = line * lineStride
+        for (c in 0..3) {
+            var sum = 0f
+            for (i in -radius..radius) sum += src[base + i.coerceIn(0, length - 1) * step + c]
+            for (i in 0 until length) {
+                dst[base + i * step + c] = sum / window
+                sum += src[base + (i + radius + 1).coerceAtMost(length - 1) * step + c] - src[base + (i - radius).coerceAtLeast(0) * step + c]
+            }
+        }
+    }
+}
+
+private fun coverCrop(art: PolyBitmap, aspect: Float): Rect {
     val w = art.width.toFloat()
     val h = art.height.toFloat()
     return if (w / h > aspect) {
@@ -258,7 +301,7 @@ private fun coverCrop(art: Image, aspect: Float): Rect {
     }
 }
 
-private fun RenderContext.drawArt(art: Image?, text: PolyColor, radius: Float) {
+private fun RenderContext.drawArt(art: PolyBitmap?, text: PolyColor, radius: Float) {
     val size = MediaCardLayout.ART_SIZE
     save()
     clipRRect(0f, 0f, size, size, radius)
@@ -267,18 +310,15 @@ private fun RenderContext.drawArt(art: Image?, text: PolyColor, radius: Float) {
         drawNote(size / 2f, size / 2f, text.multiplyAlpha(0.5f))
     } else {
         val side = minOf(art.width, art.height).toFloat()
-        val src = Rect.makeXYWH((art.width - side) / 2f, (art.height - side) / 2f, side, side)
-        paint.color = 0xFFFFFFFF.toInt()
-        paint.mode = PaintMode.FILL
-        canvas.drawImageRect(art, src, Rect.makeWH(size, size), ART_SAMPLING, paint, true)
+        val u = (art.width - side) / 2f / art.width
+        val v = (art.height - side) / 2f / art.height
+        image(art, 0f, 0f, size, size, u, v, 1f - u, 1f - v, PolyColor.WHITE)
     }
     restore()
 }
 
 private fun RenderContext.drawNote(cx: Float, cy: Float, color: PolyColor) {
-    paint.color = color.argb
-    paint.mode = PaintMode.FILL
-    canvas.drawOval(Rect.makeXYWH(cx - 6f, cy + 3f, 6f, 4.6f), paint)
+    oval(cx - 6f, cy + 3f, 6f, 4.6f, color)
     rect(cx - 1.4f, cy - 8f, 1.6f, 12.4f, color, 0.8f)
     path(
         color, fill = true, stroke = 0f,
@@ -290,17 +330,16 @@ private fun RenderContext.drawNote(cx: Float, cy: Float, color: PolyColor) {
 }
 
 private class Label(size: Float, fontName: String?, private val shadow: Boolean = false) {
-    private val skia: Font? = fontName?.let { FontManager.getFont(size, it) }
+    private val poly: PolyFont? = fontName?.let { PolyFont(it, size) }
     private val mcScale = size / MC_LINE_HEIGHT
 
-    val capHeight: Float get() = skia?.metrics?.capHeight ?: (MC_CAP_HEIGHT * mcScale)
+    val capHeight: Float get() = poly?.capHeight ?: (MC_CAP_HEIGHT * mcScale)
 
-    fun width(text: String): Float = skia?.measureTextWidth(text) ?: McFontQueue.measureTextWidth(text, mcScale)
+    fun width(text: String): Float = poly?.measureTextWidth(text) ?: McFontQueue.measureTextWidth(text, mcScale)
 
     fun RenderContext.draw(text: String, x: Float, baseline: Float, color: PolyColor) {
-        if (skia != null) return text(text, x, baseline, color, skia)
-        val renderer = McFontQueue.renderer ?: return
-        renderer(canvas, text, x, baseline - MC_CAP_HEIGHT * mcScale, color.argb, shadow, mcScale)
+        if (poly != null) return text(text, x, baseline, color, poly)
+        mcText(text, x, baseline - MC_CAP_HEIGHT * mcScale, color.argb, shadow, mcScale)
     }
 }
 
@@ -333,7 +372,7 @@ private fun RenderContext.drawLabels(
         with(title) { draw(state.title, left, TITLE_BASELINE, text) }
     } else {
         save()
-        canvas.clipRect(Rect.makeLTRB(left, -MediaCardLayout.INSET, left + textWidth, ARTIST_BASELINE), true)
+        clipRect(left, -MediaCardLayout.INSET, textWidth, ARTIST_BASELINE + MediaCardLayout.INSET)
         if (bounce) {
             val overflow = titleWidth - textWidth
             val legMs = SCROLL_PAUSE_MS + (overflow / SCROLL_SPEED).toLong()
@@ -409,9 +448,7 @@ private fun RenderContext.drawProgress(
             if (style.seekStyle == SEEK_SQUARE) {
                 rect(barLeft + filled - KNOB_RADIUS, mid - KNOB_RADIUS, KNOB_RADIUS * 2f, KNOB_RADIUS * 2f, colors.accent)
             } else {
-                paint.color = colors.accent.argb
-                paint.mode = PaintMode.FILL
-                canvas.drawCircle(barLeft + filled, mid, KNOB_RADIUS, paint)
+                circle(barLeft + filled, mid, KNOB_RADIUS, colors.accent)
             }
         }
     }
@@ -427,33 +464,22 @@ private fun RenderContext.drawWave(
     track: PolyColor,
     accent: PolyColor,
 ) {
-    paint.mode = PaintMode.STROKE
-    paint.strokeWidth = WAVE_STROKE
-    paint.strokeCap = PaintStrokeCap.ROUND
-    if (filled < width) {
-        paint.color = track.argb
-        canvas.drawLine(left + filled, mid, left + width, mid, paint)
+    if (filled < width && track.alpha > 0) {
+        renderer.strokePolyline(floatArrayOf(left + filled, mid, left + width, mid), false, track.argb, WAVE_STROKE, PolyRenderer.CAP_ROUND, PolyRenderer.JOIN_ROUND)
     }
-    if (known && filled > 0f) {
+    if (known && filled > 0f && accent.alpha > 0) {
         val amplitude = if (state.playing) WAVE_AMPLITUDE else 0f
         val phase = state.positionMs / WAVE_PERIOD_MS * 2f * PI.toFloat()
-        PathBuilder().use { builder ->
-            var dx = 0f
-            while (true) {
-                val px = left + dx
-                val py = mid + amplitude * sin(dx / WAVE_LENGTH * 2f * PI.toFloat() - phase)
-                if (dx == 0f) builder.moveTo(px, py) else builder.lineTo(px, py)
-                if (dx >= filled) break
-                dx = (dx + WAVE_STEP).coerceAtMost(filled)
-            }
-            builder.detach().use { path ->
-                paint.color = accent.argb
-                canvas.drawPath(path, paint)
-            }
+        val points = ArrayList<Float>()
+        var dx = 0f
+        while (true) {
+            points.add(left + dx)
+            points.add(mid + amplitude * sin(dx / WAVE_LENGTH * 2f * PI.toFloat() - phase))
+            if (dx >= filled) break
+            dx = (dx + WAVE_STEP).coerceAtMost(filled)
         }
+        renderer.strokePolyline(points.toFloatArray(), false, accent.argb, WAVE_STROKE, PolyRenderer.CAP_ROUND, PolyRenderer.JOIN_ROUND)
     }
-    paint.strokeCap = PaintStrokeCap.BUTT
-    paint.mode = PaintMode.FILL
     if (!known) return
     val knobHeight = MediaCardLayout.PROGRESS_HEIGHT
     rect(left + filled - WAVE_STROKE / 2f, mid - knobHeight / 2f, WAVE_STROKE, knobHeight, accent, WAVE_STROKE / 2f)
@@ -476,15 +502,23 @@ private fun RenderContext.drawButton(
         val accent = colors.accent
         val glyph = if (cutout) PLAY_GLYPH else colors.glyph.multiplyAlpha(fade)
         val fill = (if (hovered && enabled) accent.lighten(0.18f) else accent).multiplyAlpha(fade)
-        if (cutout) canvas.saveLayer(Rect.makeLTRB(cx - radius - 1f, cy - radius - 1f, cx + radius + 1f, cy + radius + 1f), null)
+        if (cutout) {
+            val body: Shape = if (material) {
+                val corner = (if (playing) MATERIAL_PLAYING_RADIUS else radius) * 2f
+                RoundRectangle2D.Float(cx - radius, cy - radius, 2f * radius, 2f * radius, corner, corner)
+            } else {
+                Ellipse2D.Float(cx - radius, cy - radius, 2f * radius, 2f * radius)
+            }
+            val area = Area(body)
+            area.subtract(toggleGlyph(cx, cy, playing, material))
+            if (fill.alpha > 0) fillShape(area, fill)
+            return
+        }
         if (material) {
             rect(cx - radius, cy - radius, 2f * radius, 2f * radius, fill, if (playing) MATERIAL_PLAYING_RADIUS else radius)
         } else {
-            paint.color = fill.argb
-            paint.mode = PaintMode.FILL
-            canvas.drawCircle(cx, cy, radius, paint)
+            circle(cx, cy, radius, fill)
         }
-        if (cutout) paint.blendMode = BlendMode.DST_OUT
         if (material) {
             val u = MATERIAL_TOGGLE_ICON
             if (playing) {
@@ -509,10 +543,6 @@ private fun RenderContext.drawButton(
                 cx + 3.8f, cy,
             )
         }
-        if (cutout) {
-            paint.blendMode = BlendMode.SRC_OVER
-            canvas.restore()
-        }
         return
     }
 
@@ -522,9 +552,7 @@ private fun RenderContext.drawButton(
         val skip = MATERIAL_SKIP_RADIUS
         rect(cx - skip, cy - skip, 2f * skip, 2f * skip, tonal, skip)
     } else if (hovered && enabled) {
-        paint.color = controls.multiplyAlpha(HOVER_ALPHA).argb
-        paint.mode = PaintMode.FILL
-        canvas.drawCircle(cx, cy, radius, paint)
+        circle(cx, cy, radius, controls.multiplyAlpha(HOVER_ALPHA))
     }
     val color = controls.multiplyAlpha(fade)
     val dir = if (button == BUTTON_PREVIOUS) -1f else 1f
@@ -549,26 +577,52 @@ private fun RenderContext.drawButton(
 }
 
 private fun RenderContext.path(color: PolyColor, fill: Boolean, stroke: Float, vararg points: Float) {
-    PathBuilder().use { builder ->
+    if (color.alpha == 0) return
+    if (fill) {
+        val path = PolyPath()
         for (i in points.indices step 2) {
-            if (i == 0) builder.moveTo(points[i], points[i + 1]) else builder.lineTo(points[i], points[i + 1])
+            if (i == 0) path.moveTo(points[i], points[i + 1]) else path.lineTo(points[i], points[i + 1])
         }
-        builder.closePath()
-        builder.detach().use { path ->
-            paint.color = color.argb
-            if (fill) {
-                paint.mode = PaintMode.FILL
-                canvas.drawPath(path, paint)
-            }
-            if (stroke > 0f) {
-                paint.mode = PaintMode.STROKE
-                paint.strokeWidth = stroke
-                paint.strokeJoin = PaintStrokeJoin.ROUND
-                canvas.drawPath(path, paint)
-                paint.mode = PaintMode.FILL
-            }
-        }
+        path.close()
+        fillPath(path, color)
     }
+    if (stroke > 0f) renderer.strokePolyline(points, true, color.argb, stroke, PolyRenderer.CAP_BUTT, PolyRenderer.JOIN_ROUND)
+}
+
+private fun RenderContext.circle(cx: Float, cy: Float, radius: Float, color: PolyColor) =
+    rect(cx - radius, cy - radius, radius * 2f, radius * 2f, color, radius)
+
+private fun toggleGlyph(cx: Float, cy: Float, playing: Boolean, material: Boolean): Area {
+    val glyph = Area()
+    if (playing) {
+        val u = if (material) MATERIAL_TOGGLE_ICON else 1f
+        val bars = if (material) {
+            floatArrayOf(cx - 6f * u, cy - 7f * u, 4f * u, 14f * u, cx + 2f * u, cy - 7f * u, 4f * u, 14f * u)
+        } else {
+            floatArrayOf(cx - 3.4f, cy - 4f, 2.6f, 8f, cx + 0.8f, cy - 4f, 2.6f, 8f)
+        }
+        val corner = 2f * u
+        for (i in bars.indices step 4) glyph.add(Area(RoundRectangle2D.Float(bars[i], bars[i + 1], bars[i + 2], bars[i + 3], corner, corner)))
+        return glyph
+    }
+    val u = MATERIAL_TOGGLE_ICON
+    val points = if (material) {
+        floatArrayOf(
+            cx - 4f * u + ICON_INSET, cy - 7f * u + ICON_INSET,
+            cx - 4f * u + ICON_INSET, cy + 7f * u - ICON_INSET,
+            cx + 7f * u - ICON_TIP_INSET, cy,
+        )
+    } else {
+        floatArrayOf(cx - 2.6f, cy - 3.6f, cx - 2.6f, cy + 3.6f, cx + 3.8f, cy)
+    }
+    val triangle = Path2D.Float()
+    triangle.moveTo(points[0], points[1])
+    for (i in 2 until points.size step 2) triangle.lineTo(points[i], points[i + 1])
+    triangle.closePath()
+    glyph.add(Area(triangle))
+    val stroke = if (material) ICON_STROKE else 1.2f
+    glyph.add(Area(BasicStroke(stroke, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND).createStrokedShape(triangle)))
+    return glyph
 }
 
 fun formatTime(ms: Long): String {

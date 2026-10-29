@@ -4,8 +4,8 @@ import androidx.compose.runtime.Composable
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
-import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.RenderContext
 import java.lang.Math.PI
 import kotlin.math.abs
@@ -152,7 +152,7 @@ private fun RenderContext.numbers(
     color: PolyColor,
     fontName: String?,
 ) {
-    val font = if (fontName != null) FontManager.getFont(radius * 0.2f, fontName) else FontManager.getFont(radius * 0.2f)
+    val font = if (fontName != null) PolyFont(fontName, radius * 0.2f) else PolyFont.default(radius * 0.2f)
     val metrics = font.metrics
     val inset = radius * if (marks) 0.32f else 0.2f
 

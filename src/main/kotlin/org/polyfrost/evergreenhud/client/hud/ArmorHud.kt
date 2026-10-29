@@ -22,7 +22,7 @@ import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.mc.McFontQueue
-import org.polyfrost.compose.render.FontManager
+import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hud.item.HOTBAR_ITEM_INSET
 import org.polyfrost.evergreenhud.client.hud.item.HOTBAR_SLOT
@@ -434,13 +434,13 @@ class ArmorHud : Hud(
     private fun textWidth(text: String, scale: Float): Float = if (font == Font.Minecraft) {
         McFontQueue.measureTextWidth(applyCase(text), scale)
     } else {
-        FontManager.getFont(FONT_SIZE * scale, getPoppinsFontName()).measureTextWidth(applyCase(text))
+        PolyFont(getPoppinsFontName(), FONT_SIZE * scale).measureTextWidth(applyCase(text))
     }
 
     private fun textHeight(scale: Float): Float = if (font == Font.Minecraft) {
         McFontQueue.measureTextHeight(scale)
     } else {
-        FontManager.getFont(FONT_SIZE * scale, getPoppinsFontName()).metrics.let { it.descent - it.ascent }
+        PolyFont(getPoppinsFontName(), FONT_SIZE * scale).metrics.let { it.descent - it.ascent }
     }
 
     @Composable

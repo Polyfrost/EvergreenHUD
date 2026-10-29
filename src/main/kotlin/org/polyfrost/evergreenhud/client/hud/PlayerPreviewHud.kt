@@ -140,8 +140,8 @@ class PlayerPreviewHud : Hud(
     @Composable
     override fun Content() {
         PolyBox(modifier = hudBackground().size(staticW, staticH)) {
-            PolyCanvas(PolyModifier.size(staticW, staticH)) { _, _, w, h ->
-                PlayerPreviewOffscreen.drawInto(this@PlayerPreviewHud, canvas, w, h)
+            PolyCanvas(PolyModifier.size(staticW, staticH), live = true) { _, _, w, h ->
+                PlayerPreviewOffscreen.drawInto(this@PlayerPreviewHud, this, w, h)
             }
         }
     }
