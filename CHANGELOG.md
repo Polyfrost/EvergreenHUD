@@ -1,4 +1,5 @@
-## 3.9.12
-- Media Player HUD is now shown by default, below the vanilla potion effect.
-- Add "Album Art Average" accent source to the Media Player HUD.
-- Potion Effects HUD now shows effects even when the server hides their icon.
+## 3.9.13
+- add media hud seek bar, color, backdrop, visibility and button options
+- apply text case option to all text huds
+- add cutout play icon and fixed-width time to media hud
+- update to oneconfig 1.6.0
