@@ -112,6 +112,7 @@ private val SECTION_GRID = arrayOf(
 )
 
 private const val PER_OPTION_OVERRIDES = 1
+private const val RANGE_LISTS = 2
 
 class PotionEffectsHud : Hud(
     id = "potion_effects.json",
@@ -361,12 +362,14 @@ class PotionEffectsHud : Hud(
                 }
             }
 
+            if (overrideOptionsVersion < RANGE_LISTS) migrateRangeLists()
             migrateLegacyEffectKeys()
 
             if (overrideOptionsVersion < PER_OPTION_OVERRIDES) {
                 migrateLegacyOverrides(scopes)
-                overrideOptionsVersion = PER_OPTION_OVERRIDES
             }
+            overrideOptionsVersion = RANGE_LISTS
+            getProperty("overrideOptionsVersion").removeMetadata("default")
 
             val scoped = scopes.flatMap(::setupOverrideScope)
 
@@ -449,9 +452,17 @@ class PotionEffectsHud : Hud(
             val old = tree.get(legacy) as? Tree ?: continue
             val target = tree.get(path) as? Tree
             val settings = effectScopes.byPath[path]
-            if (target != null && settings != null && settings.isDefault()) target.overwrite(old, false, false, null)
+            if (target != null && settings != null && settings.isDefault()) {
+                target.overwrite(old, false, false, null)
+                settings.normalizeLegacyRanges()
+            }
             stripProperty(tree, legacy)
         }
+    }
+
+    private fun migrateRangeLists() {
+        val all = categoryScopes.scopeDefs.map { it.settings } + effectScopes.byPath.values
+        for (settings in all) settings.normalizeLegacyRanges()
     }
 
     private fun migrateLegacyOverrides(scopes: List<OverrideScope>) {
@@ -620,11 +631,13 @@ class PotionEffectsHud : Hud(
         if (!values.permanentEffects[0] && effect.isInfiniteDuration) return false
         if (!values.permanentEffects[1] && !effect.isInfiniteDuration) return false
 
-        val min = values.durationRange[0]
-        val max = values.durationRange[1]
-        if (min != 0f || max != 0f) {
-            if (!effect.isInfiniteDuration && effect.duration / 20f !in min..max) return false
-        }
+        if (!effect.isInfiniteDuration && !values.durationRange.allowsInRanges(effect.duration / 20f)) return false
+
+        //? if > 1.8.9 {
+        val amplifier = effect.amplifier
+        //?} else
+        //val amplifier = effect.amplifier and 0xFF
+        if (!values.amplifierRange.allowsInRanges(amplifier.toFloat())) return false
 
         //? if > 1.8.9 {
         val category = effect.effect.value().category
