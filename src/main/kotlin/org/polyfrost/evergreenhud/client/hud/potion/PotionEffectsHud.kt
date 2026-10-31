@@ -26,14 +26,9 @@ import net.minecraft.entity.living.effect.StatusEffectInstance as MobEffectInsta
 import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
 import net.ornithemc.osl.resource.loader.api.client.ClientResourceLoaderEvents
 import net.ornithemc.osl.resource.loader.api.resource.manager.ResourceManager
-import org.jetbrains.skia.Bitmap
 import java.util.function.BiConsumer
 import kotlin.math.roundToInt
 *///?}
-import org.jetbrains.skia.Image
-import org.jetbrains.skia.Paint
-import org.jetbrains.skia.Rect
-import org.jetbrains.skia.SamplingMode
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyColumn
@@ -47,10 +42,13 @@ import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.composables.width
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.mc.McFontQueue.measureWidth
+import org.polyfrost.compose.render.FilterQuality
 import org.polyfrost.compose.render.ImageLoader
+import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.runtime.PolyComposeClock
 import org.polyfrost.compose.runtime.PolyComposeRuntime
+import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
 import org.polyfrost.oneconfig.api.config.v1.Node
 import org.polyfrost.oneconfig.api.config.v1.Property
@@ -70,6 +68,7 @@ import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.hud.v1.HudAnchor
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.hud.v1.Section
+import org.polyfrost.oneconfig.api.platform.v1.Platform
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import org.polyfrost.oneconfig.utils.v1.MHUtils.setAccessible
 import org.slf4j.LoggerFactory
@@ -169,11 +168,9 @@ class PotionEffectsHud : Hud(
         private val PROPERTY_CONDITIONS = Property::class.java.getDeclaredField("conditions").apply { setAccessible() }
         private val PROPERTY_CALLBACKS = Property::class.java.getDeclaredField("callbacks").apply { setAccessible() }
 
-        private val iconPaint = Paint()
-
         private val measureClock = PolyComposeClock()
         //~ if = 1.8.9 'ResourceLocation' -> 'Int'
-        private val iconCache = HashMap<ResourceLocation, Image?>()
+        private val iconCache = HashMap<ResourceLocation, PolyBitmap?>()
 
         init {
             //? if > 1.8.9 {
@@ -193,7 +190,7 @@ class PotionEffectsHud : Hud(
         }
 
         //? if > 1.8.9 {
-        fun iconFor(id: ResourceLocation): Image? {
+        fun iconFor(id: ResourceLocation): PolyBitmap? {
             if (iconCache.containsKey(id)) return iconCache[id]
             val path = ResourceLocation.fromNamespaceAndPath(id.namespace, "textures/mob_effect/${id.path}.png")
             val icon = try {
@@ -216,23 +213,22 @@ class PotionEffectsHud : Hud(
                 LOGGER.warn("Failed to read the potion effect icon atlas {}", path)
                 return
             }
-            atlas.use {
-                val scale = atlas.width / 256f
-                val size = (ICON * scale).roundToInt()
-                Bitmap().use { bitmap ->
-                    bitmap.allocN32Pixels(size, size)
-                    for (effect in StatusEffect.BY_ID) {
-                        if (effect == null || !effect.hasIcon()) continue
-                        val x = ((effect.iconIndex % 8 * ICON) * scale).roundToInt()
-                        val y = ((198 + effect.iconIndex / 8 * ICON) * scale).roundToInt()
-                        bitmap.erase(0)
-                        if (atlas.readPixels(bitmap, x, y)) iconCache[effect.id] = Image.makeFromBitmap(bitmap)
-                    }
-                }
+            val scale = atlas.width / 256f
+            val size = (ICON * scale).roundToInt()
+            for (effect in StatusEffect.BY_ID) {
+                if (effect == null || !effect.hasIcon()) continue
+                val x = ((effect.iconIndex % 8 * ICON) * scale).roundToInt()
+                val y = ((198 + effect.iconIndex / 8 * ICON) * scale).roundToInt()
+                val w = minOf(size, atlas.width - x)
+                val h = minOf(size, atlas.height - y)
+                if (size <= 0 || w <= 0 || h <= 0) continue
+                val pixels = ByteArray(size * size * 4)
+                for (row in 0 until h) System.arraycopy(atlas.pixels, ((y + row) * atlas.width + x) * 4, pixels, row * size * 4, w * 4)
+                iconCache[effect.id] = PolyBitmap(size, size, pixels)
             }
         }
 
-        fun iconFor(effect: StatusEffect): Image? {
+        fun iconFor(effect: StatusEffect): PolyBitmap? {
             if (!iconsLoaded) {
                 iconsLoaded = true
                 try {
@@ -271,7 +267,7 @@ class PotionEffectsHud : Hud(
     private class Example(val id: String, val ticks: Int, val amplifier: Int, val ambient: Boolean = false)
 
     private data class Row(
-        val icon: Image?,
+        val icon: PolyBitmap?,
         val name: String?,
         val duration: String?,
         val blinking: Boolean,
@@ -1037,18 +1033,19 @@ class PotionEffectsHud : Hud(
     }
 
     @Composable
-    private fun Icon(icon: Image, size: Float, alpha: Float, modifier: PolyModifier = PolyModifier) {
-        val src = remember(icon) { Rect.makeWH(icon.width.toFloat(), icon.height.toFloat()) }
+    private fun Icon(icon: PolyBitmap, size: Float, alpha: Float, modifier: PolyModifier = PolyModifier) {
         PolyCanvas(modifier.size(size, size)) { x, y, w, h ->
-            iconPaint.alpha = (255f * alpha).toInt().coerceIn(0, 255)
-            val downscaled = w * canvas.localToDeviceAsMatrix33.mat[0] < src.right
-            val sampling = if (downscaled) SamplingMode.LINEAR else SamplingMode.DEFAULT
-            canvas.drawImageRect(icon, src, Rect.makeXYWH(x, y, w, h), sampling, iconPaint, true)
+            val tint = PolyColor.WHITE.withAlpha((255f * alpha).toInt().coerceIn(0, 255))
+            val pixelsPerUnit = Platform.screen().let { if (it.guiWidth() > 0) it.viewportWidth().toFloat() / it.guiWidth() else 1f }
+            val downscaled = w * pixelsPerUnit * (if (isReal) effectiveScale else 1f) < icon.width
+            val sampling = if (downscaled) FilterQuality.Low else FilterQuality.None
+            image(icon, x, y, w, h, 0f, 0f, 1f, 1f, tint, sampling)
         }
     }
 
     @Composable
-    private fun Line(text: String, scale: Float, fade: Float, color: PolyColor, modifier: PolyModifier = PolyModifier) {
+    private fun Line(raw: String, scale: Float, fade: Float, color: PolyColor, modifier: PolyModifier = PolyModifier) {
+        val text = applyCase(raw)
         if (font == Font.Minecraft) {
             PolyMcText(text, color, shadow = showShadow, scale = scale, modifier = modifier)
         } else {

@@ -1,16 +1,16 @@
 package org.polyfrost.evergreenhud.client.hud.battery
 
 import androidx.compose.runtime.Composable
-import org.jetbrains.skia.BlendMode
-import org.jetbrains.skia.Paint
-import org.jetbrains.skia.PaintMode
-import org.jetbrains.skia.PaintStrokeJoin
-import org.jetbrains.skia.PathBuilder
-import org.jetbrains.skia.RRect
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.utils.fillShape
+import java.awt.BasicStroke
+import java.awt.Shape
+import java.awt.geom.Area
+import java.awt.geom.Path2D
+import java.awt.geom.RoundRectangle2D
 
 const val CELL_WIDTH = 24f
 const val CELL_HEIGHT = 11f
@@ -51,14 +51,9 @@ fun BatteryCell(
         save()
         translate(x, y)
         scale(unit, unit)
-        canvas.saveLayer(null, null)
-
-        paint.mode = PaintMode.FILL
-        paint.color = outline.argb
-        canvas.drawDRRect(
-            RRect.makeXYWH(0f, 0f, BODY_WIDTH, CELL_HEIGHT, BODY_RADIUS),
-            RRect.makeXYWH(RING, RING, BODY_WIDTH - RING * 2, CELL_HEIGHT - RING * 2, BODY_RADIUS - RING),
-            paint,
+        rectStroke(
+            RING / 2f, RING / 2f, BODY_WIDTH - RING, CELL_HEIGHT - RING,
+            outline, RING, BODY_RADIUS - RING / 2f,
         )
         rect(
             BODY_WIDTH + NUB_GAP, (CELL_HEIGHT - NUB_HEIGHT) / 2f,
@@ -66,38 +61,37 @@ fun BatteryCell(
             outline, NUB_WIDTH / 2f,
         )
 
+        val boltShape = if (bolt != null) boltShape() else null
         val track = BODY_WIDTH - FILL_INSET * 2
         if (percent > 0) {
             val width = (track * percent / 100f).coerceIn(MIN_FILL, track)
-            rect(FILL_INSET, FILL_INSET, width, CELL_HEIGHT - FILL_INSET * 2, fill, FILL_RADIUS)
-        }
-
-        if (bolt != null) {
-            val left = (BODY_WIDTH - BOLT_WIDTH) / 2f
-            val top = (CELL_HEIGHT - BOLT_HEIGHT) / 2f
-            PathBuilder().use { builder ->
-                for (i in BOLT.indices step 2) {
-                    val x = left + BOLT[i] * BOLT_WIDTH
-                    val y = top + BOLT[i + 1] * BOLT_HEIGHT
-                    if (i == 0) builder.moveTo(x, y) else builder.lineTo(x, y)
-                }
-                builder.closePath()
-                builder.detach().use { path ->
-                    Paint().use { cutout ->
-                        cutout.isAntiAlias = true
-                        cutout.blendMode = BlendMode.CLEAR
-                        cutout.mode = PaintMode.STROKE
-                        cutout.strokeWidth = BOLT_CUTOUT
-                        cutout.strokeJoin = PaintStrokeJoin.ROUND
-                        canvas.drawPath(path, cutout)
-                    }
-                    paint.color = bolt.argb
-                    canvas.drawPath(path, paint)
-                }
+            if (boltShape == null) {
+                rect(FILL_INSET, FILL_INSET, width, CELL_HEIGHT - FILL_INSET * 2, fill, FILL_RADIUS)
+            } else {
+                val area = Area(
+                    RoundRectangle2D.Float(FILL_INSET, FILL_INSET, width, CELL_HEIGHT - FILL_INSET * 2, FILL_RADIUS * 2, FILL_RADIUS * 2),
+                )
+                area.subtract(Area(BasicStroke(BOLT_CUTOUT, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND).createStrokedShape(boltShape)))
+                area.subtract(Area(boltShape))
+                fillShape(area, fill)
             }
         }
 
-        canvas.restore()
+        if (bolt != null && boltShape != null) fillShape(boltShape, bolt)
+
         restore()
     }
+}
+
+private fun boltShape(): Shape {
+    val left = (BODY_WIDTH - BOLT_WIDTH) / 2f
+    val top = (CELL_HEIGHT - BOLT_HEIGHT) / 2f
+    val path = Path2D.Float()
+    for (i in BOLT.indices step 2) {
+        val x = left + BOLT[i] * BOLT_WIDTH
+        val y = top + BOLT[i + 1] * BOLT_HEIGHT
+        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+    }
+    path.closePath()
+    return path
 }

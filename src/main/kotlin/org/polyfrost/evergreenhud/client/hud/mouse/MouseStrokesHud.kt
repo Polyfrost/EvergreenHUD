@@ -6,16 +6,13 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameMillis
-import org.jetbrains.skia.PaintMode
-import org.jetbrains.skia.PaintStrokeCap
-import org.jetbrains.skia.PaintStrokeJoin
-import org.jetbrains.skia.PathBuilder
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.clip
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.compose.render.PolyRenderer
 import org.polyfrost.compose.render.RenderContext
 import org.polyfrost.evergreenhud.client.hud.shape.oval
 import org.polyfrost.evergreenhud.client.utils.Facing
@@ -306,46 +303,44 @@ class MouseStrokesHud : Hud(
             return
         }
 
-        paint.mode = PaintMode.STROKE
-        paint.strokeWidth = width
-        paint.strokeCap = PaintStrokeCap.ROUND
-        paint.strokeJoin = PaintStrokeJoin.ROUND
+        val builder = ArrayList<Float>()
+        var start = 0
+        while (start < count - 1) {
+            val step = fadeStep(ages[start + 1])
+            var end = start + 1
+            while (end < count - 1 && fadeStep(ages[end + 1]) == step) end++
 
-        PathBuilder().use { builder ->
-            var start = 0
-            while (start < count - 1) {
-                val step = fadeStep(ages[start + 1])
-                var end = start + 1
-                while (end < count - 1 && fadeStep(ages[end + 1]) == step) end++
+            builder.clear()
+            builder.add(xs[start])
+            builder.add(ys[start])
+            for (i in start until end) builder.splineTo(xs, ys, i, count)
+            val segmentColor = color.withAlphaScaled((step + 1).toFloat() / FADE_STEPS)
+            renderer.strokePolyline(builder.toFloatArray(), false, segmentColor.argb, width, PolyRenderer.CAP_ROUND, PolyRenderer.JOIN_ROUND)
 
-                builder.reset()
-                builder.moveTo(xs[start], ys[start])
-                for (i in start until end) builder.splineTo(xs, ys, i, count)
-                builder.detach().use { path ->
-                    paint.color = color.withAlphaScaled((step + 1).toFloat() / FADE_STEPS).argb
-                    canvas.drawPath(path, paint)
-                }
-
-                start = end
-            }
+            start = end
         }
-
-        paint.mode = PaintMode.FILL
-        paint.strokeCap = PaintStrokeCap.BUTT
-        paint.strokeJoin = PaintStrokeJoin.MITER
     }
 
     private fun fadeStep(age: Float): Int =
         (age * FADE_STEPS).toInt().coerceIn(0, FADE_STEPS - 1)
 
-    private fun PathBuilder.splineTo(xs: FloatArray, ys: FloatArray, i: Int, count: Int) {
+    private fun MutableList<Float>.splineTo(xs: FloatArray, ys: FloatArray, i: Int, count: Int) {
         val previous = (i - 1).coerceAtLeast(0)
         val next = (i + 2).coerceAtMost(count - 1)
-        cubicTo(
-            xs[i] + (xs[i + 1] - xs[previous]) / 6f, ys[i] + (ys[i + 1] - ys[previous]) / 6f,
-            xs[i + 1] - (xs[next] - xs[i]) / 6f, ys[i + 1] - (ys[next] - ys[i]) / 6f,
-            xs[i + 1], ys[i + 1],
-        )
+        val x0 = xs[i]
+        val y0 = ys[i]
+        val x1 = xs[i] + (xs[i + 1] - xs[previous]) / 6f
+        val y1 = ys[i] + (ys[i + 1] - ys[previous]) / 6f
+        val x2 = xs[i + 1] - (xs[next] - xs[i]) / 6f
+        val y2 = ys[i + 1] - (ys[next] - ys[i]) / 6f
+        val x3 = xs[i + 1]
+        val y3 = ys[i + 1]
+        for (s in 1..SPLINE_SEGMENTS) {
+            val t = s.toFloat() / SPLINE_SEGMENTS
+            val u = 1f - t
+            add(u * u * u * x0 + 3f * u * u * t * x1 + 3f * u * t * t * x2 + t * t * t * x3)
+            add(u * u * u * y0 + 3f * u * u * t * y1 + 3f * u * t * t * y2 + t * t * t * y3)
+        }
     }
 
     private fun RenderContext.dot(centreX: Float, centreY: Float, radius: Float, color: PolyColor) {
@@ -360,6 +355,7 @@ class MouseStrokesHud : Hud(
     private data class TrailPoint(val x: Float, val y: Float, val timeMs: Long)
 
     companion object {
+        private const val SPLINE_SEGMENTS = 8
         private const val DOT = 0
         private const val SNAKE = 1
     }

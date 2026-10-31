@@ -14,6 +14,7 @@ import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.utils.Facing
+import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.utils.cameraYaw
 import org.polyfrost.evergreenhud.client.utils.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
@@ -160,7 +161,7 @@ class DirectionHud : Hud(
             if (abs(delta) > halfSpan) continue
 
             Label(
-                text = facing.abbreviated,
+                raw = facing.abbreviated,
                 color = fg.faded(delta, halfSpan, view.fadeEdges),
                 width = labelWidth,
                 height = ribbonHeight - tickStrip,
@@ -196,7 +197,8 @@ class DirectionHud : Hud(
     }
 
     @Composable
-    private fun Label(text: String, color: PolyColor, width: Float, height: Float, x: Float, y: Float) {
+    private fun Label(raw: String, color: PolyColor, width: Float, height: Float, x: Float, y: Float) {
+        val text = applyCase(raw)
         PolyBox(modifier = PolyModifier.size(width, height).absoluteAt(x, y)) {
             if (font == Font.Minecraft) {
                 PolyMcText(

@@ -1,16 +1,15 @@
 package org.polyfrost.evergreenhud.client.utils
 
-import org.jetbrains.skia.Canvas
-import org.jetbrains.skia.Rect
+import org.polyfrost.compose.render.RenderContext
 import kotlin.math.roundToInt
 
-fun snapToPixels(canvas: Canvas, x: Float, y: Float, w: Float, h: Float): Rect {
-    val m = canvas.localToDeviceAsMatrix33.mat
+fun snapToPixels(ctx: RenderContext, x: Float, y: Float, w: Float, h: Float): FloatArray {
+    val m = ctx.deviceTransform()
+    if (m == null || m[0] == 0f || m[1] == 0f) return floatArrayOf(x, y, x + w, y + h)
     val scaleX = m[0]
-    val scaleY = m[4]
-    if (m[1] != 0f || m[3] != 0f || scaleX == 0f || scaleY == 0f) return Rect.makeXYWH(x, y, w, h)
+    val scaleY = m[1]
     val transX = m[2]
-    val transY = m[5]
+    val transY = m[3]
 
     fun snap(start: Float, size: Float, scale: Float, trans: Float): Pair<Float, Float> {
         val from = (start * scale + trans).roundToInt()
@@ -22,5 +21,5 @@ fun snapToPixels(canvas: Canvas, x: Float, y: Float, w: Float, h: Float): Rect {
 
     val (left, right) = snap(x, w, scaleX, transX)
     val (top, bottom) = snap(y, h, scaleY, transY)
-    return Rect.makeLTRB(left, top, right, bottom)
+    return floatArrayOf(left, top, right, bottom)
 }

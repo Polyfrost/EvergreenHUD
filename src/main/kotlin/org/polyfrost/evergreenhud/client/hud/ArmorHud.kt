@@ -22,7 +22,7 @@ import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.mc.McFontQueue
-import org.polyfrost.compose.render.FontManager
+import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hud.item.HOTBAR_ITEM_INSET
 import org.polyfrost.evergreenhud.client.hud.item.HOTBAR_SLOT
@@ -32,6 +32,7 @@ import org.polyfrost.evergreenhud.client.hud.item.ItemIcon
 import org.polyfrost.evergreenhud.client.hud.item.VanillaTextures
 import org.polyfrost.evergreenhud.client.hud.item.hotbarStripLength
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
+import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
@@ -431,15 +432,15 @@ class ArmorHud : Hud(
     }
 
     private fun textWidth(text: String, scale: Float): Float = if (font == Font.Minecraft) {
-        McFontQueue.measureTextWidth(text, scale)
+        McFontQueue.measureTextWidth(applyCase(text), scale)
     } else {
-        FontManager.getFont(FONT_SIZE * scale, getPoppinsFontName()).measureTextWidth(text)
+        PolyFont(getPoppinsFontName(), FONT_SIZE * scale).measureTextWidth(applyCase(text))
     }
 
     private fun textHeight(scale: Float): Float = if (font == Font.Minecraft) {
         McFontQueue.measureTextHeight(scale)
     } else {
-        FontManager.getFont(FONT_SIZE * scale, getPoppinsFontName()).metrics.let { it.descent - it.ascent }
+        PolyFont(getPoppinsFontName(), FONT_SIZE * scale).metrics.let { it.descent - it.ascent }
     }
 
     @Composable
@@ -472,11 +473,12 @@ class ArmorHud : Hud(
     @Composable
     private fun Info(entry: Entry, scale: Float, modifier: PolyModifier = PolyModifier.align(PolyAlign.Center)) {
         val color = PolyColor(entry.textColor, textChroma, textChromaSpeed)
+        val text = applyCase(entry.text)
         if (font == Font.Minecraft) {
-            PolyMcText(entry.text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
+            PolyMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
         } else {
             PolyText(
-                entry.text,
+                text,
                 color = color,
                 fontSize = FONT_SIZE * scale,
                 shadow = showShadow,

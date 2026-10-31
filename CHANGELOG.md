@@ -1,6 +1,5 @@
-## 3.9.11
-- Bump OneConfig to 1.5.0.
-- Added Media Player HUD.
-- Redesign Battery HUD, which now supports Linux and macOS.
-- Add option to show coordinates in another dimension.
-- Stop mirroring the custom keybinds to Minecraft.
+## 3.9.13
+- add media hud seek bar, color, backdrop, visibility and button options
+- apply text case option to all text huds
+- add cutout play icon and fixed-width time to media hud
+- update to oneconfig 1.6.0

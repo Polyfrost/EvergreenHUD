@@ -8,11 +8,10 @@ import net.ornithemc.osl.resource.loader.api.resource.manager.ResourceManager
 //import net.minecraft.resources.ResourceLocation
 //? if >= 1.21.11
 import net.minecraft.resources.Identifier as ResourceLocation
-import org.jetbrains.skia.Image
-import org.jetbrains.skia.Paint
-import org.jetbrains.skia.Rect
-import org.jetbrains.skia.SamplingMode
+import org.polyfrost.compose.render.FilterQuality
 import org.polyfrost.compose.render.ImageLoader
+import org.polyfrost.compose.render.PolyBitmap
+import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.RenderContext
 import org.polyfrost.evergreenhud.client.utils.snapToPixels
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
@@ -48,10 +47,8 @@ private const val CONTAINER_TEXTURE_SIZE = 256f
 private const val GENERIC_54_GUI_HEIGHT = 222f
 private const val SHULKER_BOX_GUI_HEIGHT = 166f
 
-private val paint = Paint()
-
 class VanillaTexture internal constructor(
-    private val image: Image,
+    private val image: PolyBitmap,
     private val baseWidth: Float,
     private val baseHeight: Float,
     private val guiHeight: Float,
@@ -66,15 +63,13 @@ class VanillaTexture internal constructor(
         y: Float,
         scale: Float,
     ) {
-        val texelX = image.width / baseWidth
-        val texelY = image.height / baseHeight
-        ctx.canvas.drawImageRect(
+        val dst = snapToPixels(ctx, x, y, srcW * scale, srcH * scale)
+        ctx.image(
             image,
-            Rect.makeXYWH(srcX * texelX, srcY * texelY, srcW * texelX, srcH * texelY),
-            snapToPixels(ctx.canvas, x, y, srcW * scale, srcH * scale),
-            SamplingMode.DEFAULT,
-            paint,
-            true,
+            dst[0], dst[1], dst[2] - dst[0], dst[3] - dst[1],
+            srcX / baseWidth, srcY / baseHeight, (srcX + srcW) / baseWidth, (srcY + srcH) / baseHeight,
+            PolyColor.WHITE,
+            FilterQuality.None,
         )
     }
 
@@ -88,22 +83,18 @@ class VanillaTexture internal constructor(
         y: Float,
         scale: Float,
     ) {
-        val texelX = image.width / baseWidth
-        val texelY = image.height / baseHeight
-        val canvas = ctx.canvas
-        val dst = snapToPixels(canvas, x, y, srcH * scale, srcW * scale)
-        canvas.save()
-        canvas.translate(dst.right, dst.top)
-        canvas.rotate(90f)
-        canvas.drawImageRect(
+        val dst = snapToPixels(ctx, x, y, srcH * scale, srcW * scale)
+        ctx.save()
+        ctx.translate(dst[2], dst[1])
+        ctx.renderer.rotate(90f)
+        ctx.image(
             image,
-            Rect.makeXYWH(srcX * texelX, srcY * texelY, srcW * texelX, srcH * texelY),
-            Rect.makeWH(dst.height, dst.width),
-            SamplingMode.DEFAULT,
-            paint,
-            true,
+            0f, 0f, dst[3] - dst[1], dst[2] - dst[0],
+            srcX / baseWidth, srcY / baseHeight, (srcX + srcW) / baseWidth, (srcY + srcH) / baseHeight,
+            PolyColor.WHITE,
+            FilterQuality.None,
         )
-        canvas.restore()
+        ctx.restore()
     }
 
     fun drawHotbar(ctx: RenderContext, x: Float, y: Float, slots: Int, vertical: Boolean, scale: Float) {

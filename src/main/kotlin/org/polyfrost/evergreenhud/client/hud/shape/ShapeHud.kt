@@ -2,7 +2,6 @@ package org.polyfrost.evergreenhud.client.hud.shape
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import org.jetbrains.skia.Path
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
@@ -67,7 +66,7 @@ class ShapeHud : Hud(
     override var staticH: Float get() = _staticH.value; set(v) { _staticH.value = v }
 
     @Transient
-    private var cachedPath: Path? = null
+    private var cachedPath: FloatArray? = null
 
     @Transient
     private var cachedKey: PathKey? = null
@@ -106,7 +105,6 @@ class ShapeHud : Hud(
     override fun update(): Boolean = false
 
     override fun remove() {
-        cachedPath?.close()
         cachedPath = null
         cachedKey = null
     }
@@ -144,7 +142,11 @@ class ShapeHud : Hud(
         val centreY = y + height / 2f
 
         save()
-        if (rotation != 0f && shape != RING) canvas.rotate(rotation, centreX, centreY)
+        if (rotation != 0f && shape != RING) {
+            translate(centreX, centreY)
+            renderer.rotate(rotation)
+            translate(-centreX, -centreY)
+        }
 
         if (shape == RING) {
             val radius = minOf(width, height) / 2f
@@ -175,12 +177,11 @@ class ShapeHud : Hud(
         restore()
     }
 
-    private fun path(left: Float, top: Float, w: Float, h: Float): Path {
+    private fun path(left: Float, top: Float, w: Float, h: Float): FloatArray {
         val vertices = if (shape == TRIANGLE) 3 else if (shape == POLYGON) sides else points
         val key = PathKey(shape, left, top, w, h, vertices, if (shape == STAR) innerRadius else 0f)
 
         cachedPath?.let { if (key == cachedKey) return it }
-        cachedPath?.close()
 
         val centreX = left + w / 2f
         val centreY = top + h / 2f

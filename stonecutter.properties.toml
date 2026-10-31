@@ -1,13 +1,14 @@
 mod.id = "evergreenhud"
 mod.name = "EvergreenHUD"
 mod.group = "org.polyfrost"
-mod.version = "3.9.11"
+mod.version = "3.9.13"
 
 deps.fabric_loader = "0.19.3"
-deps.oneconfig = "1.5.0"
+deps.oneconfig = "1.6.0"
 deps.junit = "6.1.3"
 deps.devauth = "1.2.2"
 deps.fabric_language_kotlin = "1.14.1+kotlin.2.4.20"
+deps.errorprone = "2.51.0"
 
 loomx.loom_version = "1.17-SNAPSHOT"
 
