@@ -673,9 +673,10 @@ class PotionEffectsHud : Hud(
             if (values.amplifierStyle == ROMAN) roman(level) else level.toString()
         } else null
 
+        val displayName = values.customName.ifBlank { EFFECT_PLACEHOLDER }.replace(EFFECT_PLACEHOLDER, name)
         val title = when {
-            values.nameEnabled && amplifierText != null -> "$name $amplifierText"
-            values.nameEnabled -> name
+            values.nameEnabled && amplifierText != null -> "$displayName $amplifierText"
+            values.nameEnabled -> displayName
             amplifierText != null -> amplifierText
             else -> null
         }
