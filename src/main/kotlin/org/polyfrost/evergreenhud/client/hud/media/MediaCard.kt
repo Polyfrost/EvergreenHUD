@@ -24,6 +24,7 @@ import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 const val BUTTON_PREVIOUS = 0
 const val BUTTON_TOGGLE = 1
@@ -254,7 +255,7 @@ private fun blurred(art: PolyBitmap, crop: Rect, sigma: Float): PolyBitmap {
         pixels[dst + 3] = alpha * 255f
     }
     if (key.third > 0) {
-        val radius = ((kotlin.math.sqrt(4f * sigma * sigma + 1f) - 1f) / 2f).roundToInt().coerceAtLeast(1)
+        val radius = ((sqrt(4f * sigma * sigma + 1f) - 1f) / 2f).roundToInt().coerceAtLeast(1)
         val scratch = FloatArray(pixels.size)
         repeat(3) {
             boxBlur(pixels, scratch, width, height, radius, 4, width * 4)

@@ -18,6 +18,8 @@ import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.RenderContext
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import java.nio.ByteBuffer
+import java.util.concurrent.ConcurrentHashMap
 
 private const val LINE_GAP = 2f
 
@@ -105,13 +107,13 @@ private fun RenderContext.underline(hud: Hud, x: Float, baseline: Float, width: 
 
 private const val FALLBACK_CAP_HEIGHT = 0.7f
 
-private val capHeightRatios = java.util.concurrent.ConcurrentHashMap<String, Float>()
+private val capHeightRatios = ConcurrentHashMap<String, Float>()
 
 val PolyFont.capHeight: Float
     get() = size * capHeightRatios.getOrPut(name) { FontManager.fontData(name)?.let(::readCapHeightRatio) ?: FALLBACK_CAP_HEIGHT }
 
 private fun readCapHeightRatio(data: ByteArray): Float? = runCatching {
-    val buf = java.nio.ByteBuffer.wrap(data)
+    val buf = ByteBuffer.wrap(data)
     var head = -1
     var os2 = -1
     for (i in 0 until (buf.getShort(4).toInt() and 0xFFFF)) {
