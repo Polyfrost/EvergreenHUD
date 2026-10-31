@@ -9,6 +9,11 @@ import net.minecraft.client.input.MouseButtonInfo
 import net.minecraft.client.KeyMapping
 //? if = 1.8.9
 //import org.polyfrost.oneconfig.internal.legacy.KeyCodes
+//? if = 1.8.9 {
+/*import org.lwjgl.sdl.SDLKeyboard
+import org.lwjgl.sdl.SDLMouse
+import java.nio.FloatBuffer
+*///?}
 //? if > 1.21.1
 import net.minecraft.util.profiling.Profiler
 import net.minecraft.world.entity.Entity
@@ -86,6 +91,18 @@ fun KeyMapping.matchesKeyCode(keyCode: Int): Boolean {
     /*return matches(keyCode, 0)
     *///?} else
     //return this.keyCode == KeyCodes.toLegacy(keyCode)
+}
+
+fun KeyMapping.isHeld(): Boolean {
+    //? if = 1.8.9 {
+    /*if (keyCode < 0) {
+        val button = KeyCodes.mouseFromLegacy(keyCode + 100)
+        return button > 0 && SDLMouse.SDL_GetMouseState(null as FloatBuffer?, null as FloatBuffer?) and (1 shl (button - 1)) != 0
+    }
+    val scancode = KeyCodes.fromLegacy(keyCode).value
+    return scancode > 0 && (SDLKeyboard.SDL_GetKeyboardState()?.get(scancode)?.toInt() ?: 0) != 0
+    *///?} else
+    return isDown
 }
 
 fun PolyColor.copy(): PolyColor = PolyColor(rawArgb, chroma, chromaSpeed)
