@@ -12,9 +12,11 @@ interface EffectComponentValues {
     val showAmplifier: Boolean
     val amplifierStyle: Int
     val caseType: Int
+    val nameFormatting: BooleanArray
     val durationEnabled: Boolean
     val durationBlink: Boolean
     val durationColor: PolyColor
+    val durationFormatting: BooleanArray
 
     val showEffects: Boolean
     val ambientFilter: BooleanArray
@@ -28,8 +30,11 @@ interface EffectComponentValues {
 class GlobalEffectValues(
     private val settings: EffectComponentSettings,
     private val hudCaseType: () -> Int,
+    private val hudFormatting: () -> BooleanArray,
 ) : EffectComponentValues by settings {
     override val caseType get() = hudCaseType()
+    override val nameFormatting get() = if (settings.separateFormatting) settings.nameFormatting else hudFormatting()
+    override val durationFormatting get() = if (settings.separateFormatting) settings.durationFormatting else hudFormatting()
 }
 
 class LayeredEffectValues(
@@ -48,9 +53,11 @@ class LayeredEffectValues(
     override val showAmplifier get() = source(EffectComponentSettings::showAmplifier.name).showAmplifier
     override val amplifierStyle get() = source(EffectComponentSettings::amplifierStyle.name).amplifierStyle
     override val caseType get() = source(EffectComponentSettings::caseType.name).caseType
+    override val nameFormatting get() = source(EffectComponentSettings::nameFormatting.name).nameFormatting
     override val durationEnabled get() = source(EffectComponentSettings::durationEnabled.name).durationEnabled
     override val durationBlink get() = source(EffectComponentSettings::durationBlink.name).durationBlink
     override val durationColor get() = source(EffectComponentSettings::durationColor.name).durationColor
+    override val durationFormatting get() = source(EffectComponentSettings::durationFormatting.name).durationFormatting
 
     override val showEffects get() = source(EffectComponentSettings::showEffects.name).showEffects
     override val ambientFilter get() = source(EffectComponentSettings::ambientFilter.name).ambientFilter
