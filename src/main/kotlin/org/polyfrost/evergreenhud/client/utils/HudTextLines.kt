@@ -1,6 +1,8 @@
 package org.polyfrost.evergreenhud.client.utils
 
 import androidx.compose.runtime.Composable
+import java.nio.ByteBuffer
+import java.util.concurrent.ConcurrentHashMap
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyColumn
