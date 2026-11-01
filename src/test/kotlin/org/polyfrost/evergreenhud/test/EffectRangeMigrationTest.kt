@@ -1,6 +1,7 @@
 package org.polyfrost.evergreenhud.test
 
 import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -8,6 +9,8 @@ import org.polyfrost.evergreenhud.client.hud.potion.EffectComponentSettings
 import org.polyfrost.evergreenhud.client.hud.potion.PER_OPTION_OVERRIDES
 import org.polyfrost.evergreenhud.client.hud.potion.RANGE_LISTS
 import org.polyfrost.evergreenhud.client.hud.potion.allowsInRanges
+import org.polyfrost.evergreenhud.client.hud.potion.fallbackAmplifiers
+import org.polyfrost.evergreenhud.client.hud.potion.fallbackDurations
 import org.polyfrost.evergreenhud.client.hud.potion.migrateRanges
 
 class EffectRangeMigrationTest {
@@ -51,5 +54,22 @@ class EffectRangeMigrationTest {
         loaded.migrateRanges(PER_OPTION_OVERRIDES)
         assertArrayEquals(floatArrayOf(5f, 30f), loaded.durationRange)
         assertArrayEquals(floatArrayOf(1f, 3f), loaded.amplifierRange)
+    }
+
+    @Test
+    fun fallbackExamplesUseDefaultsWhenRangesAreEmpty() {
+        assertEquals(listOf(600), fallbackDurations(floatArrayOf(), 600))
+        assertEquals(listOf(0, 1), fallbackAmplifiers(floatArrayOf()))
+    }
+
+    @Test
+    fun fallbackExamplesTryEveryAllowedDurationRange() {
+        assertEquals(listOf(0, 3000), fallbackDurations(floatArrayOf(0f, 0f, 120f, 180f), 600))
+    }
+
+    @Test
+    fun fallbackExamplesStayInsideAllowedAmplifierRanges() {
+        assertEquals(listOf(2), fallbackAmplifiers(floatArrayOf(2f, 2f)))
+        assertEquals(listOf(0, 4, 5), fallbackAmplifiers(floatArrayOf(0f, 0f, 4f, 10f)))
     }
 }
