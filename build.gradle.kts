@@ -56,7 +56,6 @@ repositories {
     }
 
     mavenLocal()
-    strictMaven("https://repo.maven.apache.org/maven2", "LwjglCentral", "org.lwjgl")
     mavenCentral()
     google()
     maven("https://maven.ornithemc.net/releases") { name = "OrnitheMC" }
