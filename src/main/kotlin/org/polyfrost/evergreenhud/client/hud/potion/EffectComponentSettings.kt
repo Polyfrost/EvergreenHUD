@@ -3,6 +3,7 @@ package org.polyfrost.evergreenhud.client.hud.potion
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.utils.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
+import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.MultiSelectDropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.Option
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
@@ -37,6 +38,8 @@ class EffectComponentSettings : EffectComponentValues {
     override var showAmplifier = true
     @RadioButton(title = "Amplifier Style", options = ["Roman", "Arabic"], subcategory = "Name")
     override var amplifierStyle = ROMAN
+    @RadioButton(title = "Case Type", options = ["Aa", "AA", "aa"], subcategory = "Name")
+    override var caseType = 0
 
     @Switch(title = "Show Duration", subcategory = "Duration")
     override var durationEnabled = true

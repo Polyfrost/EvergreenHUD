@@ -10,6 +10,7 @@ interface EffectComponentValues {
     val nameColor: PolyColor
     val showAmplifier: Boolean
     val amplifierStyle: Int
+    val caseType: Int
     val durationEnabled: Boolean
     val durationBlink: Boolean
     val durationColor: PolyColor
@@ -23,11 +24,18 @@ interface EffectComponentValues {
     val blinkThreshold: Float
 }
 
+class GlobalEffectValues(
+    private val settings: EffectComponentSettings,
+    private val hudCaseType: () -> Int,
+) : EffectComponentValues by settings {
+    override val caseType get() = hudCaseType()
+}
+
 class LayeredEffectValues(
     private val layers: List<EffectComponentSettings>,
-    private val fallback: EffectComponentSettings,
+    private val fallback: EffectComponentValues,
 ) : EffectComponentValues {
-    private fun source(field: String): EffectComponentSettings =
+    private fun source(field: String): EffectComponentValues =
         layers.firstOrNull { field in it.overriddenOptions } ?: fallback
 
     override val iconEnabled get() = source(EffectComponentSettings::iconEnabled.name).iconEnabled
@@ -37,6 +45,7 @@ class LayeredEffectValues(
     override val nameColor get() = source(EffectComponentSettings::nameColor.name).nameColor
     override val showAmplifier get() = source(EffectComponentSettings::showAmplifier.name).showAmplifier
     override val amplifierStyle get() = source(EffectComponentSettings::amplifierStyle.name).amplifierStyle
+    override val caseType get() = source(EffectComponentSettings::caseType.name).caseType
     override val durationEnabled get() = source(EffectComponentSettings::durationEnabled.name).durationEnabled
     override val durationBlink get() = source(EffectComponentSettings::durationBlink.name).durationBlink
     override val durationColor get() = source(EffectComponentSettings::durationColor.name).durationColor
