@@ -22,6 +22,11 @@ import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
 private const val NO_SIGN = ' '
+private const val PREVIEW_X = 128.5
+private const val PREVIEW_Y = 64.0
+private const val PREVIEW_Z = -256.5
+private const val PREVIEW_YAW = -135.0
+private const val PREVIEW_PITCH = 12.5
 
 class PositionHud : GenericNumberHud(
     title = "Position",
@@ -89,7 +94,7 @@ class PositionHud : GenericNumberHud(
     @Color(title = "Pitch Color", subcategory = "Colors")
     var pitchColor = PolyColor(0xFFFFFFFF.toInt())
 
-    private val facing get() = Facing.parseExact(cameraYaw ?: 0f)
+    private val facing get() = Facing.parseExact(if (isReal) cameraYaw ?: 0f else yaw.toFloat())
     private var px = 0.0
     private var py = 0.0
     private var pz = 0.0
@@ -138,8 +143,14 @@ class PositionHud : GenericNumberHud(
     override fun Content() = HudStyledCells(linesState.value, alignColumns = alignState.value)
 
     override fun update(): Boolean {
-        val player = mc.player
-        if (player != null) {
+        val player = if (isReal) mc.player else null
+        if (!isReal) {
+            px = PREVIEW_X
+            py = PREVIEW_Y
+            pz = PREVIEW_Z
+            yaw = PREVIEW_YAW
+            pitch = PREVIEW_PITCH
+        } else if (player != null) {
             val camera = mc.cameraEntity ?: player
             val scale = dimensionScale()
             this.px = player.x * scale
@@ -152,7 +163,7 @@ class PositionHud : GenericNumberHud(
         val entries = createEntries()
         currentText = entries.joinToString(separator) { it.plain }
         val result = super.update()
-        if (player == null) return result
+        if (isReal && player == null) return result
 
         linesState.value = buildLines(entries)
         alignState.value = alignDirection && showDirection && displayMode == 0

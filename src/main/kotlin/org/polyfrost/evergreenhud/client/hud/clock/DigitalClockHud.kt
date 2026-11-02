@@ -7,6 +7,8 @@ import java.time.format.DateTimeFormatter
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+private val PREVIEW_TIME = LocalTime.of(10, 9, 30)
+
 class DigitalClockHud : SpacedTextHud(
     id = "digital_clock.json",
     title = "Digital Clock",
@@ -29,7 +31,7 @@ class DigitalClockHud : SpacedTextHud(
         }
     }
 
-    override fun getText(): String = LocalTime.now().format(formatter())
+    override fun getText(): String = (if (isReal) LocalTime.now() else PREVIEW_TIME).format(formatter())
 
     override fun updateFrequency(): Long =
         (if (showSeconds) 500.milliseconds else 1.seconds).inWholeNanoseconds

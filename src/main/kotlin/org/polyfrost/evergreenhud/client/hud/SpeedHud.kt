@@ -8,6 +8,8 @@ import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.milliseconds
 
+private const val PREVIEW_SPEED = 0.28f
+
 class SpeedHud : GenericNumberHud(
     title = "Speed",
     category = Category.INFO,
@@ -66,6 +68,7 @@ class SpeedHud : GenericNumberHud(
     }
 
     override fun getText(): String {
+        if (!isReal) return format(convertSpeed(PREVIEW_SPEED))
         val player = mc.player
         if (player == null) {
             value = 0f

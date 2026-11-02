@@ -108,9 +108,19 @@ class TpsHud : GenericNumberHud(
             .toString()
     }
 
+    override fun getText(): String? = if (isReal) {
+        super.getText()
+    } else {
+        StringBuilder().append(formatString)
+            .replace("#tps", format(PREVIEW_TPS))
+            .replace("#avg", format(PREVIEW_AVG_TPS))
+            .replace("#low", format(PREVIEW_LOW_TPS))
+            .toString()
+    }
+
     override fun valueColor(): PolyColor? {
-        if (!colorByValue || recent.isEmpty()) return null
-        return qualityColor(quality(value, LOW_TPS, PERFECT_TPS))
+        if (!colorByValue || (isReal && recent.isEmpty())) return null
+        return qualityColor(quality(if (isReal) value else PREVIEW_TPS, LOW_TPS, PERFECT_TPS))
     }
 
     private fun resetStats() {
@@ -125,6 +135,10 @@ class TpsHud : GenericNumberHud(
         const val PERFECT_TPS = 20f
 
         const val LOW_TPS = 15f
+
+        const val PREVIEW_TPS = 19.97f
+        const val PREVIEW_AVG_TPS = 19.85f
+        const val PREVIEW_LOW_TPS = 18.4f
 
         const val SAMPLE_WINDOW = 5
 

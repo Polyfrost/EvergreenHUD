@@ -54,6 +54,7 @@ class MemoryHud : CachedTextHud(
     }
 
     override fun getText(): String {
+        if (!isReal) return df.format(if (displayType == 1) 0.42 else 3.4).trim()
         val r = Runtime.getRuntime()
         val usedBytes = bytesToMb(r.totalMemory() - r.freeMemory())
         return df.format(when (displayType) {

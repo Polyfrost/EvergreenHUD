@@ -111,8 +111,8 @@ class CpsHud : CachedTextHud(
         val time = System.nanoTime()
         left.fastRemoveIfReversed { time - it > 1_000_000_000 }
         right.fastRemoveIfReversed { time - it > 1_000_000_000 }
-        val nleft = left.size
-        val nright = right.size
+        val nleft = if (isReal) left.size else 9
+        val nright = if (isReal) right.size else 4
         val sb = StringBuilder()
         when (mode) {
             0 -> sb.append(nleft)

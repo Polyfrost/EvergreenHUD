@@ -16,6 +16,8 @@ class BiomeHud : CachedTextHud(
     defaultText = "Unknown"
 ) {
 
+    override fun getText(): String? = if (isReal) super.getText() else "Plains"
+
     override fun setup() {
         super.setup()
         eventHandler { (pos): BlockPositionChangedEvent ->

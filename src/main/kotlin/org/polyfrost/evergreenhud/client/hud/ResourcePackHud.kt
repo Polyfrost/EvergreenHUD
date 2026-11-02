@@ -58,6 +58,7 @@ class ResourcePackHud : Hud(
         private val LOGGER = LoggerFactory.getLogger("EvergreenHUD/Resource Pack")
 
         private const val DEFAULT_TITLE = "Default"
+        private const val PREVIEW_PACK_ID = "evergreenhud:preview"
         private const val DEFAULT_DESCRIPTION = "The classic Minecraft experience."
 
         private const val FABRIC_SOURCE_KEY = "pack.source.fabricmod"
@@ -236,6 +237,12 @@ class ResourcePackHud : Hud(
     }
 
     override fun update(): Boolean {
+        if (!isReal) {
+            if (lastPackId == PREVIEW_PACK_ID) return false
+            lastPackId = PREVIEW_PACK_ID
+            packIcon.value = iconFor(null)
+            return true
+        }
         //~ if = 1.8.9 'mc.resourcePackRepository' -> 'ResourcePackRepository.client()'
         val selected = mc.resourcePackRepository.selectedPacks
         syncCaches(selected.map { it.id })

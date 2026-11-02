@@ -110,7 +110,7 @@ class DirectionHud : Hud(
     override fun canMergeBackground(): Boolean = true
 
     override fun update(): Boolean {
-        val bearing = cameraYaw?.let { Facing.bearingOf(it) } ?: view.value.bearing
+        val bearing = (if (isReal) cameraYaw else null)?.let { Facing.bearingOf(it) } ?: view.value.bearing
         val next = View(bearing, span, showIntercardinals, showTicks, showHeading, fadeEdges)
         if (next == view.value) return false
         view.value = next

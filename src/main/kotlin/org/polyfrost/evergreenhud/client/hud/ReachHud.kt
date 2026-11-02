@@ -58,6 +58,7 @@ class ReachHud : GenericNumberHud(
     }
 
     override fun getText(): String? {
+        if (!isReal) return format(2.87f)
         if (value == 0f) {
             return noHitMessage
         }

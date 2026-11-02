@@ -31,7 +31,7 @@ class SaturationHud : GenericNumberHud(
     }
 
     override fun getText(): String {
-        return format(SaturationTracker.saturation)
+        return format(if (isReal) SaturationTracker.saturation else value)
     }
 
     override fun shouldShow(): Boolean = SaturationTracker.saturation in showRange[0]..showRange[1]

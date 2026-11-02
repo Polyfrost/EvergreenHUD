@@ -2,8 +2,12 @@ package org.polyfrost.evergreenhud.client.hud
 
 import org.polyfrost.evergreenhud.client.utils.CachedTextHud
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Duration.Companion.seconds
+
+private val PREVIEW_TIME = 1.hours + 23.minutes + 45.seconds
 
 class PlayTimeHud : CachedTextHud(
     title = "Play Time",
@@ -24,7 +28,7 @@ class PlayTimeHud : CachedTextHud(
     }
 
     override fun getText(): String {
-        val time = (System.nanoTime() - start).nanoseconds
+        val time = if (isReal) (System.nanoTime() - start).nanoseconds else PREVIEW_TIME
         return time.toComponents { hours: Long, minutes: Int, seconds: Int, _: Int ->
             buildString {
                 fun addNumber(number: Number) {

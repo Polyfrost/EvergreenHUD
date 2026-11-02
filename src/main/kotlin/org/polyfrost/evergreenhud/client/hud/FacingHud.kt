@@ -8,6 +8,8 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
 
+private const val PREVIEW_YAW = -135f
+
 private val CARDINALS = arrayOf(Facing.NORTH, Facing.EAST, Facing.SOUTH, Facing.WEST)
 
 class FacingHud : CachedTextHud(
@@ -43,7 +45,7 @@ class FacingHud : CachedTextHud(
     }
 
     override fun getText(): String {
-        val yaw = cameraYaw ?: return defaultText
+        val yaw = if (isReal) cameraYaw ?: return defaultText else PREVIEW_YAW
         val bearing = Facing.bearingOf(yaw)
         val facing = if (showIntercardinals) {
             Facing.parse(yaw)

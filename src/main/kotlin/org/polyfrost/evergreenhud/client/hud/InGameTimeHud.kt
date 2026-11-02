@@ -5,6 +5,8 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.time.Duration.Companion.milliseconds
 
+private const val PREVIEW_DAY_TIME = 8500L
+
 class InGameTimeHud : CachedTextHud(
     title = "In Game Time",
     category = Category.INFO,
@@ -21,9 +23,10 @@ class InGameTimeHud : CachedTextHud(
 
     override fun getText(): String {
         //? if < 26
-        //val time = ((mc.level?.dayTime ?: 0L) + 6000L) % 24000L
+        //val dayTime = mc.level?.dayTime ?: 0L
         //? if >= 26
-        val time = ((mc.level?.overworldClockTime ?: 0L) + 6000L) % 24000L
+        val dayTime = mc.level?.overworldClockTime ?: 0L
+        val time = ((if (isReal) dayTime else PREVIEW_DAY_TIME) + 6000L) % 24000L
         val seconds = (time * 3.6).toLong()
         val minutes = (seconds % 3600L) / 60L
         val hours = (seconds / 3600L) % 24L

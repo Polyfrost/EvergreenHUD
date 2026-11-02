@@ -323,7 +323,7 @@ class KeystrokesHud : Hud(
             return changed
         }
 
-        fun poll(state: KeyFade, key: KeyMapping) = pollTo(state, if (if (perTick) key.isDown else key.isHeld()) 1f else 0f)
+        fun poll(state: KeyFade, key: KeyMapping) = pollTo(state, if (isReal && if (perTick) key.isDown else key.isHeld()) 1f else 0f)
         poll(keys.forward, o.keyUp)
         poll(keys.left, o.keyLeft)
         poll(keys.back, o.keyDown)

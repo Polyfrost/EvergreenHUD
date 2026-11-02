@@ -14,6 +14,12 @@ class EntityCounterHud : CachedTextHud(
     @Switch(title = "Show total entities")
     var showTotal = true
 
+    override fun getText(): String? = when {
+        isReal -> super.getText()
+        showTotal -> "24/87"
+        else -> "24"
+    }
+
     override fun setup() {
         super.setup()
         eventHandler { ev: EntityCounterEvent ->

@@ -14,6 +14,8 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 
 private const val WORST_RATIO = 0.5
+private const val PREVIEW_BASELINE = 144.0
+private val PREVIEW_DATA = FrameTimeHelper.FrameData(0.08, 7_092_198.0, 7_142_857.0, 7_092_198.0, 9_000_000.0, 12_000_000.0, 0)
 
 class FpsHud : GenericNumberHud(
     title = "FPS",
@@ -56,9 +58,10 @@ class FpsHud : GenericNumberHud(
         showRange = this@FpsHud.showRange.copyOf()
     }
 
+    private val data get() = if (isReal) FrameTimeHelper.latest else PREVIEW_DATA
+    private val baseline get() = if (isReal) FrameTimeHelper.baselineFps else PREVIEW_BASELINE
+
     override fun getText(): String {
-        val data = FrameTimeHelper.latest
-        val baseline = FrameTimeHelper.baselineFps
 
         val hiddenByRange = baseline > 0.0 && qualityPercent(data.currentFps.toFloat(), baseline).let { it < showRange[0] || it > showRange[1] }
         val hiddenByNumber = hideAboveNumber > 0 && data.currentFps > hideAboveNumber
@@ -81,9 +84,9 @@ class FpsHud : GenericNumberHud(
     override fun shouldShow(): Boolean = inRange
 
     override fun valueColor(): PolyColor? {
-        val baseline = FrameTimeHelper.baselineFps
+        val baseline = baseline
         if (!colorByValue || baseline <= 0.0) return null
-        val fps = FrameTimeHelper.latest.currentFps
+        val fps = data.currentFps
         return qualityColor(quality(fps.toFloat(), (baseline * WORST_RATIO).toFloat(), baseline.toFloat()))
     }
 

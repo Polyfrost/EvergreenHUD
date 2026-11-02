@@ -7,6 +7,8 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import kotlin.time.Duration.Companion.seconds
 
 private const val ZIP = ".zip"
+private const val PREVIEW_MOD = "Iris"
+private const val PREVIEW_PACK = "Evergreen Shaders v2.1"
 
 class ShaderHud : CachedTextHud(
     id = "shaders.json",
@@ -42,6 +44,10 @@ class ShaderHud : CachedTextHud(
     }
 
     override fun getText(): String {
+        if (!isReal) {
+            hasPack = true
+            return if (showShaderMod) "$PREVIEW_MOD: $PREVIEW_PACK" else PREVIEW_PACK
+        }
         val mod = ShaderMod.active
         val pack = mod?.packName()
 

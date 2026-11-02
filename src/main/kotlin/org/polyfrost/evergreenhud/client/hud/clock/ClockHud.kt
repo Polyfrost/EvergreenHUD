@@ -25,6 +25,8 @@ private const val DETAIL_FIVE_MINUTE_MARKS = 0
 private const val DETAIL_MINUTE_MARKS = 1
 private const val DETAIL_NUMBERS = 2
 
+private const val PREVIEW_MILLIS = (10L * 3600L + 9L * 60L + 30L) * 1000L
+
 private fun millisOfDay(zone: ZoneId): Long = LocalTime.now(zone).toNanoOfDay() / 1_000_000L
 
 class ClockHud : Hud(
@@ -99,9 +101,9 @@ class ClockHud : Hud(
         rev.value
         val sizeModifier = PolyModifier.size(scaledWidth, scaledHeight)
         val zone = remember { ZoneId.systemDefault() }
-        val timeState = remember { mutableLongStateOf(millisOfDay(zone)) }
+        val timeState = remember { mutableLongStateOf(if (isReal) millisOfDay(zone) else PREVIEW_MILLIS) }
         LaunchedEffect(zone) {
-            while (true) {
+            while (isReal) {
                 withFrameMillis {
                     val millis = millisOfDay(zone)
                     timeState.longValue = if (ticking) millis - millis % 1000 else millis
@@ -109,7 +111,6 @@ class ClockHud : Hud(
             }
         }
         val timeMillis = { timeState.longValue }
-        if (!isReal) timeState.longValue
         val fiveMinuteMarks = detailEnabled(DETAIL_FIVE_MINUTE_MARKS)
         val minuteMarks = detailEnabled(DETAIL_MINUTE_MARKS)
         val numbers = detailEnabled(DETAIL_NUMBERS)

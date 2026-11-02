@@ -34,6 +34,7 @@ class PlaceCountHud : CachedTextHud(
     }
 
     override fun getText(): String {
+        if (!isReal) return "7/s"
         val time = System.nanoTime()
         val max = interval * 1_000_000L
         blockCount.fastRemoveIfReversed { time - it > max }

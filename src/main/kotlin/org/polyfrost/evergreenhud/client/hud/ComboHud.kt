@@ -37,6 +37,8 @@ class ComboHud : CachedTextHud(
             else updateWithText(value)
         }
 
+    override fun getText(): String? = if (isReal) super.getText() else "4"
+
     override fun setup() {
         super.setup()
 
