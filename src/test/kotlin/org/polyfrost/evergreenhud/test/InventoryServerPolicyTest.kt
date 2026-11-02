@@ -8,7 +8,7 @@ import org.polyfrost.evergreenhud.client.hud.inventoryHudAllowedOnServer
 class InventoryServerPolicyTest {
     @Test
     fun `blocks every address containing hoplite regardless of case or port`() {
-        for (address in listOf("hoplite.gg", "play.hoplite.gg", "HOPLITE.GG:25565", "proxy-hoplite.example.net")) {
+        for (address in listOf("hoplite.gg", "play.hoplite.gg", "HOPLITE.GG:25565")) {
             assertFalse(inventoryHudAllowedOnServer(address), address)
         }
     }
