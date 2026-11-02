@@ -166,8 +166,6 @@ tasks.withType<JavaCompile>().configureEach {
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions.jvmTarget = kotlinJvmTarget
 }
-tasks.named("compileKotlin") { finalizedBy("detektMain") }
-tasks.named("compileTestKotlin") { finalizedBy("detektTest") }
 
 bloom {
     replacement("@MOD_ID@", modid)
