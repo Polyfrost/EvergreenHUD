@@ -1,5 +1,6 @@
-## 3.9.13
-- add media hud seek bar, color, backdrop, visibility and button options
-- apply text case option to all text huds
-- add cutout play icon and fixed-width time to media hud
-- update to oneconfig 1.6.0
+## 3.9.14
+- show sample values for huds in config preview
+- split keystroke fades into background and text, add per tick mode, and other keystrokes improvements
+- add effect overrides for case type
+- use range number lists for duration and amplifier filters
+- update to oneconfig 1.6.1
