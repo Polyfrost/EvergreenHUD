@@ -64,5 +64,5 @@ object EffectCatalog {
         return entries
     }
 
-    val titleToPath: Map<String, String> get() = ENTRIES.associate { it.title to it.path }
+    val titleToPath: Map<String, String> by lazy { ENTRIES.associate { it.title to it.path } }
 }
