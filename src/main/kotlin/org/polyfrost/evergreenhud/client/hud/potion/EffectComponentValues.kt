@@ -5,6 +5,7 @@ import org.polyfrost.compose.render.PolyColor
 interface EffectComponentValues {
     val iconEnabled: Boolean
     val iconBlink: Boolean
+    val iconSpacing: Float
     val nameEnabled: Boolean
     val customName: String
     val nameBlink: Boolean
@@ -43,6 +44,7 @@ class LayeredEffectValues(
 
     override val iconEnabled get() = source(EffectComponentSettings::iconEnabled.name).iconEnabled
     override val iconBlink get() = source(EffectComponentSettings::iconBlink.name).iconBlink
+    override val iconSpacing get() = source(EffectComponentSettings::iconSpacing.name).iconSpacing
     override val nameEnabled get() = source(EffectComponentSettings::nameEnabled.name).nameEnabled
     override val customName get() = source(EffectComponentSettings::customName.name).customName
     override val nameBlink get() = source(EffectComponentSettings::nameBlink.name).nameBlink

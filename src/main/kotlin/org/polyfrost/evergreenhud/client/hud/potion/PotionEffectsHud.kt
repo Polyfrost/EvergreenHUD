@@ -30,6 +30,7 @@ import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.composables.width
 import org.polyfrost.compose.layout.PolyAlign
+import org.polyfrost.compose.layout.PolyInsets
 import org.polyfrost.compose.mc.McFontQueue
 import org.polyfrost.compose.mc.McFontQueue.measureWidth
 import org.polyfrost.compose.render.FontManager
@@ -69,9 +70,9 @@ import kotlin.math.PI
 import kotlin.math.cos
 
 private const val ICON = 18f
-private const val ICON_GAP = 3f
 private const val LINE_GAP = 1f
 private const val FONT_SIZE = 8f
+private const val OUTLINE_INSET = 1f
 
 const val ROMAN = 0
 
@@ -188,6 +189,7 @@ class PotionEffectsHud : Hud(
 
     private data class Row(
         val icon: PolyBitmap?,
+        val iconGap: Float,
         val name: String?,
         val duration: String?,
         val blinking: Boolean,
@@ -714,6 +716,7 @@ class PotionEffectsHud : Hud(
         }
         return Row(
             icon = if (values.iconEnabled && id != null) OneConfigEffects.icon(id) else null,
+            iconGap = values.iconSpacing,
             name = title,
             duration = time,
             blinking = isBlinking(ticks, infinite, values.blinkThreshold),
@@ -852,25 +855,27 @@ class PotionEffectsHud : Hud(
             val mode = layout.mode
             val hasAnyIcon = list.any { it.icon != null }
             val iconWidth = ICON * scale
-            val iconGap = ICON_GAP * scale
 
             list.maxOf { row ->
                 val nameWidth = row.name?.let { textWidth(it, row.nameStyle, scale) } ?: 0f
                 val durationWidth = row.duration?.let { textWidth(it, row.durationStyle, scale) } ?: 0f
+                val hasText = row.name != null || row.duration != null
+                val iconGap = if (row.icon != null && hasText) row.iconGap * scale else 0f
                 when (mode) {
                     MODE_STACKED -> maxOf(if (row.icon != null) iconWidth else 0f, nameWidth, durationWidth)
                     MODE_SINGLE_LINE -> {
                         val gapWidth = if (row.name != null && row.duration != null) charWidth(scale) else 0f
                         val textWidth = nameWidth + gapWidth + durationWidth
-                        (if (hasAnyIcon) iconWidth + iconGap else 0f) + textWidth
+                        (if (hasAnyIcon) iconWidth else 0f) + iconGap + textWidth
                     }
-                    else -> (if (hasAnyIcon) iconWidth + iconGap else 0f) + maxOf(nameWidth, durationWidth)
+                    else -> (if (hasAnyIcon) iconWidth else 0f) + iconGap + maxOf(nameWidth, durationWidth)
                 }
             }
         }
 
         val horizontal = layout.horizontal
-        val modifier = hudBackground().padding(padLeft, padTop, padRight, padBottom)
+        val outline = outlineInsets(list, scale, maxRowWidth, layout)
+        val modifier = hudBackground().padding(padLeft + outline.left, padTop + outline.top, padRight + outline.right, padBottom + outline.bottom)
 
         PolyBox(modifier = modifier) {
             if (horizontal) {
@@ -885,11 +890,79 @@ class PotionEffectsHud : Hud(
         }
     }
 
+    private class RowBounds(val hasText: Boolean, val left: Float, val top: Float, val right: Float, val bottom: Float)
+
+    /** mirrors the layout of Effect and StackedEffect, placing the text block within its row **/
+    private fun rowBounds(row: Row, scale: Float, rowWidth: Float, layout: Layout, poppins: PolyFont?): RowBounds {
+        val iconSize = if (row.icon != null) ICON * scale else 0f
+        if (row.name == null && row.duration == null) return RowBounds(false, 0f, 0f, 0f, 0f)
+
+        val nameWidth = row.name?.let { textWidth(it, row.nameStyle, scale) } ?: 0f
+        val durationWidth = row.duration?.let { textWidth(it, row.durationStyle, scale) } ?: 0f
+        val lineHeight = poppins?.metrics?.let { it.descent - it.ascent } ?: McFontQueue.measureBlockHeight(1, scale)
+        val lineGap = LINE_GAP * scale
+        val lines = listOfNotNull(row.name, row.duration).size
+        val columnHeight = lines * lineHeight + (lines - 1) * lineGap
+
+        if (layout.mode == MODE_STACKED) {
+            val textWidth = maxOf(nameWidth, durationWidth)
+            val iconHeight = if (row.icon != null) iconSize + row.iconGap * scale else 0f
+            val left = (rowWidth - textWidth) / 2f
+            val bottomAligned = isBottomAligned()
+            return RowBounds(true, left, if (bottomAligned) 0f else iconHeight, left, if (bottomAligned) iconHeight else 0f)
+        }
+
+        val singleLine = layout.mode == MODE_SINGLE_LINE
+        val textWidth = if (singleLine) nameWidth + durationWidth + (if (lines > 1) charWidth(scale) else 0f) else maxOf(nameWidth, durationWidth)
+        val textHeight = if (singleLine) lineHeight else columnHeight
+        val iconWidth = if (row.icon != null) iconSize + row.iconGap * scale else 0f
+        val height = maxOf(iconSize, textHeight)
+        val contentWidth = iconWidth + textWidth
+        val rowLeft = when (layout.align) {
+            PolyAlign.Center -> (rowWidth - contentWidth) / 2f
+            PolyAlign.Right -> rowWidth - contentWidth
+            else -> 0f
+        }
+        val left = rowLeft + if (layout.align == PolyAlign.Right) 0f else iconWidth
+        val top = (height - textHeight) / 2f
+        val right = rowWidth - left - textWidth
+        return RowBounds(true, left, top, right, top)
+    }
+
+    /**
+    * a full shadow outlines the text past its bounds on every side, so pad only the edges where the text sits closer to the HUD's edge than the outline reaches
+    * the configured padding already counts towards that distance, so only the remaining deficit is added
+    * only the rows on the outer edge of the list matter for the edge they lie along
+    **/
+    private fun outlineInsets(list: List<Row>, scale: Float, rowWidth: Float, layout: Layout): PolyInsets {
+        if (!showShadow || !fullShadow) return PolyInsets()
+        val poppins = if (font == Font.Minecraft) null else PolyFont(getPoppinsFontName(), FONT_SIZE * scale)
+        val outline = OUTLINE_INSET * scale
+        // minecraft text is measured with a trailing advance and a blank bottom row, which already hold the outline there
+        val slack = if (poppins == null) outline else 0f
+        val bounds = list.map { rowBounds(it, scale, rowWidth, layout, poppins) }
+        var left = 0f
+        var top = 0f
+        var right = 0f
+        var bottom = 0f
+        val horizontal = layout.horizontal
+        bounds.forEachIndexed { i, b ->
+            if (!b.hasText) return@forEachIndexed
+            val first = i == 0
+            val last = i == bounds.lastIndex
+            if (!horizontal || first) left = maxOf(left, outline - padLeft - b.left)
+            if (horizontal || first) top = maxOf(top, outline - padTop - b.top)
+            if (!horizontal || last) right = maxOf(right, outline - padRight - b.right - slack)
+            if (horizontal || last) bottom = maxOf(bottom, outline - padBottom - b.bottom - slack)
+        }
+        return PolyInsets(left = left, top = top, right = right, bottom = bottom)
+    }
+
     @Composable
     private fun Effect(row: Row, scale: Float, maxRowWidth: Float, layout: Layout) {
         val mode = layout.mode
         if (mode == MODE_STACKED) {
-            StackedEffect(row, scale, maxRowWidth)
+            StackedEffect(row, scale, maxRowWidth, layout.horizontal)
             return
         }
 
@@ -901,7 +974,7 @@ class PotionEffectsHud : Hud(
         }
 
         PolyBox(modifier = PolyModifier.width(maxRowWidth)) {
-            PolyRow(gap = ICON_GAP * scale, modifier = PolyModifier.align(align)) {
+            PolyRow(gap = row.iconGap * scale, modifier = PolyModifier.align(align)) {
                 if (align != PolyAlign.Right) iconBlock()
 
                 if (row.name != null || row.duration != null) {
@@ -936,7 +1009,7 @@ class PotionEffectsHud : Hud(
     }
 
     @Composable
-    private fun StackedEffect(row: Row, scale: Float, maxWidth: Float) {
+    private fun StackedEffect(row: Row, scale: Float, maxWidth: Float, horizontal: Boolean) {
         val style = styleFor(row)
         val reversed = isBottomAligned()
 
@@ -950,12 +1023,29 @@ class PotionEffectsHud : Hud(
             if (row.duration != null) Line(row.duration, scale, style.durationFade, style.durationColor, row.durationStyle, modifier = PolyModifier.align(PolyAlign.Center))
         }
 
-        PolyBox(modifier = PolyModifier.width(maxWidth)) {
+        val textBlock: @Composable () -> Unit = {
             PolyColumn(gap = LINE_GAP * scale, modifier = PolyModifier.align(PolyAlign.Center)) {
                 if (reversed) {
-                    durationBlock(); nameBlock(); iconBlock()
+                    durationBlock(); nameBlock()
                 } else {
-                    iconBlock(); nameBlock(); durationBlock()
+                    nameBlock(); durationBlock()
+                }
+            }
+        }
+        val hasText = row.name != null || row.duration != null
+
+        val boxModifier = PolyModifier.width(maxWidth).let {
+            if (reversed && horizontal) it.align(PolyAlign.Bottom) else it
+        }
+
+        PolyBox(modifier = boxModifier) {
+            PolyColumn(gap = row.iconGap * scale, modifier = PolyModifier.align(PolyAlign.Center)) {
+                if (reversed) {
+                    if (hasText) textBlock()
+                    iconBlock()
+                } else {
+                    iconBlock()
+                    if (hasText) textBlock()
                 }
             }
         }
@@ -1002,10 +1092,18 @@ class PotionEffectsHud : Hud(
 
     @Composable
     private fun Line(text: String, scale: Float, fade: Float, color: PolyColor, style: Int, modifier: PolyModifier = PolyModifier) {
-        val underline = (style and UNDERLINE) != 0
+        val shadowPaint = PolyColor(faded(shadowColor, fade), shadowChroma, shadowChromaSpeed)
+        val outline = showShadow && fullShadow
         if (font == Font.Minecraft) {
             if ((style and ITALIC) == 0) {
-                PolyMcText(mcText(text, style), color, shadow = showShadow, scale = scale, modifier = modifier)
+                PolyMcText(
+                    mcText(text, style),
+                    outlineColor = if (outline) shadowPaint else null,
+                    color = color,
+                    shadow = showShadow && !fullShadow,
+                    scale = scale,
+                    modifier = modifier,
+                )
                 return
             }
 
@@ -1014,14 +1112,15 @@ class PotionEffectsHud : Hud(
             val lineHeight = McFontQueue.measureTextHeight(scale)
             val width = lines.maxOf { McFontQueue.measureTextWidth(it, scale) }
             val totalHeight = McFontQueue.measureBlockHeight(lines.size, scale)
-            PolyCanvas(modifier.size(width, totalHeight), live = color.chroma) { x, y, _, _ ->
+            PolyCanvas(modifier.size(width, totalHeight), live = color.chroma || (outline && shadowPaint.chroma)) { x, y, _, _ ->
                 val argb = color.argb
                 for ((i, formatted) in lines.withIndex()) {
                     val top = y + i * lineHeight
                     save()
                     try {
                         translate(x, top)
-                        mcText(formatted, 0f, 0f, argb, showShadow, scale)
+                        if (outline) mcTextOutline(formatted, 0f, 0f, argb, shadowPaint.argb, scale)
+                        else mcText(formatted, 0f, 0f, argb, showShadow, scale)
                     } finally {
                         restore()
                     }
@@ -1029,14 +1128,14 @@ class PotionEffectsHud : Hud(
             }
         } else {
             val fontName = poppinsFont(style)
-            val shadow = PolyColor(faded(shadowColor, fade), shadowChroma, shadowChromaSpeed)
-            if (!underline) {
+            val underline = (style and UNDERLINE) != 0
+            if (!underline && !outline) {
                 PolyText(
                     text,
                     color,
                     fontSize = FONT_SIZE * scale,
                     shadow = showShadow,
-                    shadowColor = shadow,
+                    shadowColor = shadowPaint,
                     shadowOffset = shadowOffsetX,
                     font = fontName,
                     modifier = modifier,
@@ -1046,20 +1145,23 @@ class PotionEffectsHud : Hud(
 
             val polyFont = PolyFont(fontName, FONT_SIZE * scale)
             val metrics = polyFont.metrics
-            val width = polyFont.measureTextWidth(text)
+            val width = polyFont.measureTextWidth(text).coerceAtLeast(1f)
             val height = metrics.descent - metrics.ascent
             val position = metrics.underlinePosition
             val thickness = metrics.underlineThickness
-            PolyCanvas(modifier.size(width, height)) { x, y, w, _ ->
+            PolyCanvas(PolyModifier.size(width, height).then(modifier), live = color.chroma || (showShadow && shadowPaint.chroma)) { x, y, w, _ ->
                 val baseline = y - metrics.ascent
-                if (showShadow) {
+                if (outline) {
+                    textOutline(text, x, baseline, shadowPaint, polyFont, scale)
+                    if (underline) line(x, baseline + position, x + w, baseline + position, shadowPaint, thickness + OUTLINE_INSET * 2f * scale)
+                } else if (showShadow) {
                     val sx = x + shadowOffsetX
                     val sy = baseline + shadowOffsetX
-                    text(text, sx, sy, shadow, polyFont)
-                    line(sx, sy + position, sx + w, sy + position, shadow, thickness)
+                    text(text, sx, sy, shadowPaint, polyFont)
+                    line(sx, sy + position, sx + w, sy + position, shadowPaint, thickness)
                 }
                 text(text, x, baseline, color, polyFont)
-                line(x, baseline + position, x + w, baseline + position, color, thickness)
+                if (underline) line(x, baseline + position, x + w, baseline + position, color, thickness)
             }
         }
     }
