@@ -15,6 +15,7 @@ import java.lang.reflect.Field
 import java.util.Objects
 
 const val OVERRIDDEN_OPTIONS = "overriddenOptions"
+const val SEPARATE_FORMATTING = "separateFormatting"
 const val EFFECT_PLACEHOLDER = "#effect"
 
 private const val MAX_DURATION_SECONDS = 16_777_216F
@@ -27,6 +28,13 @@ class EffectComponentSettings : EffectComponentValues {
         subcategory = "Overrides",
     )
     var overriddenOptions = emptyArray<String>()
+
+    @Switch(
+        title = "Separate Name/Duration Formatting",
+        description = "Format the name and duration separately instead of following the HUD's Bold, Italic and Underline text options.",
+        subcategory = "Formatting",
+    )
+    var separateFormatting = false
 
     @Switch(title = "Show Icon", subcategory = "Icon")
     override var iconEnabled = true
@@ -47,6 +55,8 @@ class EffectComponentSettings : EffectComponentValues {
     override var amplifierStyle = ROMAN
     @RadioButton(title = "Case Type", options = ["Aa", "AA", "aa"], subcategory = "Name")
     override var caseType = 0
+    @MultiSelectDropdown(title = "Name Formatting", options = ["Bold", "Italic", "Underline"], subcategory = "Name")
+    override var nameFormatting = booleanArrayOf(false, false, false)
 
     @Switch(title = "Show Duration", subcategory = "Duration")
     override var durationEnabled = true
@@ -54,6 +64,8 @@ class EffectComponentSettings : EffectComponentValues {
     override var durationBlink = true
     @Color(title = "Duration Color", subcategory = "Duration")
     override var durationColor = PolyColor.rgba(255, 255, 255, 255)
+    @MultiSelectDropdown(title = "Duration Formatting", options = ["Bold", "Italic", "Underline"], subcategory = "Duration")
+    override var durationFormatting = booleanArrayOf(false, false, false)
 
     @Switch(title = "Show Effect(s)", subcategory = "Filtering")
     override var showEffects = true
@@ -94,6 +106,7 @@ class EffectComponentSettings : EffectComponentValues {
 
     fun copyFrom(other: EffectComponentSettings) {
         overriddenOptions = other.overriddenOptions.copyOf()
+        separateFormatting = other.separateFormatting
         for (field in LEAF_FIELDS) copyField(field, other)
     }
 
@@ -112,7 +125,7 @@ class EffectComponentSettings : EffectComponentValues {
         return Objects.deepEquals(field.get(this), field.get(other))
     }
 
-    fun isDefault(): Boolean = overriddenOptions.isEmpty() && LEAF_FIELDS.all { matches(it, DEFAULTS) }
+    fun isDefault(): Boolean = overriddenOptions.isEmpty() && separateFormatting == DEFAULTS.separateFormatting && LEAF_FIELDS.all { matches(it, DEFAULTS) }
 
     companion object {
         val DEFAULTS = EffectComponentSettings()
@@ -120,7 +133,7 @@ class EffectComponentSettings : EffectComponentValues {
         private val fieldsByName: Map<String, Field> by lazy {
             EffectComponentSettings::class.java.declaredFields
                 .filter { field ->
-                    field.name != OVERRIDDEN_OPTIONS && field.declaredAnnotations.any { ann ->
+                    field.name != OVERRIDDEN_OPTIONS && field.name != SEPARATE_FORMATTING && field.declaredAnnotations.any { ann ->
                         ann.annotationClass.java.isAnnotationPresent(Option::class.java)
                     }
                 }
@@ -129,5 +142,7 @@ class EffectComponentSettings : EffectComponentValues {
         }
 
         val LEAF_FIELDS: List<String> by lazy { fieldsByName.keys.toList() }
+
+        val FORMATTING_FIELDS = setOf("nameFormatting", "durationFormatting")
     }
 }
