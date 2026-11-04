@@ -40,6 +40,8 @@ class EffectComponentSettings : EffectComponentValues {
     override var iconEnabled = true
     @Switch(title = "Blink Icon", subcategory = "Icon")
     override var iconBlink = true
+    @Slider(title = "Icon Spacing", description = "Spacing between the effect icon and the text", subcategory = "Icon", min = 0F, max = 10F, step = 1F)
+    override var iconSpacing = 3f
 
     @Switch(title = "Show Name", subcategory = "Name")
     override var nameEnabled = true
