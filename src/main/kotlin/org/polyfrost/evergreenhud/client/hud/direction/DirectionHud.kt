@@ -22,6 +22,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.platform.v1.Platform
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -40,6 +41,8 @@ private const val MINOR_TICK = 0.5f
 private const val FADE_START = 0.55f
 
 private const val PREVIEW_BEARING = 22.5f
+
+private const val BEARING_STEP_PIXELS = 0.5f
 
 private const val DEFAULT_WIDTH = 140f
 
@@ -77,6 +80,7 @@ class DirectionHud : Hud(
 
     private data class View(
         val bearing: Float,
+        val heading: Int,
         val span: Float,
         val showIntercardinals: Boolean,
         val showTicks: Boolean,
@@ -84,7 +88,7 @@ class DirectionHud : Hud(
         val fadeEdges: Boolean,
     )
 
-    private var view = mutableStateOf(View(PREVIEW_BEARING, span, showIntercardinals, showTicks, showHeading, fadeEdges))
+    private var view = mutableStateOf(viewOf(PREVIEW_BEARING, PREVIEW_BEARING))
 
     private var _staticW = mutableStateOf(DEFAULT_WIDTH)
     override var staticW: Float get() = _staticW.value; set(v) { _staticW.value = v }
@@ -110,11 +114,27 @@ class DirectionHud : Hud(
     override fun canMergeBackground(): Boolean = true
 
     override fun update(): Boolean {
-        val bearing = (if (isReal) cameraYaw else null)?.let { Facing.bearingOf(it) } ?: view.value.bearing
-        val next = View(bearing, span, showIntercardinals, showTicks, showHeading, fadeEdges)
+        val exact = (if (isReal) cameraYaw else null)?.let { Facing.bearingOf(it) }
+        val next = viewOf(exact?.let { snapBearing(it) } ?: view.value.bearing, exact ?: view.value.bearing)
         if (next == view.value) return false
         view.value = next
         return true
+    }
+
+    private fun viewOf(bearing: Float, exactBearing: Float): View = View(
+        bearing,
+        if (showHeading) exactBearing.roundToInt() % 360 else 0,
+        span,
+        showIntercardinals,
+        showTicks,
+        showHeading,
+        fadeEdges,
+    )
+
+    private fun snapBearing(bearing: Float): Float {
+        val screenWidth = (compassWidth * effectiveScale * Platform.compatibility().options().guiScale).coerceAtLeast(1f)
+        val step = BEARING_STEP_PIXELS * span / screenWidth
+        return (bearing / step).roundToInt() * step
     }
 
     override fun clone(): Hud = (super.clone() as DirectionHud).apply {
@@ -144,7 +164,7 @@ class DirectionHud : Hud(
         val tickStrip = if (view.showTicks) ribbonHeight * TICK_STRIP else 0f
 
         if (view.showHeading) {
-            Label("${bearing.roundToInt() % 360}°", fg, width, headingHeight, 0f, 0f)
+            Label("${view.heading}°", fg, width, headingHeight, 0f, 0f)
         }
 
         Ticks(view, width, ribbonHeight, headingHeight, tickStrip)

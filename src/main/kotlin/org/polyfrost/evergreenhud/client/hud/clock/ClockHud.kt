@@ -21,6 +21,8 @@ import java.time.ZoneId
 
 private const val DEFAULT_SIDE = 64f
 
+private const val SMOOTH_STEP_MS = 33L
+
 private const val DETAIL_FIVE_MINUTE_MARKS = 0
 private const val DETAIL_MINUTE_MARKS = 1
 private const val DETAIL_NUMBERS = 2
@@ -106,7 +108,7 @@ class ClockHud : Hud(
             while (isReal) {
                 withFrameMillis {
                     val millis = millisOfDay(zone)
-                    timeState.longValue = if (ticking) millis - millis % 1000 else millis
+                    timeState.longValue = millis - millis % (if (ticking) 1000L else SMOOTH_STEP_MS)
                 }
             }
         }

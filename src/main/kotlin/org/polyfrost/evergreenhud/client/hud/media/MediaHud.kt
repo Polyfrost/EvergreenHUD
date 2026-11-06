@@ -44,6 +44,10 @@ private const val TEXT_CUSTOM = 1
 private const val TEXT_ALBUM_ART = 2
 private const val TEXT_ALBUM_AVERAGE = 3
 private const val POP_MS = 220f
+
+private const val SEEK_STEPS = 2000L
+
+private const val MAX_POSITION_STEP_MS = 250L
 private const val VANILLA_EFFECTS_MARGIN = 1f
 //? if > 1.8.9 {
 private const val VANILLA_EFFECTS_BOTTOM = 51f
@@ -60,6 +64,12 @@ private fun mediaBind(command: MediaCommand, allowed: (MediaInfo) -> Boolean): O
             true
         }
         .register()
+
+internal fun stepPosition(positionMs: Long, lengthMs: Long): Long {
+    if (lengthMs > 0L && positionMs >= lengthMs) return lengthMs
+    val step = if (lengthMs > 0L) (lengthMs / SEEK_STEPS).coerceIn(1L, MAX_POSITION_STEP_MS) else 1000L
+    return positionMs - positionMs % 1000L % step
+}
 
 private val EXAMPLE = MediaInfo(
     player = "example",
@@ -290,7 +300,7 @@ class MediaHud : Hud(
     private fun read(): MediaCardState? {
         val live = if (isReal) MediaService.current else EXAMPLE
         val info = live ?: EXAMPLE.takeIf { HudManager.isEditing } ?: return null
-        val position = if (info === EXAMPLE) info.positionMs else smoothPosition(info)
+        val position = if (info === EXAMPLE) info.positionMs else steppedPosition(smoothPosition(info), info)
         return MediaCardState(
             title = applyCase(info.title),
             artist = applyCase(info.artist),
@@ -345,6 +355,11 @@ class MediaHud : Hud(
             glyph = if (customControls) glyphColor else PLAY_GLYPH,
             accent = state.artAccent?.let { PolyColor(it) } ?: accentColor,
         )
+    }
+
+    private fun steppedPosition(positionMs: Long, info: MediaInfo): Long {
+        if (seekStyle == SEEK_WAVE || !info.playing) return positionMs
+        return stepPosition(positionMs, info.lengthMs)
     }
 
     private fun smoothPosition(info: MediaInfo): Long {

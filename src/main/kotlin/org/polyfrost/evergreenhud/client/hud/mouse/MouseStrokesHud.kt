@@ -5,7 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.withFrameNanos
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
@@ -24,7 +24,9 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.exp
+import kotlin.math.sqrt
 
 private const val DECAY_RATE = 6f
 
@@ -32,11 +34,19 @@ private const val SETTLED = 0.001f
 
 private const val MAX_FRAME_SECONDS = 0.1f
 
+private const val SAMPLE_NANOS = 1_000_000_000L / 60L
+
+private const val SAMPLE_TOLERANCE_NANOS = 2_000_000L
+
 private const val MAX_TRAIL_POINTS = 512
 
 private const val MIN_POINT_DISTANCE = 0.35f
 
 private const val FADE_STEPS = 16
+
+private const val MAX_SPLINE_SEGMENTS = 8
+
+private const val SPLINE_CHORD = 1.5f
 
 private const val PREVIEW_X = 0.45f
 
@@ -120,13 +130,22 @@ class MouseStrokesHud : Hud(
     private var lastYaw = Float.NaN
 
     @Transient
-    private var lastPitch = 0f
+    private var lastPitch = Float.NaN
+
+    @Transient
+    private var pendingYaw = 0f
 
     @Transient
     private var lastFrameMs = 0L
 
     @Transient
     private var lastMovedMs = 0L
+
+    @Transient
+    private var nextSampleNs = Long.MIN_VALUE
+
+    @Transient
+    private var polyline = FloatArray(0)
 
     private var _staticW = mutableStateOf(DEFAULT_SIDE)
     override var staticW: Float get() = _staticW.value; set(v) { _staticW.value = v }
@@ -162,6 +181,8 @@ class MouseStrokesHud : Hud(
     override fun remove() {
         trail.clear()
         lastYaw = Float.NaN
+        lastPitch = Float.NaN
+        pendingYaw = 0f
     }
 
     override fun clone(): Hud = (super.clone() as MouseStrokesHud).apply {
@@ -178,9 +199,14 @@ class MouseStrokesHud : Hud(
         if (isReal) {
             LaunchedEffect(Unit) {
                 while (true) {
-                    withFrameMillis { nowMs ->
-                        step(nowMs)
-                        if (nowMs - lastMovedMs <= repaintWindow()) frame.longValue = nowMs
+                    withFrameNanos { nowNs ->
+                        trackYaw()
+                        if (isSampleDue(nextSampleNs, nowNs)) {
+                            nextSampleNs = nextSampleAfter(nextSampleNs, nowNs)
+                            val nowMs = nowNs / 1_000_000L
+                            step(nowMs)
+                            if (nowMs - lastMovedMs <= repaintWindow()) frame.longValue = nowMs
+                        }
                     }
                 }
             }
@@ -197,21 +223,28 @@ class MouseStrokesHud : Hud(
 
     private fun repaintWindow(): Float = if (dotType == SNAKE) snakeMs else 0f
 
+    private fun trackYaw() {
+        val player = mc.player
+        val yaw = player?.yRot ?: 0f
+        if (player == null || lastYaw.isNaN()) {
+            lastYaw = yaw
+            pendingYaw = 0f
+        }
+        pendingYaw = accumulatedYaw(pendingYaw, lastYaw, yaw)
+        lastYaw = yaw
+    }
+
     private fun step(nowMs: Long) {
         val deltaSeconds = if (lastFrameMs == 0L) 0f else ((nowMs - lastFrameMs) / 1000f).coerceIn(0f, MAX_FRAME_SECONDS)
         lastFrameMs = nowMs
 
         val player = mc.player
-        val yaw = player?.yRot ?: 0f
         val pitch = player?.xRot ?: 0f
-        if (player == null || lastYaw.isNaN()) {
-            lastYaw = yaw
-            lastPitch = pitch
-        }
+        if (player == null || lastPitch.isNaN()) lastPitch = pitch
 
-        val deltaYaw = Facing.wrapDegrees(yaw - lastYaw)
+        val deltaYaw = pendingYaw
+        pendingYaw = 0f
         val deltaPitch = pitch - lastPitch
-        lastYaw = yaw
         lastPitch = pitch
 
         val decay = exp(-DECAY_RATE * deltaSeconds)
@@ -303,19 +336,20 @@ class MouseStrokesHud : Hud(
             return
         }
 
-        val builder = ArrayList<Float>()
+        val capacity = (count * MAX_SPLINE_SEGMENTS + 1) * 2
+        if (polyline.size < capacity) polyline = FloatArray(capacity)
         var start = 0
         while (start < count - 1) {
             val step = fadeStep(ages[start + 1])
             var end = start + 1
             while (end < count - 1 && fadeStep(ages[end + 1]) == step) end++
 
-            builder.clear()
-            builder.add(xs[start])
-            builder.add(ys[start])
-            for (i in start until end) builder.splineTo(xs, ys, i, count)
+            polyline[0] = xs[start]
+            polyline[1] = ys[start]
+            var size = 2
+            for (i in start until end) size = appendSpline(polyline, size, xs, ys, i, count)
             val segmentColor = color.withAlphaScaled((step + 1).toFloat() / FADE_STEPS)
-            renderer.strokePolyline(builder.toFloatArray(), false, segmentColor.argb, width, PolyRenderer.CAP_ROUND, PolyRenderer.JOIN_ROUND)
+            renderer.strokePolyline(polyline.copyOf(size), false, segmentColor.argb, width, PolyRenderer.CAP_ROUND, PolyRenderer.JOIN_ROUND)
 
             start = end
         }
@@ -323,25 +357,6 @@ class MouseStrokesHud : Hud(
 
     private fun fadeStep(age: Float): Int =
         (age * FADE_STEPS).toInt().coerceIn(0, FADE_STEPS - 1)
-
-    private fun MutableList<Float>.splineTo(xs: FloatArray, ys: FloatArray, i: Int, count: Int) {
-        val previous = (i - 1).coerceAtLeast(0)
-        val next = (i + 2).coerceAtMost(count - 1)
-        val x0 = xs[i]
-        val y0 = ys[i]
-        val x1 = xs[i] + (xs[i + 1] - xs[previous]) / 6f
-        val y1 = ys[i] + (ys[i + 1] - ys[previous]) / 6f
-        val x2 = xs[i + 1] - (xs[next] - xs[i]) / 6f
-        val y2 = ys[i + 1] - (ys[next] - ys[i]) / 6f
-        val x3 = xs[i + 1]
-        val y3 = ys[i + 1]
-        for (s in 1..SPLINE_SEGMENTS) {
-            val t = s.toFloat() / SPLINE_SEGMENTS
-            val u = 1f - t
-            add(u * u * u * x0 + 3f * u * u * t * x1 + 3f * u * t * t * x2 + t * t * t * x3)
-            add(u * u * u * y0 + 3f * u * u * t * y1 + 3f * u * t * t * y2 + t * t * t * y3)
-        }
-    }
 
     private fun RenderContext.dot(centreX: Float, centreY: Float, radius: Float, color: PolyColor) {
         oval(centreX - radius, centreY - radius, radius * 2f, radius * 2f, color)
@@ -355,8 +370,41 @@ class MouseStrokesHud : Hud(
     private data class TrailPoint(val x: Float, val y: Float, val timeMs: Long)
 
     companion object {
-        private const val SPLINE_SEGMENTS = 8
         private const val DOT = 0
         private const val SNAKE = 1
     }
+}
+
+internal fun nextSampleAfter(deadlineNs: Long, nowNs: Long): Long {
+    val next = deadlineNs + SAMPLE_NANOS
+    return if (next > nowNs) next else nowNs + SAMPLE_NANOS
+}
+
+internal fun isSampleDue(deadlineNs: Long, nowNs: Long): Boolean =
+    nowNs + SAMPLE_TOLERANCE_NANOS >= deadlineNs
+
+internal fun accumulatedYaw(pending: Float, lastYaw: Float, yaw: Float): Float =
+    pending + Facing.wrapDegrees(yaw - lastYaw)
+
+internal fun appendSpline(out: FloatArray, end: Int, xs: FloatArray, ys: FloatArray, i: Int, count: Int): Int {
+    val previous = (i - 1).coerceAtLeast(0)
+    val next = (i + 2).coerceAtMost(count - 1)
+    val x0 = xs[i]
+    val y0 = ys[i]
+    val x1 = xs[i] + (xs[i + 1] - xs[previous]) / 6f
+    val y1 = ys[i] + (ys[i + 1] - ys[previous]) / 6f
+    val x2 = xs[i + 1] - (xs[next] - xs[i]) / 6f
+    val y2 = ys[i + 1] - (ys[next] - ys[i]) / 6f
+    val x3 = xs[i + 1]
+    val y3 = ys[i + 1]
+    val length = sqrt((x3 - x0) * (x3 - x0) + (y3 - y0) * (y3 - y0))
+    val segments = ceil(length / SPLINE_CHORD).toInt().coerceIn(1, MAX_SPLINE_SEGMENTS)
+    var at = end
+    for (s in 1..segments) {
+        val t = s.toFloat() / segments
+        val u = 1f - t
+        out[at++] = u * u * u * x0 + 3f * u * u * t * x1 + 3f * u * t * t * x2 + t * t * t * x3
+        out[at++] = u * u * u * y0 + 3f * u * u * t * y1 + 3f * u * t * t * y2 + t * t * t * y3
+    }
+    return at
 }
