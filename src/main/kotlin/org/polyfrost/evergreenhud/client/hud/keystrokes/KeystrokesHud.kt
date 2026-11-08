@@ -460,7 +460,7 @@ class KeystrokesHud : Hud(
         when (cpsMode) {
             CPS_SMALL -> Key(label, progress, w, h, sub = "$cps CPS")
             CPS_LARGE -> Key(if (cps > 0) cps.toString() else label, progress, w, h)
-	    CPS_ONLY -> Key(cps.toString(), progress, w, h)
+	        CPS_ONLY -> Key(cps.toString(), progress, w, h)
             else -> Key(label, progress, w, h)
         }
     }
