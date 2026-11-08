@@ -64,6 +64,7 @@ private const val FONT = 8f
 private const val CPS_NONE = 0
 private const val CPS_SMALL = 1
 private const val CPS_LARGE = 2
+private const val CPS_ONLY = 3
 
 private const val ROW_MOVEMENT = "Movement"
 private const val ROW_SPACEBAR = "Spacebar"
@@ -126,7 +127,7 @@ class KeystrokesHud : Hud(
     @RadioButton(
         title = "Click Counter",
         description = "Show CPS on the mouse keys.",
-        options = ["None", "Small", "Large"],
+        options = ["None", "Small", "Large", "Only"],
     )
     var cpsMode = CPS_NONE
 
@@ -459,6 +460,7 @@ class KeystrokesHud : Hud(
         when (cpsMode) {
             CPS_SMALL -> Key(label, progress, w, h, sub = "$cps CPS")
             CPS_LARGE -> Key(if (cps > 0) cps.toString() else label, progress, w, h)
+	    CPS_ONLY -> Key(cps.toString(), progress, w, h)
             else -> Key(label, progress, w, h)
         }
     }
