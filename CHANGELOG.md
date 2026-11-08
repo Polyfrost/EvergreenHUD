@@ -1,2 +1,3 @@
-## 3.9.16
-- Fixed Media Player not working on macOS due to missing library
+## 3.9.17
+- Added Lyrics HUD to go along with the Media Player HUD.
+- Improved Media Player performance.
