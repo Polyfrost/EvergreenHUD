@@ -15,12 +15,14 @@ import org.polyfrost.evergreenhud.client.utils.copy
 import org.polyfrost.evergreenhud.client.utils.media.MediaCommand
 import org.polyfrost.evergreenhud.client.utils.media.MediaInfo
 import org.polyfrost.evergreenhud.client.utils.media.MediaService
+import org.polyfrost.evergreenhud.client.utils.media.cleanTitle
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.annotations.Keybind
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
+import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.MouseInputEvent
 import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
@@ -89,10 +91,19 @@ class MediaHud : Hud(
     title = "Media Player",
     category = Category.INFO,
 ) {
+    @Text(
+        title = "Sources",
+        description = "Player names to show, comma separated. Empty shows all.",
+    )
+    var sources = ""
+
+    @Switch(title = "Clean Title", description = "Removes extras like \"(Official Video)\".")
+    var cleanTitles = true
+
     @Switch(title = "Show Album Art")
     var showAlbumArt = true
 
-    @Switch(title = "Concentric Album Art Corners", description = "Round the album art to match the background's corners.")
+    @Switch(title = "Concentric Album Art Corners", description = "Matches the art's corners to the background.")
     var concentricArt = true
 
     @Slider(title = "Album Art Corner Radius", min = 0f, max = MediaCardLayout.ART_SIZE / 2f, step = 1f)
@@ -100,25 +111,25 @@ class MediaHud : Hud(
 
     @Dropdown(
         title = "Title Scroll",
-        description = "How a title too long for the card scrolls.",
+        description = "How long titles scroll.",
         options = ["Loop", "Back and Forth"],
     )
     var titleScroll = 0
 
     @Dropdown(
         title = "Button Style",
-        description = "Material puts the skip buttons in tonal circles and squares off the play button while playing.",
+        description = "Material adds circles behind the skip buttons.",
         options = ["Classic", "Material"],
     )
     var buttonStyle = BUTTONS_CLASSIC
 
-    @Switch(title = "Cutout Play / Pause Icon", description = "Cuts the icon out of the play button so whatever is behind it shows through.")
+    @Switch(title = "Cutout Play / Pause Icon", description = "Lets the background show through the icon.")
     var cutoutGlyph = false
 
     @Dropdown(title = "Seek Bar Position", options = ["Below", "Above", "Hidden"], subcategory = "Seek Bar")
     var seekPosition = SEEK_BELOW
 
-    @Slider(title = "Seek Bar Width", description = "How much of the card's width the seek bar spans, in percent.", min = 10f, max = 100f, step = 5f, subcategory = "Seek Bar")
+    @Slider(title = "Seek Bar Width", description = "Percent of the card's width.", min = 10f, max = 100f, step = 5f, subcategory = "Seek Bar")
     var seekWidth = 100f
 
     @Dropdown(title = "Seek Bar Style", options = ["Rounded", "Square", "Wave"], subcategory = "Seek Bar")
@@ -129,18 +140,18 @@ class MediaHud : Hud(
 
     @Dropdown(
         title = "Accent Source",
-        description = "Where the play button and progress bar get their color.",
+        description = "Color of the play button and seek bar.",
         options = ["Accent Color", "Album Art", "Album Art Average"],
         subcategory = "Colors",
     )
     var accentSource = ACCENT_ALBUM_ART
 
-    @Color(title = "Accent Color", description = "Color of the play button and the progress bar.", subcategory = "Colors")
+    @Color(title = "Accent Color", description = "Play button and seek bar.", subcategory = "Colors")
     var accentColor = PolyColor(0xFF7CE0A8.toInt())
 
     @Dropdown(
         title = "Text Color Source",
-        description = "Where the title, artist and time get their color.",
+        description = "Color of the title, artist and time.",
         options = ["Text Color", "Custom", "Album Art", "Album Art Average"],
         subcategory = "Colors",
     )
@@ -155,10 +166,10 @@ class MediaHud : Hud(
     @Color(title = "Time Color", subcategory = "Colors")
     var timeColor = PolyColor(0x99FFFFFF.toInt())
 
-    @Slider(title = "Album Text Saturation", description = "Scales the saturation of the album color, in percent.", min = 0f, max = 200f, step = 5f, subcategory = "Colors")
+    @Slider(title = "Album Text Saturation", description = "In percent.", min = 0f, max = 200f, step = 5f, subcategory = "Colors")
     var albumTextSaturation = 100f
 
-    @Slider(title = "Album Text Lightness", description = "Moves the album color toward white (positive) or black (negative).", min = -100f, max = 100f, step = 5f, subcategory = "Colors")
+    @Slider(title = "Album Text Lightness", description = "Positive is lighter, negative is darker.", min = -100f, max = 100f, step = 5f, subcategory = "Colors")
     var albumTextLightness = 0f
 
     @Switch(title = "Custom Control Colors", subcategory = "Colors")
@@ -170,7 +181,7 @@ class MediaHud : Hud(
     @Color(title = "Play / Pause Icon Color", subcategory = "Colors")
     var glyphColor = PLAY_GLYPH.copy()
 
-    @Switch(title = "Album Art Background", description = "Draws the album art blurred behind the card, under the background color.", subcategory = "Background")
+    @Switch(title = "Album Art Background", description = "Blurred album art behind the card.", subcategory = "Background")
     var artBackground = false
 
     @Slider(title = "Album Art Blur", min = 0f, max = 20f, step = 1f, subcategory = "Background")
@@ -179,10 +190,10 @@ class MediaHud : Hud(
     @Slider(title = "Album Art Opacity", min = 0f, max = 100f, step = 5f, subcategory = "Background")
     var artBackgroundOpacity = 100f
 
-    @Switch(title = "Only Show in GUIs", description = "Hides the card unless a screen such as chat or the inventory is open.", subcategory = "Visibility")
+    @Switch(title = "Only Show in GUIs", description = "Only shows while a screen like chat is open.", subcategory = "Visibility")
     var onlyInGuis = false
 
-    @Switch(title = "Pop In Animation", description = "Fades and scales the card in when a screen opens.", subcategory = "Visibility")
+    @Switch(title = "Pop In Animation", description = "Fades the card in when a screen opens.", subcategory = "Visibility")
     var popIn = true
 
     @Keybind(title = "Play / Pause Key")
@@ -226,6 +237,9 @@ class MediaHud : Hud(
     private var shownTitle: String? = null
 
     @Transient
+    private var textCache: Pair<List<Any>, Pair<String, String>>? = null
+
+    @Transient
     private var handlers = ArrayList<EventHandler<*>>(2)
 
     @Transient
@@ -250,13 +264,15 @@ class MediaHud : Hud(
         showWhen("popIn") { onlyInGuis }
         if (!isReal) return
         val options = listOf(
-            "showAlbumArt", "concentricArt", "artCornerRadius", "titleScroll", "buttonStyle", "cutoutGlyph",
+            "cleanTitles", "showAlbumArt", "concentricArt", "artCornerRadius", "titleScroll", "buttonStyle", "cutoutGlyph",
             "seekPosition", "seekWidth", "seekStyle", "showTimes",
             "accentSource", "accentColor", "textSource", "titleColor", "artistColor", "timeColor",
             "albumTextSaturation", "albumTextLightness", "customControls", "controlColor", "glyphColor",
             "artBackground", "artBackgroundBlur", "artBackgroundOpacity", "onlyInGuis", "popIn",
         )
         for (option in options) updateWhenChanged(option)
+        applySources()
+        addCallback("sources") { applySources() }
         if (acquired) return
         acquired = true
         MediaService.acquire()
@@ -264,6 +280,10 @@ class MediaHud : Hud(
         handlers.add(eventHandler { (button, state): MouseInputEvent ->
             if (button <= 1 && state == MouseInputEvent.PRESSED) click()
         })
+    }
+
+    private fun applySources() {
+        MediaService.sources = sources.split(',').map { it.trim() }.filter { it.isNotEmpty() }
     }
 
     private fun showWhen(option: String, hide: Boolean = false, condition: () -> Boolean) {
@@ -276,9 +296,11 @@ class MediaHud : Hud(
         handlers.clear()
         if (acquired) MediaService.release()
         acquired = false
+        shownWidth = 0f
     }
 
     override fun update(): Boolean {
+        if (isReal) shownWidth = if (hidden || card.value == null) 0f else scaledWidth
         if (hovered.intValue != -1 && !screenOpen()) hovered.intValue = -1
         val next = read()
         val now = System.currentTimeMillis()
@@ -301,9 +323,10 @@ class MediaHud : Hud(
         val live = if (isReal) MediaService.current else EXAMPLE
         val info = live ?: EXAMPLE.takeIf { HudManager.isEditing } ?: return null
         val position = if (info === EXAMPLE) info.positionMs else steppedPosition(smoothPosition(info), info)
+        val (title, artist) = shownText(info.title, info.artist)
         return MediaCardState(
-            title = applyCase(info.title),
-            artist = applyCase(info.artist),
+            title = title,
+            artist = artist,
             playing = info.playing,
             positionMs = position,
             lengthMs = info.lengthMs,
@@ -317,6 +340,14 @@ class MediaHud : Hud(
                 else -> null
             },
         )
+    }
+
+    private fun shownText(title: String, artist: String): Pair<String, String> {
+        val key = listOf(title, artist, cleanTitles, caseType)
+        textCache?.takeIf { it.first == key }?.let { return it.second }
+        val text = applyCase(if (cleanTitles) cleanTitle(title) else title) to applyCase(artist)
+        textCache = key to text
+        return text
     }
 
     private fun albumColor(average: Boolean): Int? {
@@ -468,20 +499,29 @@ class MediaHud : Hud(
 
     private fun backdrop(state: MediaCardState, cardStyle: MediaCardStyle, scale: Float, inset: Float, textWidth: Float): MediaCardBackdrop? {
         if (!artBackground && !(onlyInGuis && popIn)) return null
-        if (bgMerged) return null
+        val merged = if (bgMerged) mediaMergePiece(padLeft + inset, padTop + inset, scale) ?: return null else null
+        if (merged != null && (!artBackground || state.art == null)) return null
         val boxW = if (isStatic) staticW else padLeft + padRight + 2f * inset + MediaCardLayout.width(cardStyle.showArt, textWidth) * scale
         val boxH = if (isStatic) staticH else padTop + padBottom + 2f * inset + MediaCardLayout.height(cardStyle.seekPosition) * scale
         val left = -(padLeft + inset) / scale
         val top = -(padTop + inset) / scale
-        val showColor = showBackground && hasBackground()
+        val showColor = merged == null && showBackground && hasBackground()
+        val bounds = Rect.makeXYWH(left, top, boxW / scale, boxH / scale)
         return MediaCardBackdrop(
-            bounds = Rect.makeXYWH(left, top, boxW / scale, boxH / scale),
+            bounds = bounds,
             radius = if (showColor || artBackground) bgRadius / scale else 0f,
             color = if (showColor) PolyColor(bgColor, bgChroma, bgChromaSpeed) else null,
             art = if (artBackground) state.art else null,
             artBlur = artBackgroundBlur,
             artAlpha = artBackgroundOpacity / 100f,
+            artBounds = merged?.artBounds ?: bounds,
+            roundedCorners = merged?.roundedCorners ?: ALL_CORNERS,
         )
+    }
+
+    companion object {
+        @Volatile
+        internal var shownWidth = 0f
     }
 
     override fun clone(): Hud = (super.clone() as MediaHud).also {
@@ -503,12 +543,13 @@ class MediaHud : Hud(
         it.shownPosition = 0.0
         it.shownAt = 0L
         it.shownTitle = null
+        it.textCache = null
         it.handlers = ArrayList(2)
         it.acquired = false
     }
 }
 
-private fun adjustColor(argb: Int, saturation: Float, lightness: Float): Int {
+internal fun adjustColor(argb: Int, saturation: Float, lightness: Float): Int {
     val r = (argb ushr 16 and 0xFF) / 255f
     val g = (argb ushr 8 and 0xFF) / 255f
     val b = (argb and 0xFF) / 255f
