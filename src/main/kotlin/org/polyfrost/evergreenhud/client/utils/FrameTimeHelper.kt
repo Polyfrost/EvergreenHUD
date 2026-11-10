@@ -8,8 +8,6 @@ import org.polyfrost.oneconfig.api.event.v1.events.FramebufferRenderEvent
 object FrameTimeHelper {
     private const val WINDOW_NANOS = 1_000_000_000L
 
-    private const val RECENT_NANOS = 250_000_000L
-
     private const val SAMPLE_NANOS = 100_000_000L
 
     private const val BASELINE_SMOOTHING = 0.004
@@ -53,7 +51,7 @@ object FrameTimeHelper {
             val p50 = percentile(sorted, 0.50)
             val p95 = percentile(sorted, 0.95)
             val p99 = percentile(sorted, 0.99)
-            val data = FrameData(consistency, recentMean(avg), avg, p50, p95, p99, sorted.size)
+            val data = FrameData(consistency, avg, p50, p95, p99, sorted.size)
             latest = data
 
             val fps = data.averageFps
@@ -63,17 +61,6 @@ object FrameTimeHelper {
 
             EventManager.INSTANCE.post(FrameDataEvent(data))
         }
-    }
-
-    private fun recentMean(fallback: Double): Double {
-        var sum = 0L
-        var count = 0
-        for (i in frameTimes.indices.reversed()) {
-            sum += frameTimes[i]
-            count++
-            if (sum >= RECENT_NANOS) break
-        }
-        return if (count > 0) sum.toDouble() / count else fallback
     }
 
     private fun percentile(sorted: LongArray, percentile: Double): Double {
@@ -88,15 +75,12 @@ object FrameTimeHelper {
 
     data class FrameData(
         val consistency: Double,
-        val recent: Double,
         val mean: Double,
         val median: Double,
         val p95: Double,
         val p99: Double,
         val nframes: Int
     ) {
-        val currentFps get() = fps(recent)
-
         val averageFps get() = fps(mean)
         val medianFps get() = fps(median)
         val meanMillis get() = mean / 1_000_000.0
@@ -109,7 +93,7 @@ object FrameTimeHelper {
 
         companion object {
             @JvmField
-            val EMPTY = FrameData(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0)
+            val EMPTY = FrameData(0.0, 0.0, 0.0, 0.0, 0.0, 0)
         }
     }
 

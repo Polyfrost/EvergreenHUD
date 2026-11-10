@@ -1,5 +1,6 @@
 package org.polyfrost.evergreenhud.client.hud
 
+import net.minecraft.client.Minecraft
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.utils.FrameTimeHelper
 import org.polyfrost.evergreenhud.client.utils.GenericNumberHud
@@ -15,7 +16,8 @@ import org.polyfrost.oneconfig.api.hud.v1.Hud
 
 private const val WORST_RATIO = 0.5
 private const val PREVIEW_BASELINE = 144.0
-private val PREVIEW_DATA = FrameTimeHelper.FrameData(0.08, 7_092_198.0, 7_142_857.0, 7_092_198.0, 9_000_000.0, 12_000_000.0, 0)
+private const val PREVIEW_FPS = 141
+private val PREVIEW_DATA = FrameTimeHelper.FrameData(0.08, 7_142_857.0, 7_092_198.0, 9_000_000.0, 12_000_000.0, 0)
 
 class FpsHud : GenericNumberHud(
     title = "FPS",
@@ -59,17 +61,20 @@ class FpsHud : GenericNumberHud(
     }
 
     private val data get() = if (isReal) FrameTimeHelper.latest else PREVIEW_DATA
+
+    // vanilla's counter, so the value matches the debug screen
+    //~ if = 1.8.9 'Minecraft.getInstance().fps' -> 'Minecraft.getCurrentFps()'
+    private val fps get() = if (isReal) Minecraft.getInstance().fps else PREVIEW_FPS
     private val baseline get() = if (isReal) FrameTimeHelper.baselineFps else PREVIEW_BASELINE
 
     override fun getText(): String {
-
-        val hiddenByRange = baseline > 0.0 && qualityPercent(data.currentFps.toFloat(), baseline).let { it < showRange[0] || it > showRange[1] }
-        val hiddenByNumber = hideAboveNumber > 0 && data.currentFps > hideAboveNumber
+        val hiddenByRange = baseline > 0.0 && qualityPercent(fps.toFloat(), baseline).let { it < showRange[0] || it > showRange[1] }
+        val hiddenByNumber = hideAboveNumber > 0 && fps > hideAboveNumber
 
         inRange = !hiddenByRange && !hiddenByNumber
 
         return StringBuilder().append(formatString)
-            .replace("#fps", format(data.currentFps))
+            .replace("#fps", format(fps))
             .replace("#avg", format(data.averageFps))
             .replace("#med", format(data.medianFps))
             .replace("#p95", format(data.p95Millis))
@@ -86,7 +91,6 @@ class FpsHud : GenericNumberHud(
     override fun valueColor(): PolyColor? {
         val baseline = baseline
         if (!colorByValue || baseline <= 0.0) return null
-        val fps = data.currentFps
         return qualityColor(quality(fps.toFloat(), (baseline * WORST_RATIO).toFloat(), baseline.toFloat()))
     }
 
