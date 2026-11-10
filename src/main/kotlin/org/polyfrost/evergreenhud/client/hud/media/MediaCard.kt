@@ -13,7 +13,9 @@ import org.polyfrost.compose.render.PolyRenderer
 import org.polyfrost.compose.render.RenderContext
 import org.polyfrost.evergreenhud.client.hud.shape.oval
 import org.polyfrost.evergreenhud.client.utils.capHeight
-import org.polyfrost.evergreenhud.client.utils.fillShape
+import org.polyfrost.evergreenhud.client.utils.toPolyPath
+import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import java.awt.BasicStroke
 import java.awt.Shape
 import java.awt.geom.Area
@@ -21,6 +23,8 @@ import java.awt.geom.Ellipse2D
 import java.awt.geom.Path2D
 import java.awt.geom.RoundRectangle2D
 import kotlin.math.PI
+import kotlin.math.ceil
+import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -76,6 +80,12 @@ data class MediaCardStyle(
     val colors: MediaCardColors,
 )
 
+const val CORNER_TOP_LEFT = 1
+const val CORNER_TOP_RIGHT = 2
+const val CORNER_BOTTOM_RIGHT = 4
+const val CORNER_BOTTOM_LEFT = 8
+const val ALL_CORNERS = 15
+
 data class MediaCardBackdrop(
     val bounds: Rect,
     val radius: Float,
@@ -83,6 +93,8 @@ data class MediaCardBackdrop(
     val art: PolyBitmap?,
     val artBlur: Float,
     val artAlpha: Float,
+    val artBounds: Rect = bounds,
+    val roundedCorners: Int = ALL_CORNERS,
 )
 
 data class Rect(val left: Float, val top: Float, val right: Float, val bottom: Float) {
@@ -163,8 +175,12 @@ private const val ICON_STROKE = 1f
 private const val ICON_INSET = ICON_STROKE / 2f
 private const val ICON_TIP_INSET = 0.8f
 val PLAY_GLYPH = PolyColor(0xFF101014.toInt())
-private var blurredArt: PolyBitmap? = null
-private var blurredKey: Triple<PolyBitmap, Rect, Int>? = null
+private const val BLUR_MAX_SIDE = 128
+private const val BLUR_CACHE_SIZE = 4
+
+private val blurCache = object : LinkedHashMap<Pair<PolyBitmap, Int>, PolyBitmap>(BLUR_CACHE_SIZE * 2, 0.75f, true) {
+    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<PolyBitmap, Int>, PolyBitmap>?): Boolean = size > BLUR_CACHE_SIZE
+}
 
 @Composable
 fun MediaCard(
@@ -213,7 +229,7 @@ fun MediaCard(
     }
 }
 
-private fun RenderContext.beginPop(progress: Float, bounds: Rect) {
+internal fun RenderContext.beginPop(progress: Float, bounds: Rect) {
     val inverse = 1f - progress.coerceIn(0f, 1f)
     val eased = 1f - inverse * inverse * inverse
     saveLayerAlpha(eased)
@@ -223,38 +239,102 @@ private fun RenderContext.beginPop(progress: Float, bounds: Rect) {
     translate(-(bounds.left + bounds.width / 2f), -(bounds.top + bounds.height / 2f))
 }
 
-private fun RenderContext.drawBackdrop(backdrop: MediaCardBackdrop) {
+internal fun RenderContext.drawBackdrop(backdrop: MediaCardBackdrop) {
     val bounds = backdrop.bounds
     val art = backdrop.art
     if (art != null && backdrop.artAlpha > 0f) {
         save()
-        clipRRect(bounds.left, bounds.top, bounds.width, bounds.height, backdrop.radius)
+        clipBackdrop(backdrop)
         val bleed = backdrop.artBlur * 3f
-        val target = Rect(bounds.left - bleed, bounds.top - bleed, bounds.right + bleed, bounds.bottom + bleed)
+        val area = backdrop.artBounds
+        val target = Rect(area.left - bleed, area.top - bleed, area.right + bleed, area.bottom + bleed)
         val crop = coverCrop(art, target.width / target.height)
         val tint = PolyColor.WHITE.withAlpha((backdrop.artAlpha * 255f).roundToInt())
-        image(blurred(art, crop, backdrop.artBlur * crop.width / target.width), target.left, target.top, target.width, target.height, 0f, 0f, 1f, 1f, tint)
+        val blur = blurred(art, backdrop.artBlur * crop.width / target.width)
+        image(blur, target.left, target.top, target.width, target.height, crop.left / art.width, crop.top / art.height, crop.right / art.width, crop.bottom / art.height, tint)
         restore()
     }
-    backdrop.color?.let { rect(bounds.left, bounds.top, bounds.width, bounds.height, it, backdrop.radius) }
+    val color = backdrop.color ?: return
+    if (backdrop.roundedCorners == ALL_CORNERS) return rect(bounds.left, bounds.top, bounds.width, bounds.height, color, backdrop.radius)
+    save()
+    clipBackdrop(backdrop)
+    rect(bounds.left, bounds.top, bounds.width, bounds.height, color)
+    restore()
 }
 
-private fun blurred(art: PolyBitmap, crop: Rect, sigma: Float): PolyBitmap {
-    val left = crop.left.roundToInt().coerceIn(0, art.width - 1)
-    val top = crop.top.roundToInt().coerceIn(0, art.height - 1)
-    val width = crop.width.roundToInt().coerceIn(1, art.width - left)
-    val height = crop.height.roundToInt().coerceIn(1, art.height - top)
-    val key = Triple(art, Rect.makeXYWH(left.toFloat(), top.toFloat(), width.toFloat(), height.toFloat()), (sigma * 4f).roundToInt())
-    if (key == blurredKey) blurredArt?.let { return it }
-    val pixels = FloatArray(width * height * 4)
-    for (y in 0 until height) for (x in 0 until width) {
-        val src = ((top + y) * art.width + left + x) * 4
-        val dst = (y * width + x) * 4
-        val alpha = (art.pixels[src + 3].toInt() and 0xFF) / 255f
-        for (c in 0..2) pixels[dst + c] = (art.pixels[src + c].toInt() and 0xFF) * alpha
-        pixels[dst + 3] = alpha * 255f
+private const val CORNER_SEGMENTS = 8
+
+private fun RenderContext.clipBackdrop(backdrop: MediaCardBackdrop) {
+    val b = backdrop.bounds
+    val corners = backdrop.roundedCorners
+    if (corners == ALL_CORNERS) return clipRRect(b.left, b.top, b.width, b.height, backdrop.radius)
+    val r = backdrop.radius.coerceAtMost(minOf(b.width, b.height) / 2f)
+    val points = ArrayList<Float>(4 * (CORNER_SEGMENTS + 1) * 2)
+    fun corner(bit: Int, x: Float, y: Float, cx: Float, cy: Float, from: Double) {
+        if (corners and bit == 0 || r <= 0f) {
+            points.add(x)
+            points.add(y)
+            return
+        }
+        for (i in 0..CORNER_SEGMENTS) {
+            val angle = from + PI / 2 * i / CORNER_SEGMENTS
+            points.add(cx + r * cos(angle).toFloat())
+            points.add(cy + r * sin(angle).toFloat())
+        }
     }
-    if (key.third > 0) {
+    corner(CORNER_TOP_LEFT, b.left, b.top, b.left + r, b.top + r, PI)
+    corner(CORNER_TOP_RIGHT, b.right, b.top, b.right - r, b.top + r, PI * 1.5)
+    corner(CORNER_BOTTOM_RIGHT, b.right, b.bottom, b.right - r, b.bottom - r, 0.0)
+    corner(CORNER_BOTTOM_LEFT, b.left, b.bottom, b.left + r, b.bottom - r, PI / 2)
+    renderer.clipPolygon(points.toFloatArray())
+}
+
+class MergedPiece(val artBounds: Rect, val roundedCorners: Int)
+
+private const val MERGE_TOUCH = 2f
+
+internal fun Hud.mediaMergePiece(originX: Float, originY: Float, scale: Float): MergedPiece? {
+    val group = HudManager.mergeGroupOf(this)
+    if (group.size < 2 || group.any { it !is MediaHud && it !is LyricsHud }) return null
+    val unit = effectiveScale.coerceAtLeast(0.01f)
+    fun local(hud: Hud) = Rect.makeXYWH((hud.x - x) / unit, (hud.y - y) / unit, hud.renderedW / unit, hud.renderedH / unit)
+    val others = group.filter { it !== this }.map(::local)
+    val own = local(this)
+    val touch = MERGE_TOUCH / unit
+    fun shared(px: Float, py: Float) = others.any { px >= it.left - touch && px <= it.right + touch && py >= it.top - touch && py <= it.bottom + touch }
+    var corners = 0
+    if (!shared(own.left, own.top)) corners = corners or CORNER_TOP_LEFT
+    if (!shared(own.right, own.top)) corners = corners or CORNER_TOP_RIGHT
+    if (!shared(own.right, own.bottom)) corners = corners or CORNER_BOTTOM_RIGHT
+    if (!shared(own.left, own.bottom)) corners = corners or CORNER_BOTTOM_LEFT
+    val all = others + own
+    fun canvas(lx: Float, ly: Float) = (lx - originX) / scale to (ly - originY) / scale
+    val (left, top) = canvas(all.minOf { it.left }, all.minOf { it.top })
+    val (right, bottom) = canvas(all.maxOf { it.right }, all.maxOf { it.bottom })
+    return MergedPiece(Rect(left, top, right, bottom), corners)
+}
+
+private fun blurred(art: PolyBitmap, sigma: Float): PolyBitmap {
+    val factor = ceil(maxOf(art.width, art.height) / BLUR_MAX_SIDE.toFloat()).toInt().coerceAtLeast(1)
+    val halfSteps = (sigma / factor * 2f).roundToInt()
+    return blurCache.getOrPut(art to halfSteps) { blur(art, factor, halfSteps / 2f) }
+}
+
+private fun blur(art: PolyBitmap, factor: Int, sigma: Float): PolyBitmap {
+    val width = (art.width / factor).coerceAtLeast(1)
+    val height = (art.height / factor).coerceAtLeast(1)
+    val pixels = FloatArray(width * height * 4)
+    val area = factor * factor
+    for (y in 0 until height) for (x in 0 until width) {
+        val dst = (y * width + x) * 4
+        for (sy in 0 until factor) for (sx in 0 until factor) {
+            val src = ((y * factor + sy) * art.width + x * factor + sx) * 4
+            val alpha = (art.pixels[src + 3].toInt() and 0xFF) / 255f
+            for (c in 0..2) pixels[dst + c] += (art.pixels[src + c].toInt() and 0xFF) * alpha / area
+            pixels[dst + 3] += alpha * 255f / area
+        }
+    }
+    if (sigma > 0f) {
         val radius = ((sqrt(4f * sigma * sigma + 1f) - 1f) / 2f).roundToInt().coerceAtLeast(1)
         val scratch = FloatArray(pixels.size)
         repeat(3) {
@@ -269,10 +349,7 @@ private fun blurred(art: PolyBitmap, crop: Rect, sigma: Float): PolyBitmap {
         for (c in 0..2) out[i * 4 + c] = (pixels[i * 4 + c] * 255f / alpha).roundToInt().coerceIn(0, 255).toByte()
         out[i * 4 + 3] = alpha.roundToInt().coerceIn(0, 255).toByte()
     }
-    return PolyBitmap(width, height, out).also {
-        blurredArt = it
-        blurredKey = key
-    }
+    return PolyBitmap(width, height, out)
 }
 
 private fun boxBlur(src: FloatArray, dst: FloatArray, lines: Int, length: Int, radius: Int, lineStride: Int, step: Int) {
@@ -330,7 +407,7 @@ private fun RenderContext.drawNote(cx: Float, cy: Float, color: PolyColor) {
     )
 }
 
-private class Label(size: Float, fontName: String?, private val shadow: Boolean = false) {
+internal class Label(size: Float, fontName: String?, private val shadow: Boolean = false) {
     private val poly: PolyFont? = fontName?.let { PolyFont(it, size) }
     private val mcScale = size / MC_LINE_HEIGHT
 
@@ -343,6 +420,8 @@ private class Label(size: Float, fontName: String?, private val shadow: Boolean 
         mcText(text, x, baseline - MC_CAP_HEIGHT * mcScale, color.argb, shadow, mcScale)
     }
 }
+
+private val DIGIT = Regex("\\d")
 
 private const val MC_LINE_HEIGHT = 9f
 private const val MC_CAP_HEIGHT = 7f
@@ -428,7 +507,7 @@ private fun RenderContext.drawProgress(
             draw(right, barRight - width(right), baseline, colors.time)
         }
         val digit = "0123456789".maxBy { font.width(it.toString()) }
-        val template = formatTime(maxOf(state.positionMs, state.lengthMs)).replace(Regex("\\d"), digit.toString())
+        val template = formatTime(maxOf(state.positionMs, state.lengthMs)).replace(DIGIT, digit.toString())
         val slot = maxOf(font.width(template), font.width(right))
         barLeft += slot + TIME_GAP
         barRight -= slot + TIME_GAP
@@ -486,6 +565,20 @@ private fun RenderContext.drawWave(
     rect(left + filled - WAVE_STROKE / 2f, mid - knobHeight / 2f, WAVE_STROKE, knobHeight, accent, WAVE_STROKE / 2f)
 }
 
+private data class CutoutKey(val cx: Float, val cy: Float, val playing: Boolean, val material: Boolean)
+
+private var cutoutCache: Pair<CutoutKey, PolyPath>? = null
+
+private fun cutoutPath(cx: Float, cy: Float, radius: Float, playing: Boolean, material: Boolean): PolyPath {
+    val body: Shape = if (material) {
+        val corner = (if (playing) MATERIAL_PLAYING_RADIUS else radius) * 2f
+        RoundRectangle2D.Float(cx - radius, cy - radius, 2f * radius, 2f * radius, corner, corner)
+    } else {
+        Ellipse2D.Float(cx - radius, cy - radius, 2f * radius, 2f * radius)
+    }
+    return Area(body).apply { subtract(toggleGlyph(cx, cy, playing, material)) }.toPolyPath()
+}
+
 private fun RenderContext.drawButton(
     button: Int,
     cx: Float,
@@ -504,15 +597,11 @@ private fun RenderContext.drawButton(
         val glyph = if (cutout) PLAY_GLYPH else colors.glyph.multiplyAlpha(fade)
         val fill = (if (hovered && enabled) accent.lighten(0.18f) else accent).multiplyAlpha(fade)
         if (cutout) {
-            val body: Shape = if (material) {
-                val corner = (if (playing) MATERIAL_PLAYING_RADIUS else radius) * 2f
-                RoundRectangle2D.Float(cx - radius, cy - radius, 2f * radius, 2f * radius, corner, corner)
-            } else {
-                Ellipse2D.Float(cx - radius, cy - radius, 2f * radius, 2f * radius)
-            }
-            val area = Area(body)
-            area.subtract(toggleGlyph(cx, cy, playing, material))
-            if (fill.alpha > 0) fillShape(area, fill)
+            if (fill.alpha == 0) return
+            val key = CutoutKey(cx, cy, playing, material)
+            val path = cutoutCache?.takeIf { it.first == key }?.second
+                ?: cutoutPath(cx, cy, radius, playing, material).also { cutoutCache = key to it }
+            fillPath(path, fill)
             return
         }
         if (material) {
@@ -590,7 +679,7 @@ private fun RenderContext.path(color: PolyColor, fill: Boolean, stroke: Float, v
     if (stroke > 0f) renderer.strokePolyline(points, true, color.argb, stroke, PolyRenderer.CAP_BUTT, PolyRenderer.JOIN_ROUND)
 }
 
-private fun RenderContext.circle(cx: Float, cy: Float, radius: Float, color: PolyColor) =
+internal fun RenderContext.circle(cx: Float, cy: Float, radius: Float, color: PolyColor) =
     rect(cx - radius, cy - radius, radius * 2f, radius * 2f, color, radius)
 
 private fun toggleGlyph(cx: Float, cy: Float, playing: Boolean, material: Boolean): Area {

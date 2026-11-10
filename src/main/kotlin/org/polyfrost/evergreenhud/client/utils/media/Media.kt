@@ -44,8 +44,14 @@ interface MediaBackend {
     }
 }
 
-fun List<MediaInfo>.pickActive(lastActive: String?): MediaInfo? =
+fun List<MediaInfo>.pickActive(lastActive: String?): MediaInfo? = filter { it.matchesSource() }.run {
     firstOrNull { it.playing } ?: firstOrNull { it.player == lastActive } ?: firstOrNull()
+}
+
+fun MediaInfo.matchesSource(): Boolean {
+    val sources = MediaService.sources
+    return sources.isEmpty() || sources.any { player.contains(it, ignoreCase = true) }
+}
 
 fun runProcess(command: List<String>, timeoutSeconds: Long = 3L): String? = runCatching {
     val process = ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.DISCARD).start()

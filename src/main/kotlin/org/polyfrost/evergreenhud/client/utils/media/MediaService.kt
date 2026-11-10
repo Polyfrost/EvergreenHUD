@@ -43,6 +43,9 @@ object MediaService {
     var artAverage: Int? = null
         private set
 
+    @Volatile
+    var sources: List<String> = emptyList()
+
     fun isSupported(): Boolean = backend != null
 
     @Synchronized
@@ -75,7 +78,7 @@ object MediaService {
     }
 
     private fun refresh(backend: MediaBackend) {
-        val info = runCatching { backend.poll() }.getOrNull()
+        val info = runCatching { backend.poll() }.getOrNull()?.takeIf { it.matchesSource() }
         current = info
         loadArt(info)
     }
