@@ -1,3 +1,3 @@
-## 3.9.17
-- Added Lyrics HUD to go along with the Media Player HUD.
-- Improved Media Player performance.
+## 3.9.18
+- Use vanilla FPS counter for FPS hud
+- Fixed media hud controlling music even when It's not actually shown
