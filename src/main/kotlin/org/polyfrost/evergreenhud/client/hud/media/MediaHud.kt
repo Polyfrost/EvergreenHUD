@@ -46,6 +46,7 @@ private const val TEXT_CUSTOM = 1
 private const val TEXT_ALBUM_ART = 2
 private const val TEXT_ALBUM_AVERAGE = 3
 private const val POP_MS = 220f
+private const val DRAWN_GRACE_NS = 200_000_000L
 
 private const val SEEK_STEPS = 2000L
 
@@ -220,6 +221,9 @@ class MediaHud : Hud(
     @Transient
     private var popStart = 0L
 
+    @Transient
+    private var lastDrawCheck = 0L
+
     private var hovered = mutableIntStateOf(-1)
 
     private var scrollMs = mutableLongStateOf(0L)
@@ -317,7 +321,12 @@ class MediaHud : Hud(
 
     override fun updateFrequency(): Long = SCROLL_STEP_MS.milliseconds.inWholeNanoseconds
 
-    override fun shouldShow(): Boolean = card.value != null && (!onlyInGuis || screenOpen())
+    override fun shouldShow(): Boolean {
+        lastDrawCheck = System.nanoTime()
+        return card.value != null && (!onlyInGuis || screenOpen())
+    }
+
+    private fun drawn(): Boolean = isVisible.value && System.nanoTime() - lastDrawCheck < DRAWN_GRACE_NS
 
     private fun read(): MediaCardState? {
         val live = if (isReal) MediaService.current else EXAMPLE
@@ -448,7 +457,7 @@ class MediaHud : Hud(
     private fun screenOpen(): Boolean = Platform.screen().current<Any?>() != null
 
     private fun buttonAt(windowX: Float, windowY: Float): Int {
-        if (card.value == null || hidden || HudManager.isEditing) return -1
+        if (card.value == null || hidden || HudManager.isEditing || !drawn()) return -1
         val screen = Platform.screen()
         val gx = windowX * HudManager.guiScreenWidth / screen.windowWidth().coerceAtLeast(1)
         val gy = windowY * HudManager.guiScreenHeight / screen.windowHeight().coerceAtLeast(1)
@@ -462,7 +471,7 @@ class MediaHud : Hud(
 
     private fun click() {
         val state = card.value ?: return
-        if (!screenOpen()) return
+        if (!screenOpen() || !drawn()) return
         when (hovered.intValue) {
             BUTTON_PREVIOUS -> if (state.canPrevious) MediaService.send(MediaCommand.Previous)
             BUTTON_TOGGLE -> if (state.canToggle) MediaService.send(MediaCommand.Toggle)
