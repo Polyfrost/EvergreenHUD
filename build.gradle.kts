@@ -74,11 +74,6 @@ repositories {
     strictMaven("https://maven.fabricmc.net/", "FabricMC", "net.fabricmc")
     strictMaven("https://www.cursemaven.com", "CurseForge", "curse.maven")
     strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
-    strictMaven(
-        "https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1",
-        "DevAuth",
-        "me.djtheredstoner"
-    )
 }
 
 dependencies {
@@ -104,8 +99,6 @@ dependencies {
     for (module in arrayOf("commands", "config", "config-impl", "events", "internal", "ui", "utils", "hud")) {
         implementation("org.polyfrost.oneconfig:$module:$oneconfigversion")
     }
-
-    modRuntimeOnly("me.djtheredstoner:DevAuth-fabric:${sc.properties.get<String>("deps.devauth")}")
 
     testImplementation("org.junit.jupiter:junit-jupiter:${sc.properties.get<String>("deps.junit")}")
     testImplementation("net.fabricmc:fabric-loader-junit:$loaderversion")
@@ -139,8 +132,6 @@ loom {
         generateRunConfig = true
         runDirectory = rootProject.file("run")
         jvmArguments.add("-Dmixin.debug.export=true")
-        // pass through so DevAuth can be turned off for offline runs
-        providers.systemProperty("devauth.enabled").orNull?.let { jvmArguments.add("-Ddevauth.enabled=$it") }
     }
 
     runConfigs.remove(runConfigs["server"])
