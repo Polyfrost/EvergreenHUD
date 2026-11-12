@@ -151,6 +151,9 @@ class LyricsHud : Hud(
     @Switch(title = "Match Media Player Width", description = "Same width as the Media Player.")
     var matchMediaWidth = true
 
+    @Switch(title = "Wrap Text", description = "Wraps long lines. Off cuts them off at the edge.")
+    var wrapText = true
+
     @Switch(title = "Word Sync", description = "Highlights word by word. Off highlights whole lines.")
     var wordSync = true
 
@@ -328,7 +331,7 @@ class LyricsHud : Hud(
         val fontName = cardFont()
         val label = Label(FONT_SIZE, fontName)
         val width = contentWidth(lyrics, label)
-        val key = listOf(lyrics, width, fontName, caseType)
+        val key = listOf(lyrics, width, fontName, caseType, wrapText)
         if (key != layoutKey) {
             layoutKey = key
             layouts.clear()
@@ -457,7 +460,7 @@ class LyricsHud : Hud(
         for (word in line.words) {
             val text = applyCase(word.text)
             val ink = label.width(text.trimEnd())
-            if (row.isNotEmpty() && x + ink > maxWidth) {
+            if (wrapText && row.isNotEmpty() && x + ink > maxWidth) {
                 rows.add(row)
                 row = ArrayList()
                 x = 0f
@@ -478,7 +481,7 @@ class LyricsHud : Hud(
             songWidthKey = key
             songWidth = lyrics.lines.maxOfOrNull { label.width(applyCase(it.text.trimEnd())) } ?: 0f
         }
-        return songWidth.coerceIn(MIN_WIDTH, MAX_WIDTH)
+        return songWidth.coerceIn(MIN_WIDTH, if (wrapText) MAX_WIDTH else Float.MAX_VALUE)
     }
 
     private fun colors(): LyricsColors {

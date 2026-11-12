@@ -524,7 +524,7 @@ class KeystrokesHud : Hud(
                 val s = textScale
                 val half = spaceLineW * s / 2f
                 val thickness = spaceLineH * s
-                val cx = x + cw / 2f - 0.5f * s
+                val cx = x + cw / 2f
                 val cy = y + ch / 2f - 0.5f * s
                 if (showShadow && font == Font.Minecraft) {
                     line(cx - half + s, cy + s, cx + half + s, cy + s, fg.darken(0.75f), thickness)

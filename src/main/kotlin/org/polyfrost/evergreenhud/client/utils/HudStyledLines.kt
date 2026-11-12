@@ -127,7 +127,7 @@ private fun Hud.StyledLine(cells: List<StyledCell>, alignment: PolyAlign, polyFo
         }
     } else {
         val texts = placed.map { (run, _) -> mcRunText(run) }
-        val height = McFontQueue.measureTextHeight(textScale)
+        val height = McFontQueue.measureBlockHeight(1, textScale)
 
         PolyCanvas(PolyModifier.size(width, height).align(alignment)) { x, y, _, _ ->
             for ((i, entry) in placed.withIndex()) {

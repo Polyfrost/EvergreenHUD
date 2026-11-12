@@ -18,6 +18,7 @@ import org.polyfrost.compose.composables.absoluteAt
 import org.polyfrost.compose.composables.background
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
 //? if > 1.8.9 {
 import org.polyfrost.evergreenhud.client.hooks.ShulkerPreview
@@ -374,15 +375,24 @@ class InventoryHud : Hud(
         val title = applyCase(raw)
         val color = PolyColor(textColor, textChroma, textChromaSpeed)
         val modifier = PolyModifier.absoluteAt(originX + EDGE * content, originY + TITLE_Y * content)
+        val shadowCol = PolyColor(shadowColor, shadowChroma, shadowChromaSpeed)
+        val outline = showShadow && fullShadow
         if (font == Font.Minecraft) {
-            PolyMcText(title, color = color, shadow = showShadow, scale = content, modifier = modifier)
+            PolyMcText(title, if (outline) shadowCol else null, color = color, shadow = showShadow && !outline, scale = content, modifier = modifier)
+        } else if (outline) {
+            val polyFont = PolyFont(getPoppinsFontName(), FONT_SIZE * content)
+            val metrics = polyFont.metrics
+            PolyCanvas(modifier.size(polyFont.measureTextWidth(title), metrics.descent - metrics.ascent)) { x, y, _, _ ->
+                textOutline(title, x, y - metrics.ascent, shadowCol, polyFont, content)
+                text(title, x, y - metrics.ascent, color, polyFont)
+            }
         } else {
             PolyText(
                 title,
                 color = color,
                 fontSize = FONT_SIZE * content,
                 shadow = showShadow,
-                shadowColor = PolyColor(shadowColor, shadowChroma, shadowChromaSpeed),
+                shadowColor = shadowCol,
                 shadowOffset = shadowOffsetX * content,
                 font = getPoppinsFontName(),
                 modifier = modifier,

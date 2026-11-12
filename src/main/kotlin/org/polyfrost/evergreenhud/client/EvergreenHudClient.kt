@@ -74,7 +74,7 @@ object EvergreenHudClient : ClientModInitializer {
 
         val huds = arrayOf(
             ArmorHud(),
-            BiomeHud(), BlockAboveHud(),
+            BiomeHud(), BlockAboveHud(), CCounterHud(),
             ClockHud(), DigitalClockHud(), ComboHud(), CpsHud(),
             CustomImageHud(), CustomTextHud(),
             DayHud(), DirectionHud(), EntityCounterHud(), FacingHud(), FpsHud(),

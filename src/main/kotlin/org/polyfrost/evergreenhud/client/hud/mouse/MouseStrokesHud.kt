@@ -69,6 +69,12 @@ class MouseStrokesHud : Hud(
     )
     var dotType = DOT
 
+    @Switch(
+        title = "Raw Mouse Input",
+        description = "Follow mouse movement instead of head rotation, so freelook works and respawning doesn't move the dot.",
+    )
+    var rawInput = false
+
     @Slider(title = "Sensitivity", description = "How sensitive the \"dot\" is.", min = 0.1F, max = 5F, step = 0.1F)
     var sensitivity = 1f
 
@@ -136,6 +142,12 @@ class MouseStrokesHud : Hud(
     private var pendingYaw = 0f
 
     @Transient
+    private var lastRawYaw = Double.NaN
+
+    @Transient
+    private var lastRawPitch = Double.NaN
+
+    @Transient
     private var lastFrameMs = 0L
 
     @Transient
@@ -183,6 +195,7 @@ class MouseStrokesHud : Hud(
         lastYaw = Float.NaN
         lastPitch = Float.NaN
         pendingYaw = 0f
+        lastRawYaw = Double.NaN
     }
 
     override fun clone(): Hud = (super.clone() as MouseStrokesHud).apply {
@@ -224,6 +237,7 @@ class MouseStrokesHud : Hud(
     private fun repaintWindow(): Float = if (dotType == SNAKE) snakeMs else 0f
 
     private fun trackYaw() {
+        if (rawInput) return
         val player = mc.player
         val yaw = player?.yRot ?: 0f
         if (player == null || lastYaw.isNaN()) {
@@ -238,14 +252,31 @@ class MouseStrokesHud : Hud(
         val deltaSeconds = if (lastFrameMs == 0L) 0f else ((nowMs - lastFrameMs) / 1000f).coerceIn(0f, MAX_FRAME_SECONDS)
         lastFrameMs = nowMs
 
-        val player = mc.player
-        val pitch = player?.xRot ?: 0f
-        if (player == null || lastPitch.isNaN()) lastPitch = pitch
-
-        val deltaYaw = pendingYaw
-        pendingYaw = 0f
-        val deltaPitch = pitch - lastPitch
-        lastPitch = pitch
+        val deltaYaw: Float
+        val deltaPitch: Float
+        if (rawInput) {
+            val yaw = MouseTurnTracker.yaw
+            val pitch = MouseTurnTracker.pitch
+            if (lastRawYaw.isNaN()) {
+                lastRawYaw = yaw
+                lastRawPitch = pitch
+            }
+            deltaYaw = (yaw - lastRawYaw).toFloat()
+            deltaPitch = (pitch - lastRawPitch).toFloat()
+            lastRawYaw = yaw
+            lastRawPitch = pitch
+            lastYaw = Float.NaN
+            lastPitch = Float.NaN
+        } else {
+            val player = mc.player
+            val pitch = player?.xRot ?: 0f
+            if (player == null || lastPitch.isNaN()) lastPitch = pitch
+            deltaYaw = pendingYaw
+            pendingYaw = 0f
+            deltaPitch = pitch - lastPitch
+            lastPitch = pitch
+            lastRawYaw = Double.NaN
+        }
 
         val decay = exp(-DECAY_RATE * deltaSeconds)
         val last = trail.lastOrNull()
@@ -372,6 +403,22 @@ class MouseStrokesHud : Hud(
     companion object {
         private const val DOT = 0
         private const val SNAKE = 1
+    }
+}
+
+object MouseTurnTracker {
+    @JvmStatic
+    var yaw = 0.0
+        private set
+
+    @JvmStatic
+    var pitch = 0.0
+        private set
+
+    @JvmStatic
+    fun turn(deltaYaw: Double, deltaPitch: Double) {
+        yaw += deltaYaw
+        pitch += deltaPitch
     }
 }
 

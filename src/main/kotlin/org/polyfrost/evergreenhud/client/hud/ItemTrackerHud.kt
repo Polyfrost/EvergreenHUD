@@ -92,12 +92,19 @@ class ItemTrackerHud : Hud(
     @Color(title = "Lost Color")
     var lostColor = PolyColor(0xFFFF5555.toInt())
 
-    private class Change(val item: Item, val stack: ItemStack, var amount: Int, var time: Long)
+    private data class Key(val item: Item, val meta: Int = 0) {
+        //? if > 1.8.9 {
+        fun stack() = ItemStack(item)
+        //?} else
+        //fun stack() = ItemStack(item, 1, meta)
+    }
+
+    private class Change(val key: Key, val stack: ItemStack, var amount: Int, var time: Long)
 
     private class Entry(val stack: ItemStack, val amount: String, val name: String, val color: Int)
 
     private var changes = ArrayList<Change>()
-    private var counts: HashMap<Item, Int>? = null
+    private var counts: HashMap<Key, Int>? = null
     private var trackedPlayer: LocalPlayer? = null
 
     private var entries = mutableStateOf<List<Entry>>(emptyList())
@@ -151,31 +158,35 @@ class ItemTrackerHud : Hud(
         if (previous == null) return
         if (!trackContainers && player.containerMenu !== player.inventoryMenu) return
 
-        for ((item, count) in next) {
-            val delta = count - (previous[item] ?: 0)
-            if (delta != 0) record(item, delta)
+        for ((key, count) in next) {
+            val delta = count - (previous[key] ?: 0)
+            if (delta != 0) record(key, delta)
         }
-        for ((item, count) in previous) {
-            if (item !in next) record(item, -count)
+        for ((key, count) in previous) {
+            if (key !in next) record(key, -count)
         }
     }
 
-    private fun snapshot(player: LocalPlayer): HashMap<Item, Int> {
-        val counts = HashMap<Item, Int>()
+    private fun snapshot(player: LocalPlayer): HashMap<Key, Int> {
+        val counts = HashMap<Key, Int>()
         val inventory = player.inventory
         for (slot in 0 until inventory.containerSize) {
             val stack = inventory.getItem(slot)
             //~ if = 1.8.9 'stack.isEmpty' -> 'stack == null || stack.isEmpty'
             if (stack.isEmpty) continue
-            counts[stack.item] = (counts[stack.item] ?: 0) + stack.count
+            //? if > 1.8.9 {
+            val key = Key(stack.item)
+            //?} else
+            //val key = Key(stack.item, if (stack.item.hasCustomData()) stack.metadata else 0)
+            counts[key] = (counts[key] ?: 0) + stack.count
         }
         return counts
     }
 
-    private fun record(item: Item, delta: Int) {
+    private fun record(key: Key, delta: Int) {
         val now = System.nanoTime()
         if (combine) {
-            val existing = changes.lastOrNull { it.item == item }
+            val existing = changes.lastOrNull { it.key == key }
             if (existing != null) {
                 existing.amount += delta
                 existing.time = now
@@ -183,7 +194,7 @@ class ItemTrackerHud : Hud(
                 return
             }
         }
-        changes.add(Change(item, ItemStack(item), delta, now))
+        changes.add(Change(key, key.stack(), delta, now))
         trim()
     }
 

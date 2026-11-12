@@ -7,7 +7,6 @@ import org.polyfrost.compose.composables.PolyColumn
 import org.polyfrost.compose.composables.PolyMcText
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.align
-import org.polyfrost.compose.composables.background
 import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
@@ -38,14 +37,9 @@ fun Hud.HudTextLines(lines: List<String>) {
     val padInsets = PolyInsets(padLeft, padTop, padRight, padBottom)
     val isStaticValid = staticWidth && staticW > 0f && staticH > 0f
 
-    val outerModifier = if (showBackground) {
-        val bgModifier = PolyModifier.background(PolyColor(bgColor, bgChroma, bgChromaSpeed), bgRadius)
-        if (isStaticValid) bgModifier.size(staticW, staticH).padding(padInsets)
-        else bgModifier.padding(padInsets)
-    } else {
-        if (isStaticValid) PolyModifier.size(staticW, staticH).padding(padInsets)
-        else PolyModifier.padding(padInsets)
-    }
+    val bgModifier = hudBackground()
+    val outerModifier = if (isStaticValid) bgModifier.size(staticW, staticH).padding(padInsets)
+    else bgModifier.padding(padInsets)
 
     val lineAlign = if (isStaticValid) alignment else PolyAlign.Left
 

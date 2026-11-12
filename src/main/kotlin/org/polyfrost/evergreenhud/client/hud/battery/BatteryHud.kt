@@ -52,6 +52,9 @@ class BatteryHud : Hud(
     @Switch(title = "Show Time Remaining", description = "Estimated time left while running on battery.")
     var showTimeRemaining = false
 
+    @Switch(title = "Hide While Charging")
+    var hideWhileCharging = false
+
     @Slider(title = "Low Battery Threshold", min = 5f, max = 50f, step = 5f)
     var lowThreshold = 20
 
@@ -80,7 +83,7 @@ class BatteryHud : Hud(
     override fun setup() {
         super.setup()
         if (!isReal) return
-        for (option in listOf("showPercentage", "showTimeRemaining", "lowThreshold", "chargingColor", "saverColor", "lowColor")) {
+        for (option in listOf("showPercentage", "showTimeRemaining", "hideWhileCharging", "lowThreshold", "chargingColor", "saverColor", "lowColor")) {
             updateWhenChanged(option)
         }
     }
@@ -103,6 +106,7 @@ class BatteryHud : Hud(
             HudManager.isEditing -> EXAMPLE
             else -> return null
         }
+        if (hideWhileCharging && battery.isCharging && !HudManager.isEditing) return null
 
         val percent = battery.percentage.coerceIn(0, 100)
         val fill = when {

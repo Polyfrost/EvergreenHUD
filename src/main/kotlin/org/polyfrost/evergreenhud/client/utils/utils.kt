@@ -14,17 +14,11 @@ import net.minecraft.client.KeyMapping
 import org.lwjgl.sdl.SDLMouse
 import java.nio.FloatBuffer
 *///?}
-//? if > 1.21.1
-import net.minecraft.util.profiling.Profiler
 import net.minecraft.world.entity.Entity
-import net.minecraft.world.phys.AABB
+//? if > 1.8.9
+import net.minecraft.world.phys.EntityHitResult
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
-
-private const val MAX_REACH_DISTANCE = 6.0f
-
-private val Entity.accurateCollisionBox: AABB
-    get() = boundingBox.inflate(pickRadius.toDouble(), pickRadius.toDouble(), pickRadius.toDouble())
 
 val Entity.uniqueEntityId: Int
     get() = id
@@ -42,26 +36,17 @@ fun StringBuilder.replace(string: String, value: String): StringBuilder {
 }
 
 fun calculateReachDistanceToEntity(entity: Entity): Float {
-    //? if > 1.21.1
-    val profiler = Profiler.get()
-    //? if <= 1.21.1
-    //val profiler = mc.profiler
-    val player = mc.player ?: return 0f
-    if (!player.isAlive) return 0f
-    profiler.push("evergreenhud_reach_distance_calculation")
-
-    var result = 0f
-    val collisionBox = entity.accurateCollisionBox
-    val eyePos = player.getEyePosition(1.0f)
-    val lookPos = player.getViewVector(1.0f)
-    val adjustedPos = eyePos.add(lookPos.x * MAX_REACH_DISTANCE, lookPos.y * MAX_REACH_DISTANCE, lookPos.z * MAX_REACH_DISTANCE)
-    //~ if = 1.8.9 '.orElse(null)' -> '?.facePos'
-    val hit = collisionBox.clip(eyePos, adjustedPos).orElse(null)
-    if (hit != null) {
-        result = eyePos.distanceTo(hit).toFloat()
-    }
-    profiler.pop()
-    return result
+    //? if > 1.8.9 {
+    val hit = mc.hitResult as? EntityHitResult ?: return 0f
+    if (hit.entity != entity) return 0f
+    val hitPos = hit.location
+    //?} else {
+    /*val hit = mc.crosshairTarget ?: return 0f
+    if (hit.entity != entity) return 0f
+    val hitPos = hit.facePos
+    *///?}
+    val camera = mc.cameraEntity ?: return 0f
+    return camera.getEyePosition(1.0f).distanceTo(hitPos).toFloat()
 }
 
 inline fun <L, E> L.fastRemoveIfReversed(predicate: (E) -> Boolean) where L : MutableList<E>, L : RandomAccess {
