@@ -599,7 +599,7 @@ class PotionEffectsHud : Hud(
         val target = section
         val held = layoutSection.value
 
-        if (held == target || held == null || !HudManager.isEditing || selfAnchorPoint != HudAnchor.Auto) {
+        if (held == target || held == null || !HudManager.isEditing || selfAnchorPoint != HudAnchor.Auto || !dragging) {
             if (!dragging) {
                 dragX = x
                 dragY = y
