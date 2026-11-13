@@ -17,13 +17,13 @@ import org.polyfrost.oneconfig.api.hud.v1.Hud
 private const val WORST_RATIO = 0.5
 private const val PREVIEW_BASELINE = 144.0
 private const val PREVIEW_FPS = 141
-private val PREVIEW_DATA = FrameTimeHelper.FrameData(0.08, 7_142_857.0, 7_092_198.0, 9_000_000.0, 12_000_000.0, 0)
+private val PREVIEW_DATA = FrameTimeHelper.FrameData(0.08, 7_142_857.0, 7_092_198.0, 8_000_000.0, 9_000_000.0, 9_500_000.0, 12_000_000.0, 0)
 
 class FpsHud : GenericNumberHud(
     title = "FPS",
     category = Category.INFO,
 ) {
-    @Text(title = "Format String", description = "Use #avg for average, #med for median, #fps for fps, #p95 for 95th percentile, #p99 for 99th percentile, #cst for consistency")
+    @Text(title = "Format String", description = "Use #avg for average, #med or #p50 for median, #fps for fps, #p95 for 95th percentile, #p99 for 99th percentile, #low1 for 1% low, #low01 for 0.1% low, #cst for consistency")
     private var formatString = "#fps"
 
     @Slider(title = "Update Rate", description = "Seconds between display updates. 0 updates as fast as possible.", min = 0F, max = 5F, step = 0.5F)
@@ -77,8 +77,11 @@ class FpsHud : GenericNumberHud(
             .replace("#fps", format(fps))
             .replace("#avg", format(data.averageFps))
             .replace("#med", format(data.medianFps))
-            .replace("#p95", format(data.p95Millis))
-            .replace("#p99", format(data.p99Millis))
+            .replace("#p50", format(data.medianFps))
+            .replace("#low1", format(data.low1Fps))
+            .replace("#low01", format(data.low01Fps))
+            .replace("#p95", format(data.p95Fps))
+            .replace("#p99", format(data.p99Fps))
             .replace("#cst", format(data.consistencyPercent))
             .toString()
     }

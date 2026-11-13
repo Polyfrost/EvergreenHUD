@@ -8,6 +8,8 @@ import org.polyfrost.oneconfig.api.event.v1.events.FramebufferRenderEvent
 object FrameTimeHelper {
     private const val WINDOW_NANOS = 1_000_000_000L
 
+    private const val LOWS_WINDOW_NANOS = 10_000_000_000L
+
     private const val SAMPLE_NANOS = 100_000_000L
 
     private const val BASELINE_SMOOTHING = 0.004
@@ -15,6 +17,8 @@ object FrameTimeHelper {
     private var lastTime = System.nanoTime()
     private val frameTimes = ArrayDeque<Long>()
     private var windowSum = 0L
+    private val lowsFrameTimes = ArrayDeque<Long>()
+    private var lowsWindowSum = 0L
     private var lastSample = 0L
 
     @JvmStatic
@@ -38,6 +42,11 @@ object FrameTimeHelper {
             while (frameTimes.size > 2 && windowSum > WINDOW_NANOS) {
                 windowSum -= frameTimes.removeFirst()
             }
+            lowsFrameTimes.addLast(frameTime)
+            lowsWindowSum += frameTime
+            while (lowsFrameTimes.size > 2 && lowsWindowSum > LOWS_WINDOW_NANOS) {
+                lowsWindowSum -= lowsFrameTimes.removeFirst()
+            }
 
             if (now - lastSample < SAMPLE_NANOS) return@eventHandler
             lastSample = now
@@ -51,7 +60,11 @@ object FrameTimeHelper {
             val p50 = percentile(sorted, 0.50)
             val p95 = percentile(sorted, 0.95)
             val p99 = percentile(sorted, 0.99)
-            val data = FrameData(consistency, avg, p50, p95, p99, sorted.size)
+            val lowsSorted = lowsFrameTimes.toLongArray()
+            lowsSorted.sort()
+            val low1 = worstAverage(lowsSorted, 0.01)
+            val low01 = worstAverage(lowsSorted, 0.001)
+            val data = FrameData(consistency, avg, p50, p95, p99, low1, low01, sorted.size)
             latest = data
 
             val fps = data.averageFps
@@ -73,27 +86,38 @@ object FrameTimeHelper {
         return lower + (higher - lower) * fractional
     }
 
+    private fun worstAverage(sorted: LongArray, fraction: Double): Double {
+        val count = Math.ceil(sorted.size * fraction).toInt().coerceAtLeast(1)
+        var sum = 0.0
+        for (i in sorted.size - count until sorted.size) sum += sorted[i]
+        return sum / count
+    }
+
     data class FrameData(
         val consistency: Double,
         val mean: Double,
         val median: Double,
         val p95: Double,
         val p99: Double,
+        val low1: Double,
+        val low01: Double,
         val nframes: Int
     ) {
         val averageFps get() = fps(mean)
         val medianFps get() = fps(median)
         val meanMillis get() = mean / 1_000_000.0
         val medianMillis get() = median / 1_000_000.0
-        val p95Millis get() = p95 / 1_000_000.0
-        val p99Millis get() = p99 / 1_000_000.0
+        val p95Fps get() = fps(p95)
+        val p99Fps get() = fps(p99)
+        val low1Fps get() = fps(low1)
+        val low01Fps get() = fps(low01)
         val consistencyPercent get() = (1.0 - consistency) * 100.0
 
         private fun fps(nanos: Double) = if (nanos > 0.0) 1_000_000_000.0 / nanos else 0.0
 
         companion object {
             @JvmField
-            val EMPTY = FrameData(0.0, 0.0, 0.0, 0.0, 0.0, 0)
+            val EMPTY = FrameData(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0)
         }
     }
 
