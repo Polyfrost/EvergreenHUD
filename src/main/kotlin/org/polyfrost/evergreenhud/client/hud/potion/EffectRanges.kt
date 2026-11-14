@@ -1,5 +1,8 @@
 package org.polyfrost.evergreenhud.client.hud.potion
 
+import kotlin.math.ceil
+import kotlin.math.min
+
 /** Flat `[min0, max0, min1, max1, ...]` range list; an empty list doesn't restrict anything */
 internal fun FloatArray.allowsInRanges(value: Float): Boolean =
     isEmpty() || (0 until size / 2).any { value in this[it * 2]..this[it * 2 + 1] }
@@ -17,3 +20,16 @@ internal fun EffectComponentSettings.normalizeLegacyRanges() {
 internal fun EffectComponentSettings.migrateRanges(fromVersion: Int) {
     if (fromVersion < RANGE_LISTS) normalizeLegacyRanges()
 }
+
+/** One duration in ticks from each allowed range, or just [default] if the list doesn't restrict anything */
+internal fun fallbackDurations(ranges: FloatArray, default: Int): List<Int> =
+    if (ranges.isEmpty()) listOf(default)
+    else (0 until ranges.size / 2).map { ((ranges[it * 2] + ranges[it * 2 + 1]) * 10f).toInt() }
+
+/** The lowest two amplifiers from each allowed range, or levels I and II if the list doesn't restrict anything */
+internal fun fallbackAmplifiers(ranges: FloatArray): List<Int> =
+    if (ranges.isEmpty()) listOf(0, 1)
+    else (0 until ranges.size / 2).flatMap {
+        val low = ceil(ranges[it * 2]).toInt()
+        (low..min(low + 1, ranges[it * 2 + 1].toInt()))
+    }.distinct()
