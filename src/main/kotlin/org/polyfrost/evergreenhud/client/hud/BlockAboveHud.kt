@@ -6,12 +6,12 @@ import net.minecraft.core.Direction
 import net.minecraft.sounds.SoundEvents
 //?}
 import net.minecraft.world.level.block.*
-import org.polyfrost.evergreenhud.client.BlockChangeEvent
 import org.polyfrost.evergreenhud.client.BlockPositionChangedEvent
 import org.polyfrost.evergreenhud.client.utils.CachedTextHud
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
+import org.polyfrost.oneconfig.api.event.v1.events.BlockUpdateEvent
 import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
@@ -44,7 +44,8 @@ class BlockAboveHud : CachedTextHud(
             eventHandler { (pos): BlockPositionChangedEvent ->
                 update(pos)
             },
-            eventHandler { (pos): BlockChangeEvent ->
+            eventHandler { event: BlockUpdateEvent ->
+                val pos = event.getPos<Any>() as? BlockPos ?: return@eventHandler
                 val player = mc.player?.blockPosition() ?: return@eventHandler
                 if (pos.y > player.y && pos.x == player.x && pos.z == player.z) {
                     update(player)

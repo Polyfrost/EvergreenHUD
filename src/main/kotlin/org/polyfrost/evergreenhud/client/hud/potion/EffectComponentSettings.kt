@@ -1,7 +1,7 @@
 package org.polyfrost.evergreenhud.client.hud.potion
 
 import org.polyfrost.compose.render.PolyColor
-import org.polyfrost.evergreenhud.client.utils.copy
+import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.MultiSelectDropdown

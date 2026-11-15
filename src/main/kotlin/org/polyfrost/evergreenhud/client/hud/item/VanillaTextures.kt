@@ -13,7 +13,7 @@ import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.RenderContext
-import org.polyfrost.evergreenhud.client.utils.snapToPixels
+import org.polyfrost.compose.render.snappedRect
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.ResourceFinishedLoading
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
@@ -63,10 +63,10 @@ class VanillaTexture internal constructor(
         y: Float,
         scale: Float,
     ) {
-        val dst = snapToPixels(ctx, x, y, srcW * scale, srcH * scale)
+        val dst = ctx.snappedRect(x, y, srcW * scale, srcH * scale)
         ctx.image(
             image,
-            dst[0], dst[1], dst[2] - dst[0], dst[3] - dst[1],
+            dst[0], dst[1], dst[2], dst[3],
             srcX / baseWidth, srcY / baseHeight, (srcX + srcW) / baseWidth, (srcY + srcH) / baseHeight,
             PolyColor.WHITE,
             FilterQuality.None,
@@ -83,13 +83,13 @@ class VanillaTexture internal constructor(
         y: Float,
         scale: Float,
     ) {
-        val dst = snapToPixels(ctx, x, y, srcH * scale, srcW * scale)
+        val dst = ctx.snappedRect(x, y, srcH * scale, srcW * scale)
         ctx.save()
-        ctx.translate(dst[2], dst[1])
+        ctx.translate(dst[0] + dst[2], dst[1])
         ctx.renderer.rotate(90f)
         ctx.image(
             image,
-            0f, 0f, dst[3] - dst[1], dst[2] - dst[0],
+            0f, 0f, dst[3], dst[2],
             srcX / baseWidth, srcY / baseHeight, (srcX + srcW) / baseWidth, (srcY + srcH) / baseHeight,
             PolyColor.WHITE,
             FilterQuality.None,

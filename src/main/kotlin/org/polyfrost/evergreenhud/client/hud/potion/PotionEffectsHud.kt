@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud.potion
 
 import androidx.compose.runtime.Composable
@@ -70,6 +72,7 @@ import org.polyfrost.oneconfig.api.hud.v1.HudAnchor
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.hud.v1.Section
 import org.polyfrost.oneconfig.api.hud.v1.Weight
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 
 import org.polyfrost.oneconfig.api.platform.v1.Platform
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
@@ -1249,19 +1252,16 @@ class PotionEffectsHud : Hud(
         return (color and 0xFFFFFF) or (alpha shl 24)
     }
 
-    override fun clone(): Hud = (super.clone() as PotionEffectsHud).also {
-        it.sorting = sorting.copyOf()
-        it.overrides = overrides.copyOf()
-        it.layoutState = mutableStateOf(layoutState.value)
-        it.blinkFade = mutableFloatStateOf(1f)
-        it.fontRevision = mutableIntStateOf(FontManager.revision)
-        it.tickHandler = null
+    override fun onCloned() {
+        blinkFade = mutableFloatStateOf(1f)
+        fontRevision = mutableIntStateOf(FontManager.revision)
+        tickHandler = null
 
-        it.categoryScopes = categoryScopes.deepCopy()
-        it.effectScopes = effectScopes.deepCopy()
+        categoryScopes = categoryScopes.deepCopy()
+        effectScopes = effectScopes.deepCopy()
 
-        it.rows = mutableStateOf(emptyList())
-        it.layoutSection = mutableStateOf(null)
+        rows = mutableStateOf(emptyList())
+        layoutSection = mutableStateOf(null)
     }
 
     private class PerCategoryEffectSettings {

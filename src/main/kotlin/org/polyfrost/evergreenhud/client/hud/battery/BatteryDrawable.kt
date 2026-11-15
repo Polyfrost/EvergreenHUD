@@ -5,7 +5,7 @@ import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
-import org.polyfrost.evergreenhud.client.utils.fillShape
+import org.polyfrost.compose.render.fillShape
 import java.awt.BasicStroke
 import java.awt.Shape
 import java.awt.geom.Area

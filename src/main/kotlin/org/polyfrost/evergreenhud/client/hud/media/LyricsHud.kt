@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud.media
 
 import androidx.compose.runtime.Composable
@@ -12,7 +14,7 @@ import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.RenderContext
 import org.polyfrost.evergreenhud.client.utils.applyCase
-import org.polyfrost.evergreenhud.client.utils.copy
+import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.evergreenhud.client.utils.media.KUGOU
 import org.polyfrost.evergreenhud.client.utils.media.LRCLIB
 import org.polyfrost.evergreenhud.client.utils.media.LRC_RED
@@ -32,6 +34,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.platform.v1.Platform
 import java.util.IdentityHashMap
@@ -489,7 +492,7 @@ class LyricsHud : Hud(
             TEXT_ALBUM_ART -> albumColor(average = false)
             TEXT_ALBUM_AVERAGE -> albumColor(average = true)
             else -> null
-        } ?: PolyColor(textColor, textChroma, textChromaSpeed)
+        } ?: textPolyColor
         val sung = when (highlightSource) {
             HIGHLIGHT_ACCENT -> accentColor
             HIGHLIGHT_ALBUM_ART -> albumColor(average = false) ?: text
@@ -581,7 +584,7 @@ class LyricsHud : Hud(
         return MediaCardBackdrop(
             bounds = bounds,
             radius = if (showColor || artBackground) bgRadius / scale else 0f,
-            color = if (showColor) PolyColor(bgColor, bgChroma, bgChromaSpeed) else null,
+            color = if (showColor) bgPolyColor else null,
             art = current.art,
             artBlur = artBackgroundBlur,
             artAlpha = artBackgroundOpacity / 100f,
@@ -590,23 +593,18 @@ class LyricsHud : Hud(
         )
     }
 
-    override fun clone(): Hud = (super.clone() as LyricsHud).also {
-        it.unsungColor = unsungColor.copy()
-        it.otherColor = otherColor.copy()
-        it.accentColor = accentColor.copy()
-        it._staticW = mutableStateOf(staticW)
-        it._staticH = mutableStateOf(staticH)
-        it.frame = mutableStateOf(null)
-        it.layouts = IdentityHashMap()
-        it.layoutKey = null
-        it.songWidth = 0f
-        it.songWidthKey = null
-        it.shownHeight = 0f
-        it.shownPosition = 0.0
-        it.shownAt = 0L
-        it.shownTitle = null
-        it.popStart = 0L
-        it.acquired = false
+    override fun onCloned() {
+        frame = mutableStateOf(null)
+        layouts = IdentityHashMap()
+        layoutKey = null
+        songWidth = 0f
+        songWidthKey = null
+        shownHeight = 0f
+        shownPosition = 0.0
+        shownAt = 0L
+        shownTitle = null
+        popStart = 0L
+        acquired = false
     }
 }
 

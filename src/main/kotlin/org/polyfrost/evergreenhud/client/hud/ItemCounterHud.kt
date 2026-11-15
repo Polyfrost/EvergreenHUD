@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
@@ -50,6 +52,7 @@ import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
 import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
@@ -282,7 +285,7 @@ class ItemCounterHud : Hud(
     @Composable
     private fun Label(raw: String, scale: Float, iconSize: Float) {
         val text = applyCase(raw)
-        val color = PolyColor(textColor, textChroma, textChromaSpeed)
+        val color = textPolyColor
         if (font == Font.Minecraft) {
             val modifier = topAlign(inkOffset(iconSize, 0f, MC_INK_HEIGHT * scale))
             PolyMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
@@ -295,7 +298,7 @@ class ItemCounterHud : Hud(
                 color = color,
                 fontSize = FONT_SIZE * scale,
                 shadow = showShadow,
-                shadowColor = PolyColor(shadowColor, shadowChroma, shadowChromaSpeed),
+                shadowColor = shadowPolyColor,
                 shadowOffset = shadowOffsetX,
                 font = getPoppinsFontName(),
                 modifier = modifier,
@@ -309,9 +312,8 @@ class ItemCounterHud : Hud(
     private fun inkOffset(rowHeight: Float, inkTop: Float, inkHeight: Float): Float =
         ((rowHeight - inkHeight) / 2f - inkTop).coerceAtLeast(0f)
 
-    override fun clone(): Hud = (super.clone() as ItemCounterHud).also {
-        it.item = item.copyOf()
-        it.display = mutableStateOf(null)
-        it.tickHandler = null
+    override fun onCloned() {
+        display = mutableStateOf(null)
+        tickHandler = null
     }
 }

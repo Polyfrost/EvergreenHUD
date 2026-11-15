@@ -1,6 +1,5 @@
 package org.polyfrost.evergreenhud.client.utils
 
-import androidx.compose.ui.graphics.Color
 //? if >= 1.21.10 {
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.input.MouseButtonEvent
@@ -17,8 +16,20 @@ import java.nio.FloatBuffer
 import net.minecraft.world.entity.Entity
 //? if > 1.8.9
 import net.minecraft.world.phys.EntityHitResult
-import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.oneconfig.api.event.v1.events.AttackEntityEvent
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
+
+fun settledAttackHandler(handler: (AttackEntityEvent) -> Unit): EventHandler<AttackEntityEvent> = object : EventHandler<AttackEntityEvent>() {
+    override fun handle(event: AttackEntityEvent): Boolean {
+        handler(event)
+        return false
+    }
+
+    override fun getEventClass() = AttackEntityEvent::class.java
+
+    override fun getPriority() = Int.MIN_VALUE
+}.register()
 
 val Entity.uniqueEntityId: Int
     get() = id
@@ -88,14 +99,4 @@ fun KeyMapping.isHeld(): Boolean {
     return scancode > 0 && (SDLKeyboard.SDL_GetKeyboardState()?.get(scancode)?.toInt() ?: 0) != 0
     *///?} else
     return isDown
-}
-
-fun PolyColor.copy(): PolyColor = PolyColor(rawArgb, chroma, chromaSpeed)
-
-fun PolyColor.toComposeColor(): Color {
-    return Color(red, green, blue, alpha)
-}
-
-fun Color.toPolyColor(): PolyColor {
-    return PolyColor.hex(value.toInt())
 }

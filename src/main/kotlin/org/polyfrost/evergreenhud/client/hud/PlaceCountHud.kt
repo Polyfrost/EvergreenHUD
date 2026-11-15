@@ -1,10 +1,10 @@
 package org.polyfrost.evergreenhud.client.hud
 
-import org.polyfrost.evergreenhud.client.ClientPlaceBlockEvent
 import org.polyfrost.evergreenhud.client.utils.CachedTextHud
 import org.polyfrost.evergreenhud.client.utils.fastRemoveIfReversed
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
+import org.polyfrost.oneconfig.api.event.v1.events.PlaceBlockEvent
 import org.polyfrost.oneconfig.api.hud.v1.TextHud
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.time.Duration.Companion.milliseconds
@@ -24,8 +24,8 @@ class PlaceCountHud : CachedTextHud(
         super.setup()
 
         if (isReal) {
-            eventHandler { event: ClientPlaceBlockEvent ->
-                if (event.player == mc.player) {
+            eventHandler { event: PlaceBlockEvent ->
+                if (event.getPlayer<Any>() == mc.player) {
                     blockCount.add(System.nanoTime())
                     updateAndRecalculate()
                 }

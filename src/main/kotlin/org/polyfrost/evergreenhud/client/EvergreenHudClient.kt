@@ -1,16 +1,14 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client
 
 import net.fabricmc.api.ClientModInitializer
 import net.minecraft.core.BlockPos
-import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket
 //? if > 1.8.9 {
 import net.minecraft.network.protocol.game.ClientboundDamageEventPacket
 import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket
-import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket
-//?} else {
-/*import net.minecraft.network.packet.s2c.play.BlocksUpdateS2CPacket
-import net.minecraft.network.packet.s2c.play.EntityEventS2CPacket
-*///?}
+//?} else
+//import net.minecraft.network.packet.s2c.play.EntityEventS2CPacket
 import net.minecraft.world.entity.Entity
 import org.polyfrost.evergreenhud.client.config.GlobalConfig
 import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
@@ -27,124 +25,64 @@ import org.polyfrost.evergreenhud.client.hud.media.LyricsHud
 import org.polyfrost.evergreenhud.client.hud.media.MediaHud
 import org.polyfrost.evergreenhud.client.utils.media.MediaService
 import org.polyfrost.evergreenhud.client.hud.mouse.MouseStrokesHud
+import org.polyfrost.evergreenhud.client.hud.mouse.MouseTurnTracker
 import org.polyfrost.evergreenhud.client.hud.potion.PotionEffectsHud
 import org.polyfrost.evergreenhud.client.hud.shape.ShapeHud
 import org.polyfrost.evergreenhud.client.utils.FrameTimeHelper
 import org.polyfrost.evergreenhud.client.utils.shaders.ShaderMod
 import org.polyfrost.evergreenhud.client.utils.SaturationTracker
+import org.polyfrost.evergreenhud.client.utils.settledAttackHandler
 import org.polyfrost.evergreenhud.client.utils.uniqueEntityId
 import org.polyfrost.oneconfig.api.event.v1.EventManager
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
-import org.polyfrost.oneconfig.api.event.v1.events.InitializationEvent
+import org.polyfrost.oneconfig.api.event.v1.events.AttackEntityEvent
 import org.polyfrost.oneconfig.api.event.v1.events.PacketEvent
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
-import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.hud.v1.TextHud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
-import java.util.concurrent.ConcurrentLinkedQueue
 
 object EvergreenHudClient : ClientModInitializer {
     override fun onInitializeClient() {
-        // 1.8.9 runs entrypoints before Minecraft.init, so HUDs can't be built yet (I18n isn't loaded).
-        // Wait for InitializationEvent at the end of init, at the lowest priority so OneConfig's own setup runs first
-        //? if = 1.8.9 {
-        /*EventManager.INSTANCE.register(object : EventHandler<InitializationEvent>() {
-            override fun handle(event: InitializationEvent): Boolean {
-                initializeClient()
-                return true
-            }
-
-            override fun getEventClass(): Class<InitializationEvent> = InitializationEvent::class.java
-
-            override fun getPriority(): Int = Int.MIN_VALUE
-        })
-        *///?} else
-        initializeClient()
-    }
-
-    private fun initializeClient() {
         FrameTimeHelper.initialize()
         PlayerPreviewOffscreen.initialize()
         VanillaTextures.initialize()
         EnderChestTracker.initialize()
         SaturationTracker.initialize()
+        MouseTurnTracker.initialize()
         GlobalConfig.preload()
 
-        val huds = arrayOf(
-            ArmorHud(),
-            BiomeHud(), BlockAboveHud(), CCounterHud(),
-            ClockHud(), DigitalClockHud(), ComboHud(), CpsHud(),
-            CustomImageHud(), CustomTextHud(),
-            DayHud(), DirectionHud(), EntityCounterHud(), FacingHud(), FpsHud(),
-            InGameTimeHud(), InventoryHud(), ItemCounterHud(), ItemTrackerHud(),
-            KeystrokesHud(),
-            LoreHud(), MemoryHud(), MouseStrokesHud(),
-            PingHud(), PlaceCountHud(), PlayerHeadHud(), PlayerPreviewHud(),
-            PlayTimeHud(), PositionHud(), PotionEffectsHud(), ReachHud(),
-            ResourcePackHud(), SaturationHud(), ServerAddressHud(),
-            ShapeHud(), SocialStatsHud(), SpeedHud(), TpsHud(), WeatherHud(),
+        val huds = listOf<() -> Hud>(
+            ::ArmorHud,
+            ::BiomeHud, ::BlockAboveHud, ::CCounterHud,
+            ::ClockHud, ::DigitalClockHud, ::ComboHud, ::CpsHud,
+            ::CustomImageHud, ::CustomTextHud,
+            ::DayHud, ::DirectionHud, ::EntityCounterHud, ::FacingHud, ::FpsHud,
+            ::InGameTimeHud, ::InventoryHud, ::ItemCounterHud, ::ItemTrackerHud,
+            ::KeystrokesHud,
+            ::LoreHud, ::MemoryHud, ::MouseStrokesHud,
+            ::PingHud, ::PlaceCountHud, ::PlayerHeadHud, ::PlayerPreviewHud,
+            ::PlayTimeHud, ::PositionHud, ::PotionEffectsHud, ::ReachHud,
+            ::ResourcePackHud, ::SaturationHud, ::ServerAddressHud,
+            ::ShapeHud, ::SocialStatsHud, ::SpeedHud, ::TpsHud, ::WeatherHud,
         )
 
-        huds.forEach(::register)
+        huds.forEach { register(it) }
 
-        registerIfSupported(Battery.isSupported(), ::BatteryHud)
-        registerIfSupported(MediaService.isSupported(), ::MediaHud)
-        registerIfSupported(MediaService.isSupported(), ::LyricsHud)
-        registerIfSupported(ShaderMod.isSupported(), ::ShaderHud)
+        register(::BatteryHud) { Battery.isSupported() }
+        register(::MediaHud) { MediaService.isSupported() }
+        register(::LyricsHud) { MediaService.isSupported() }
+        register(::ShaderHud) { ShaderMod.isSupported() }
 
-        BlockChangeEvent()
         BlockPositionChangedEvent()
         ServerDamageEntityEvent()
     }
 
-    private fun register(hud: Hud) {
-        if (hud is TextHud) hud.staticWidth = false
-        HudManager.register(hud, GlobalConfig.id, GlobalConfig.iconPath)
-    }
-
-    private fun registerIfSupported(supported: Boolean, factory: () -> Hud) {
-        if (supported) {
-            register(factory())
-            return
-        }
-
-        //? if = 1.8.9 {
-        /*// already inside InitializationEvent on 1.8.9, so a handler registered now would never run
-        HudManager.unregister(factory(), removeActiveInstances = true)
-        *///?} else {
-        EventManager.INSTANCE.register(object : EventHandler<InitializationEvent>() {
-            override fun handle(event: InitializationEvent): Boolean {
-                HudManager.unregister(factory(), removeActiveInstances = true)
-                return false
-            }
-
-            override fun getEventClass(): Class<InitializationEvent> = InitializationEvent::class.java
-
-            override fun getPriority(): Int = Int.MIN_VALUE
-        })
-        //?}
-    }
-
-    private val recentBlockChanges = ConcurrentLinkedQueue<BlockPos>()
-
-    private fun BlockChangeEvent() {
-        eventHandler { event: PacketEvent.Receive ->
-            when (val packet = event.getPacket<Any>()) {
-                is ClientboundBlockUpdatePacket -> recentBlockChanges.add(packet.pos)
-                //? if > 1.8.9 {
-                is ClientboundSectionBlocksUpdatePacket -> packet.runUpdates { pos, _ -> recentBlockChanges.add(pos) }
-                //?} else
-                //is BlocksUpdateS2CPacket -> packet.updates.forEach { update -> recentBlockChanges.add(update.blockPos) }
-
-            }
-        }
-        eventHandler { _: TickEvent.End ->
-            while (true) {
-                val pos = recentBlockChanges.poll() ?: break
-                EventManager.INSTANCE.post(BlockChangeEvent(pos))
-            }
+    private fun register(factory: () -> Hud, supported: () -> Boolean = { true }) {
+        HudManager.registerLater(GlobalConfig.id, GlobalConfig.iconPath, supported) {
+            factory().also { if (it is TextHud) it.staticWidth = false }
         }
     }
 
@@ -176,8 +114,10 @@ object EvergreenHudClient : ClientModInitializer {
 
     @Suppress("FunctionName")
     private fun ServerDamageEntityEvent() {
-        eventHandler { (attacker, target): ClientDamageEntityEvent ->
-            lastAttacker = attacker
+        settledAttackHandler { event: AttackEntityEvent ->
+            if (event.cancelled || mc.player?.isSpectator == true) return@settledAttackHandler
+            val target = event.getTarget<Any>() as? Entity ?: return@settledAttackHandler
+            lastAttacker = event.getPlayer<Any>() as? Entity
             lastTargetId = target.uniqueEntityId
             lastAttackTime = System.currentTimeMillis()
         }

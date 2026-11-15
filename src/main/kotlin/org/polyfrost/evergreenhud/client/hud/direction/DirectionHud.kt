@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud.direction
 
 import androidx.compose.runtime.Composable
@@ -16,12 +18,13 @@ import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.utils.Facing
 import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.utils.cameraYaw
-import org.polyfrost.evergreenhud.client.utils.copy
+import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.api.platform.v1.Platform
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -137,13 +140,6 @@ class DirectionHud : Hud(
         return (bearing / step).roundToInt() * step
     }
 
-    override fun clone(): Hud = (super.clone() as DirectionHud).apply {
-        view = mutableStateOf(this@DirectionHud.view.value)
-        _staticW = mutableStateOf(this@DirectionHud.staticW)
-        _staticH = mutableStateOf(this@DirectionHud.staticH)
-        markerColor = markerColor.copy()
-        tickColor = tickColor.copy()
-    }
 
     @Composable
     override fun Content() {
@@ -157,7 +153,7 @@ class DirectionHud : Hud(
     private fun Compass(view: View) {
         val bearing = view.bearing
         val width = compassWidth
-        val fg = PolyColor(textColor, textChroma, textChromaSpeed)
+        val fg = textPolyColor
 
         val headingHeight = if (view.showHeading) LINE * textScale else 0f
         val ribbonHeight = compassHeight - headingHeight
@@ -235,7 +231,7 @@ class DirectionHud : Hud(
                     fontSize = FONT * textScale,
                     font = getPoppinsFontName(),
                     shadow = showShadow,
-                    shadowColor = PolyColor(shadowColor, shadowChroma, shadowChromaSpeed),
+                    shadowColor = shadowPolyColor,
                     shadowOffset = shadowOffsetX,
                     modifier = PolyModifier.align(PolyAlign.Center),
                 )

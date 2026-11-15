@@ -1,10 +1,14 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.utils
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import org.polyfrost.compose.render.PolyColor
-import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.hud.v1.HudText
+import org.polyfrost.oneconfig.api.hud.v1.TextRun
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 
 abstract class CachedTextHud(
     title: String,
@@ -18,7 +22,7 @@ abstract class CachedTextHud(
 
     private var lastValue: String = defaultText
 
-    private var styledLinesState: MutableState<List<List<StyledRun>>?> = mutableStateOf(null)
+    private var styledLinesState: MutableState<List<List<TextRun>>?> = mutableStateOf(null)
 
     fun updateWithText(text: Any?) {
         this.currentText = text?.toString() ?: defaultText
@@ -45,10 +49,10 @@ abstract class CachedTextHud(
     @Composable
     override fun Content() {
         val lines = styledLinesState.value ?: return super.Content()
-        HudStyledLines(lines)
+        HudText(lines)
     }
 
-    private fun styledLines(color: PolyColor): List<List<StyledRun>> {
+    private fun styledLines(color: PolyColor): List<List<TextRun>> {
         val value = lastValue
         if (value.isEmpty()) {
             val bare = listOfNotNull(prefix.takeIf { it.isNotEmpty() }, suffix.takeIf { it.isNotEmpty() }).joinToString(concatString)
@@ -57,8 +61,8 @@ abstract class CachedTextHud(
         return value.split('\n').map { line -> styledLine(line, color) }
     }
 
-    private fun styledLine(value: String, color: PolyColor): List<StyledRun> {
-        val runs = ArrayList<StyledRun>(5)
+    private fun styledLine(value: String, color: PolyColor): List<TextRun> {
+        val runs = ArrayList<TextRun>(5)
         if (brackets) runs.add(run("["))
         if (prefix.isNotEmpty()) runs.add(run("$prefix$concatString"))
         runs.add(run(value, color))
@@ -67,10 +71,11 @@ abstract class CachedTextHud(
         return runs
     }
 
-    private fun run(text: String, color: PolyColor? = null) = StyledRun(text, color, false, false)
+    private fun run(text: String, color: PolyColor? = null) = TextRun(text, color)
 
-    override fun clone(): Hud = (super.clone() as CachedTextHud).also {
-        it.lastValue = defaultText
-        it.styledLinesState = mutableStateOf(null)
+    override fun onCloned() {
+        super.onCloned()
+        lastValue = defaultText
+        styledLinesState = mutableStateOf(null)
     }
 }

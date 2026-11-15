@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud.shape
 
 import androidx.compose.runtime.Composable
@@ -8,12 +10,13 @@ import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.RenderContext
-import org.polyfrost.evergreenhud.client.utils.copy
+import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 
 class ShapeHud : Hud(
     id = "shape.json",
@@ -109,13 +112,9 @@ class ShapeHud : Hud(
         cachedKey = null
     }
 
-    override fun clone(): Hud = (super.clone() as ShapeHud).apply {
-        _staticW = mutableStateOf(this@ShapeHud.staticW)
-        _staticH = mutableStateOf(this@ShapeHud.staticH)
+    override fun onCloned() {
         cachedPath = null
         cachedKey = null
-        color = color.copy()
-        outlineColor = outlineColor.copy()
     }
 
     @Composable

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud.clock
 
 import androidx.compose.runtime.Composable
@@ -10,12 +12,13 @@ import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
-import org.polyfrost.evergreenhud.client.utils.copy
+import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.MultiSelectDropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import java.time.LocalTime
 import java.time.ZoneId
 
@@ -65,14 +68,8 @@ class ClockHud : Hud(
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
-    override fun clone(): Hud = (super.clone() as ClockHud).apply {
-        details = this@ClockHud.details.copyOf()
-        hourHandColor = this@ClockHud.hourHandColor.copy()
-        minuteHandColor = this@ClockHud.minuteHandColor.copy()
-        secondHandColor = this@ClockHud.secondHandColor.copy()
+    override fun onCloned() {
         rev = mutableStateOf(0)
-        _staticW = mutableStateOf(this@ClockHud.staticW)
-        _staticH = mutableStateOf(this@ClockHud.staticH)
     }
 
     fun applyGlobalColor(color: PolyColor) {
@@ -116,7 +113,7 @@ class ClockHud : Hud(
         val fiveMinuteMarks = detailEnabled(DETAIL_FIVE_MINUTE_MARKS)
         val minuteMarks = detailEnabled(DETAIL_MINUTE_MARKS)
         val numbers = detailEnabled(DETAIL_NUMBERS)
-        val detailColor = PolyColor(textColor, textChroma, textChromaSpeed)
+        val detailColor = textPolyColor
         val fontName = getPoppinsFontName()
         if (showBackground) {
             PolyBox(modifier = hudBackground(sizeModifier)) {

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
@@ -39,6 +41,7 @@ import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration.Companion.seconds
@@ -311,7 +314,7 @@ class ResourcePackHud : Hud(
 
     @Composable
     private fun Line(text: String, scale: Float) {
-        val color = PolyColor(textColor, textChroma, textChromaSpeed)
+        val color = textPolyColor
         if (font == Font.Minecraft) {
             PolyMcText(text, color = color, shadow = showShadow, scale = scale)
         } else {
@@ -320,18 +323,18 @@ class ResourcePackHud : Hud(
                 color = color,
                 fontSize = FONT_SIZE * scale,
                 shadow = showShadow,
-                shadowColor = PolyColor(shadowColor, shadowChroma, shadowChromaSpeed),
+                shadowColor = shadowPolyColor,
                 shadowOffset = shadowOffsetX,
                 font = getPoppinsFontName(),
             )
         }
     }
 
-    override fun clone(): Hud = (super.clone() as ResourcePackHud).also {
-        it.packTitle = mutableStateOf(DEFAULT_TITLE)
-        it.packDescription = mutableStateOf(DEFAULT_DESCRIPTION)
-        it.packIcon = mutableStateOf(null)
-        it.lastPackId = null
-        it.lastIgnoreOverlay = null
+    override fun onCloned() {
+        packTitle = mutableStateOf(DEFAULT_TITLE)
+        packDescription = mutableStateOf(DEFAULT_DESCRIPTION)
+        packIcon = mutableStateOf(null)
+        lastPackId = null
+        lastIgnoreOverlay = null
     }
 }

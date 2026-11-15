@@ -11,9 +11,9 @@ import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.PolyPath
 import org.polyfrost.compose.render.PolyRenderer
 import org.polyfrost.compose.render.RenderContext
+import org.polyfrost.compose.render.addShape
 import org.polyfrost.evergreenhud.client.hud.shape.oval
 import org.polyfrost.evergreenhud.client.utils.capHeight
-import org.polyfrost.evergreenhud.client.utils.toPolyPath
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import java.awt.BasicStroke
@@ -25,7 +25,6 @@ import java.awt.geom.RoundRectangle2D
 import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.cos
-import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -136,12 +135,8 @@ object MediaCardLayout {
     fun buttonX(button: Int, showArt: Boolean, textWidth: Float): Float =
         textX(showArt) + textWidth / 2f + (button - BUTTON_TOGGLE) * BUTTON_SPACING
 
-    fun buttonAt(x: Float, y: Float, showArt: Boolean, textWidth: Float, seek: Int): Int {
-        for (button in BUTTON_PREVIOUS..BUTTON_NEXT) {
-            if (hypot(x - buttonX(button, showArt, textWidth), y - buttonY(seek)) <= HIT_RADIUS) return button
-        }
-        return -1
-    }
+    fun buttonBounds(button: Int, showArt: Boolean, textWidth: Float, seek: Int): Rect =
+        Rect.makeXYWH(buttonX(button, showArt, textWidth) - HIT_RADIUS, buttonY(seek) - HIT_RADIUS, 2f * HIT_RADIUS, 2f * HIT_RADIUS)
 }
 
 private const val TITLE_SIZE = 8f
@@ -576,7 +571,7 @@ private fun cutoutPath(cx: Float, cy: Float, radius: Float, playing: Boolean, ma
     } else {
         Ellipse2D.Float(cx - radius, cy - radius, 2f * radius, 2f * radius)
     }
-    return Area(body).apply { subtract(toggleGlyph(cx, cy, playing, material)) }.toPolyPath()
+    return PolyPath().apply { addShape(Area(body).apply { subtract(toggleGlyph(cx, cy, playing, material)) }) }
 }
 
 private fun RenderContext.drawButton(

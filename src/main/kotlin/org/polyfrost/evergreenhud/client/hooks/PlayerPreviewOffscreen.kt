@@ -1,17 +1,14 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hooks
 
 //? if > 1.8.9 {
-//? if >= 1.21.4 {
-import com.mojang.blaze3d.ProjectionType
-//?} else
-//import com.mojang.blaze3d.vertex.VertexSorting
 import com.mojang.blaze3d.pipeline.RenderTarget
 import com.mojang.blaze3d.platform.Lighting
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
 //?} else {
-/*import net.minecraft.client.render.pipeline.RenderTarget
-import net.minecraft.client.render.platform.GLX
+/*import net.minecraft.client.render.platform.GLX
 import net.minecraft.client.render.platform.GlStateManager
 import net.minecraft.client.render.platform.Lighting
 import net.minecraft.util.math.MathHelper
@@ -19,16 +16,12 @@ import org.lwjgl.opengl.GL11
 *///?}
 import net.minecraft.client.Minecraft
 //? if >= 26.1 {
-import net.minecraft.client.renderer.ProjectionMatrixBuffer
 import net.minecraft.client.renderer.state.level.CameraRenderState
 //?} elif >= 1.21.10
 //import net.minecraft.client.renderer.state.CameraRenderState
-//? if >= 1.21.8 && < 26.1
-//import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
 //? if >= 1.21.10
 import net.minecraft.client.renderer.entity.state.AvatarRenderState
 //? if >= 26.2 {
-import net.minecraft.client.renderer.Projection
 import net.minecraft.client.renderer.SubmitNodeStorage
 //?}
 //? if >= 26.3 {
@@ -42,18 +35,13 @@ import net.minecraft.world.entity.player.Player
 //? if >= 1.21.10
 import net.minecraft.world.phys.Vec3
 //? if > 1.8.9 {
-import org.joml.Matrix4f
 import org.joml.Quaternionf
 //?}
-//? if >= 26.2
-import org.joml.Vector4f
 import org.polyfrost.compose.render.RenderContext
-import org.polyfrost.oneconfig.internal.ui.OffscreenTarget
-import org.polyfrost.oneconfig.internal.ui.TextureRenderer
-//? if > 1.8.9 && < 1.21.8
-//import org.polyfrost.oneconfig.internal.ui.hud.GuiTargetRedirect
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.WorldEvent
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
+import org.polyfrost.oneconfig.api.ui.v1.platform.PolyOffscreen
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import org.slf4j.LoggerFactory
 
@@ -71,14 +59,6 @@ object PlayerPreviewOffscreen {
 
     private val client: Minecraft get() = mc
 
-    //? if >= 26.1 {
-    private val projection by lazy { ProjectionMatrixBuffer("evergreenhud_player_preview") }
-    //?} elif >= 1.21.8 {
-    /*private val projection by lazy {
-        CachedOrthoProjectionMatrixBuffer("evergreenhud_player_preview", -1000f, 1000f, true)
-    }
-    *///? }
-
     class Request(
         val widthPx: Int,
         val heightPx: Int,
@@ -93,25 +73,16 @@ object PlayerPreviewOffscreen {
     )
 
     private class Slot {
-        val offscreen = OffscreenTarget()
-        var boundTarget: RenderTarget? = null
-        var lastWidth = -1
-        var lastHeight = -1
+        var offscreen: PolyOffscreen? = null
 
         var anchorHeight = -1f
         var lastAnchorNanos = 0L
 
-        var hasContent = false
         var lastUsedNanos = 0L
 
-        val target: RenderTarget? get() = offscreen.target
-
         fun invalidate() {
-            offscreen.dispose()
-            boundTarget = null
-            lastWidth = -1
-            lastHeight = -1
-            hasContent = false
+            offscreen?.close()
+            offscreen = null
         }
     }
 
@@ -126,6 +97,8 @@ object PlayerPreviewOffscreen {
 
     fun initialize() {
         eventHandler { _: WorldEvent.Unload -> invalidate() }
+        //? if >= 1.21.10
+        PolyOffscreen.onBeforePresent(::render)
     }
 
     fun submit(owner: Any, request: Request) {
@@ -157,10 +130,22 @@ object PlayerPreviewOffscreen {
         val height = (requestedHeight * fit).toInt().coerceIn(1, MAX_DIM)
 
         try {
-            if (!resolveTarget(slot, width, height)) return
-            val rt = slot.target ?: return
-            renderInto(slot, rt, request, player, width, height, fit)
-            slot.hasContent = true
+            val offscreen = slot.offscreen ?: PolyOffscreen(width, height).also { slot.offscreen = it }
+            offscreen.resize(width, height)
+            offscreen.render {
+                //? if >= 1.21.10 {
+                val rt = offscreen.renderTarget ?: return@render
+                renderPlayer(slot, rt, request, player, width, height, fit)
+                //?} else
+                //renderInto(slot, request, player, width, height, fit)
+            }
+            if (!offscreen.hasContent) {
+                if (!loggedResolveFailure) {
+                    loggedResolveFailure = true
+                    LOGGER.warn("Player preview could not acquire an offscreen target")
+                }
+                return
+            }
             if (!loggedFirstFrame) {
                 loggedFirstFrame = true
                 LOGGER.info("Player preview target ready ({}x{} px)", width, height)
@@ -184,145 +169,26 @@ object PlayerPreviewOffscreen {
 
     fun drawInto(owner: Any, ctx: RenderContext, width: Float, height: Float) {
         if (client.player == null) return
-        val slot = slots[owner] ?: return
-        if (!slot.hasContent) return
-        val rt = slot.target ?: return
-        if (slot.lastWidth <= 0 || slot.lastHeight <= 0) return
-        val textures = ctx.renderer as? TextureRenderer ?: return
+        val offscreen = slots[owner]?.offscreen ?: return
         try {
-            textures.texture(rt, 0f, 0f, width, height, 0f, 1f, 1f, 0f, 1f)
+            with(offscreen) { ctx.blit(0f, 0f, width, height) }
         } catch (throwable: Throwable) {
             LOGGER.warn("Player preview blit failed", throwable)
         }
     }
 
-    //? if >= 1.21.8 {
-    private fun renderInto(slot: Slot, rt: RenderTarget, request: Request, player: Player, width: Int, height: Int, fit: Float) {
-        //? if >= 1.21.10 {
-        val colorTexture = rt.colorTexture ?: return
-        val depthTexture = rt.depthTexture ?: return
-        //?}
-        //? if < 26.3 {
-        /*val colorView = rt.colorTextureView ?: return
-        val depthView = rt.depthTextureView ?: return
-        *///? }
-
-        val savedLights = RenderSystem.getShaderLights()
-        val savedFog = RenderSystem.getShaderFog()
-
-        //? if >= 26.2 {
-        RenderSystem.getDevice().createCommandEncoder()
-            .clearColorAndDepthTextures(colorTexture, Vector4f(0f, 0f, 0f, 0f), depthTexture, 0.0)
-        //?} elif >= 1.21.10 {
-        /*RenderSystem.getDevice().createCommandEncoder()
-            .clearColorAndDepthTextures(colorTexture, 0x00000000, depthTexture, 1.0)
-        *///?} else
-        //slot.offscreen.clear()
-
-        RenderSystem.backupProjectionMatrix()
-        //? if >= 26.2 {
-        RenderSystem.setProjectionMatrix(projection.getBuffer(orthoProjection(width, height)), ProjectionType.ORTHOGRAPHIC)
-        //? } else if >= 26.1 {
-        /*RenderSystem.setProjectionMatrix(projection.getBuffer(orthoMatrix(width, height)), ProjectionType.ORTHOGRAPHIC)
-        *///? } else {
-        /*RenderSystem.setProjectionMatrix(projection.getBuffer(width.toFloat(), height.toFloat()), ProjectionType.ORTHOGRAPHIC)
-        *///? }
-        //? if < 26.3 {
-        /*RenderSystem.outputColorTextureOverride = colorView
-        RenderSystem.outputDepthTextureOverride = depthView
-        *///? }
-
-        val scissor = RenderSystem.getScissorStateForRenderTypeDraws()
-        val hadScissor = scissor.enabled()
-        val scissorX = scissor.x()
-        val scissorY = scissor.y()
-        val scissorW = scissor.width()
-        val scissorH = scissor.height()
-        RenderSystem.disableScissorForRenderTypeDraws()
-
-        //? if >= 26.2 || < 1.21.10 {
-        val modelView = RenderSystem.getModelViewStack()
-        modelView.pushMatrix()
-        modelView.identity()
-        //? }
-        try {
-            //? if >= 1.21.10 {
-            renderPlayer(slot, rt, request, player, width, height, fit)
-            //?} else
-            //renderPlayer(slot, request, player, width, height, fit)
-        } finally {
-            //? if >= 26.2 || < 1.21.10 {
-            RenderSystem.getModelViewStack().popMatrix()
-            //? }
-            //? if < 26.3 {
-            /*RenderSystem.outputColorTextureOverride = null
-            RenderSystem.outputDepthTextureOverride = null
-            *///? }
-            RenderSystem.restoreProjectionMatrix()
-            savedLights?.let { RenderSystem.setShaderLights(it) }
-            savedFog?.let { RenderSystem.setShaderFog(it) }
-            if (hadScissor) RenderSystem.enableScissorForRenderTypeDraws(scissorX, scissorY, scissorW, scissorH)
-        }
+    //? if > 1.8.9 && < 1.21.10 {
+    /*private fun renderInto(slot: Slot, request: Request, player: Player, width: Int, height: Int, fit: Float) {
+        renderPlayer(slot, request, player, width, height, fit)
     }
-    //? } else if > 1.8.9 {
-    /*private fun renderInto(slot: Slot, rt: RenderTarget, request: Request, player: Player, width: Int, height: Int, fit: Float) {
-        slot.offscreen.clear()
-
-        val previousTarget = GuiTargetRedirect.target
-        val ortho = Matrix4f().setOrtho(0f, width.toFloat(), height.toFloat(), 0f, -1000f, 1000f)
-        RenderSystem.backupProjectionMatrix()
-        val modelView = RenderSystem.getModelViewStack()
-        modelView.pushMatrix()
-        modelView.identity()
-        //? if >= 1.21.4 {
-        RenderSystem.setProjectionMatrix(ortho, ProjectionType.ORTHOGRAPHIC)
-        //?} else {
-        /^RenderSystem.setProjectionMatrix(ortho, VertexSorting.ORTHOGRAPHIC_Z)
-        RenderSystem.applyModelViewMatrix()
-        ^///?}
-        GuiTargetRedirect.target = rt
-        //? if < 1.21.5
-        //rt.bindWrite(true)
-        try {
-            renderPlayer(slot, request, player, width, height, fit)
-        } finally {
-            GuiTargetRedirect.target = previousTarget
-            //? if < 1.21.5
-            //(previousTarget ?: client.mainRenderTarget).bindWrite(true)
-            modelView.popMatrix()
-            //? if < 1.21.4
-            //RenderSystem.applyModelViewMatrix()
-            RenderSystem.restoreProjectionMatrix()
-        }
-    }
-    *///?} else {
-    /*private fun renderInto(slot: Slot, rt: RenderTarget, request: Request, player: Player, width: Int, height: Int, fit: Float) {
-        slot.offscreen.clear()
-
-        val depthWasEnabled = GL11.glIsEnabled(GL11.GL_DEPTH_TEST)
-        rt.bindWrite(true)
-        GlStateManager.matrixMode(GL11.GL_PROJECTION)
-        GlStateManager.pushMatrix()
-        GlStateManager.loadIdentity()
-        GlStateManager.ortho(0.0, width.toDouble(), height.toDouble(), 0.0, 1000.0, 3000.0)
-        GlStateManager.matrixMode(GL11.GL_MODELVIEW)
-        GlStateManager.pushMatrix()
-        GlStateManager.loadIdentity()
-        GlStateManager.translatef(0f, 0f, -2000f)
-        GlStateManager.color4f(1f, 1f, 1f, 1f)
-        GlStateManager.enableDepthTest()
+    *///?} else if <= 1.8.9 {
+    /*private fun renderInto(slot: Slot, request: Request, player: Player, width: Int, height: Int, fit: Float) {
         // the held item layer disables GL_RESCALE_NORMAL, which darkens every layer drawn after it at this scale
         GL11.glEnable(GL11.GL_NORMALIZE)
         try {
             renderPlayer(slot, request, player, width, height, fit)
         } finally {
             GL11.glDisable(GL11.GL_NORMALIZE)
-            if (!depthWasEnabled) GlStateManager.disableDepthTest()
-            GlStateManager.matrixMode(GL11.GL_PROJECTION)
-            GlStateManager.popMatrix()
-            GlStateManager.matrixMode(GL11.GL_MODELVIEW)
-            GlStateManager.popMatrix()
-            client.renderTarget.bindWrite(true)
         }
     }
     *///?}
@@ -568,36 +434,6 @@ object PlayerPreviewOffscreen {
         val step = (1.0 - Math.exp(-HEIGHT_CATCHUP * elapsed)).toFloat()
         slot.anchorHeight = previous + (target - previous) * step
         return slot.anchorHeight
-    }
-
-    //? if >= 26.2 {
-    private fun orthoProjection(width: Int, height: Int): Projection =
-        Projection().apply {
-            setupOrtho(-1000f, 1000f, width.toFloat(), height.toFloat(), true)
-        }
-    //? } else if >= 26.1 {
-    /*private fun orthoMatrix(width: Int, height: Int): Matrix4f =
-        Matrix4f().setOrtho(0f, width.toFloat(), height.toFloat(), 0f, -1000f, 1000f)
-    *///? }
-
-    private fun resolveTarget(slot: Slot, width: Int, height: Int): Boolean {
-        if (!slot.offscreen.resolve(width, height)) {
-            if (!loggedResolveFailure) {
-                loggedResolveFailure = true
-                LOGGER.warn("Player preview could not acquire an offscreen target")
-            }
-            slot.boundTarget = null
-            slot.hasContent = false
-            return false
-        }
-        val rt = slot.offscreen.target ?: return false
-        if (rt !== slot.boundTarget || slot.lastWidth != width || slot.lastHeight != height) {
-            slot.boundTarget = rt
-            slot.lastWidth = width
-            slot.lastHeight = height
-            slot.hasContent = false
-        }
-        return true
     }
 
     private fun invalidate() {

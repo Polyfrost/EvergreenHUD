@@ -1,21 +1,9 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import com.mojang.blaze3d.platform.NativeImage
-//? if > 1.8.9 {
-import net.minecraft.client.resources.DefaultPlayerSkin
-//? if < 1.21.10
-//import net.minecraft.client.resources.PlayerSkin
-//? if >= 1.21.10
-import net.minecraft.world.entity.player.PlayerSkin
-//?} else {
-/*import net.minecraft.client.resource.skin.DefaultSkinUtils
-import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
-import net.ornithemc.osl.resource.loader.api.resource.manager.ResourceManager
-import org.polyfrost.oneconfig.internal.legacy.PlayerSkin
-import javax.imageio.ImageIO
-*///?}
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
@@ -23,9 +11,9 @@ import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.FilterQuality
 import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.oneconfig.api.hud.v1.Hud
-import org.polyfrost.oneconfig.internal.ui.PlayerHeadTextureAccess
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
+import org.polyfrost.oneconfig.api.ui.v1.components.PlayerHeads
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
-import java.util.UUID
 import kotlin.math.min
 
 private const val DEFAULT_SIDE = 16f
@@ -66,15 +54,14 @@ class PlayerHeadHud : Hud(
     override fun minimumSize(): Pair<Float, Float> = MIN_SIDE to MIN_SIDE
 
     override fun update(): Boolean {
-        val next = PlayerHeadTexture.current()
+        val id = mc.player?.uuid ?: PlayerHeads.localPlayerId()
+        val next = PlayerHeads.bitmap(id, preferLoadedSkin = true) ?: id?.let(PlayerHeads::defaultBitmap)
         if (next === headImage.value) return false
         headImage.value = next
         return true
     }
 
-    override fun clone(): Hud = (super.clone() as PlayerHeadHud).apply {
-        _staticW = mutableStateOf(this@PlayerHeadHud.staticW)
-        _staticH = mutableStateOf(this@PlayerHeadHud.staticH)
+    override fun onCloned() {
         headImage = mutableStateOf(null)
     }
 
@@ -90,109 +77,5 @@ class PlayerHeadHud : Hud(
                 image(head, left, top, side, side, FilterQuality.None)
             }
         }
-    }
-}
-
-//? if = 1.8.9 {
-/*private object DefaultPlayerSkin {
-    fun get(uuid: UUID) = PlayerSkin(DefaultSkinUtils.getDefaultSkin(uuid))
-}
-*///?}
-
-private object PlayerHeadTexture {
-    private val FALLBACK_UUID = UUID(0L, 0L)
-
-    private const val FACE = 8
-    private const val HEAD_U = 8
-    private const val HEAD_V = 8
-    private const val HAT_U = 40
-    private const val HAT_V = 8
-
-    private var cachedTexture: Any? = null
-    private var image: PolyBitmap? = null
-
-    fun current(): PolyBitmap? {
-        val skin = mc.player?.skin ?: DefaultPlayerSkin.get(FALLBACK_UUID)
-        val texture = texturePath(skin)
-        if (texture == cachedTexture) return image
-
-        image = build(skin) ?: build(DefaultPlayerSkin.get(FALLBACK_UUID))
-        cachedTexture = texture
-        return image
-    }
-
-    private fun texturePath(skin: PlayerSkin): Any {
-        //? if >= 1.21.10 || = 1.8.9
-        return skin.body().texturePath()
-        //? if < 1.21.10 && > 1.8.9
-        //return skin.texture
-    }
-
-    private fun build(skin: PlayerSkin): PolyBitmap? = runCatching {
-        //? if >= 1.21.10 || = 1.8.9
-        val texture = skin.body().texturePath()
-        //? if < 1.21.10 && > 1.8.9
-        //val texture = skin.texture
-
-        //? if > 1.8.9 {
-        val packed = mc.resourceManager.getResource(texture).orElse(null)
-        if (packed != null) return@runCatching packed.open().use { NativeImage.read(it) }.use { headImage(it) }
-        //?} else {
-        /*val packed = ResourceManager.client().getResource(NamespacedIdentifiers.from(texture.namespace, texture.path)).orElse(null)
-        if (packed != null) return@runCatching packed.open().use { NativeImage(ImageIO.read(it)) }.use { headImage(it) }
-        *///?}
-
-        //~ if = 1.8.9 'getTexture(' -> 'get('
-        val pixels = PlayerHeadTextureAccess.readPixels(mc.textureManager.getTexture(texture))
-        pixels?.let { headImage(it) }
-    }.getOrNull()
-
-    private fun headImage(skin: NativeImage): PolyBitmap {
-        val hasHat = skin.width >= HAT_U + FACE && skin.height >= HAT_V + FACE
-        val bytes = ByteArray(FACE * FACE * 4)
-
-        for (y in 0 until FACE) {
-            for (x in 0 until FACE) {
-                var color = pixel(skin, HEAD_U + x, HEAD_V + y)
-                if (hasHat) color = composite(pixel(skin, HAT_U + x, HAT_V + y), color)
-
-                val i = (y * FACE + x) * 4
-                bytes[i] = (color shr 16 and 0xFF).toByte()
-                bytes[i + 1] = (color shr 8 and 0xFF).toByte()
-                bytes[i + 2] = (color and 0xFF).toByte()
-                bytes[i + 3] = (color ushr 24).toByte()
-            }
-        }
-
-        return PolyBitmap(FACE, FACE, bytes)
-    }
-
-    private fun pixel(image: NativeImage, x: Int, y: Int): Int {
-        //? if >= 1.21.4 {
-        return image.getPixel(x, y)
-        //?} else {
-        /*val abgr = image.getPixelRGBA(x, y)
-        return (abgr and 0xFF00FF00.toInt()) or ((abgr shr 16) and 0xFF) or ((abgr and 0xFF) shl 16)
-        *///?}
-    }
-
-    private fun composite(src: Int, dst: Int): Int {
-        val srcAlpha = src ushr 24
-        if (srcAlpha == 0) return dst
-        if (srcAlpha == 0xFF) return src
-
-        val dstAlpha = dst ushr 24
-        if (dstAlpha == 0) return src
-
-        val outAlpha = srcAlpha + dstAlpha * (0xFF - srcAlpha) / 0xFF
-        if (outAlpha == 0) return 0
-
-        fun channel(shift: Int): Int {
-            val s = (src shr shift) and 0xFF
-            val d = (dst shr shift) and 0xFF
-            return (s * srcAlpha + d * dstAlpha * (0xFF - srcAlpha) / 0xFF) / outAlpha
-        }
-
-        return (outAlpha shl 24) or (channel(16) shl 16) or (channel(8) shl 8) or channel(0)
     }
 }

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
@@ -9,25 +11,25 @@ import net.minecraft.core.component.DataComponents
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.ItemStack
 import org.polyfrost.compose.render.PolyColor
-import org.polyfrost.evergreenhud.client.utils.HudStyledLines
-import org.polyfrost.evergreenhud.client.utils.StyledRun
-import org.polyfrost.evergreenhud.client.utils.plainText
-import org.polyfrost.evergreenhud.client.utils.toStyledRuns
+import org.polyfrost.evergreenhud.client.utils.toTextRuns
 import org.polyfrost.oneconfig.api.config.v1.annotations.Checkbox
 import org.polyfrost.oneconfig.api.config.v1.annotations.Number
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
 import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
-import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.hud.v1.HudText
+import org.polyfrost.oneconfig.api.hud.v1.TextRun
+import org.polyfrost.oneconfig.api.hud.v1.plainText
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.evergreenhud.client.utils.SpacedTextHud
 
 private val AQUA = PolyColor(0xFF55FFFF.toInt())
 private val GRAY = PolyColor(0xFFAAAAAA.toInt())
 
 private val PLACEHOLDER_LINES = listOf(
-    listOf(StyledRun("Item Lore HUD", AQUA, bold = false, italic = false)),
-    listOf(StyledRun("Hold an item with lore", GRAY, bold = false, italic = false)),
+    listOf(TextRun("Item Lore HUD", AQUA)),
+    listOf(TextRun("Hold an item with lore", GRAY)),
 )
 
 class LoreHud : SpacedTextHud(
@@ -49,9 +51,9 @@ class LoreHud : SpacedTextHud(
         //~ if = 1.8.9 'has(DataComponents.CUSTOM_NAME)' -> 'hasCustomHoverName()'
         get() = has(DataComponents.CUSTOM_NAME)
 
-    private var currentLines: List<List<StyledRun>> = emptyList()
+    private var currentLines: List<List<TextRun>> = emptyList()
     private var hasLore = false
-    private var linesState: MutableState<List<List<StyledRun>>> = mutableStateOf(emptyList())
+    private var linesState: MutableState<List<List<TextRun>>> = mutableStateOf(emptyList())
 
     private var tickHandler: EventHandler<*>? = null
 
@@ -86,7 +88,7 @@ class LoreHud : SpacedTextHud(
         }
 
     @Composable
-    override fun Content() = HudStyledLines(linesState.value)
+    override fun Content() = HudText(linesState.value)
 
     override fun update(): Boolean {
         val lore = loreLines()
@@ -102,12 +104,12 @@ class LoreHud : SpacedTextHud(
 
     override fun shouldShow(): Boolean = hasLore
 
-    private fun loreLines(): List<List<StyledRun>> {
+    private fun loreLines(): List<List<TextRun>> {
         val item = theItem ?: return emptyList()
-        val out = ArrayList<List<StyledRun>>()
+        val out = ArrayList<List<TextRun>>()
 
         if (showName && item.isNameShown) {
-            val name = item.hoverName.toStyledRuns()
+            val name = item.hoverName.toTextRuns()
             if (name.plainText().isNotEmpty()) out.add(name)
         }
 
@@ -122,23 +124,23 @@ class LoreHud : SpacedTextHud(
         return out
     }
 
-    private inline fun ItemStack.forEachLore(consumer: (List<StyledRun>) -> Unit) {
+    private inline fun ItemStack.forEachLore(consumer: (List<TextRun>) -> Unit) {
         //? if > 1.8.9 {
         val lore = this.get(DataComponents.LORE) ?: return
         for (line: Component in lore.lines) {
-            consumer(line.toStyledRuns())
+            consumer(line.toTextRuns())
         }
         //?} else {
         /*val display = nbt?.getCompound("display") ?: return
         val lore = display.getList("Lore", 8)
         for (i in 0 until lore.size()) {
-            consumer(Component.fromLegacy(lore.getString(i)).toStyledRuns())
+            consumer(Component.fromLegacy(lore.getString(i)).toTextRuns())
         }
         *///?}
     }
 
-    override fun clone(): Hud = (super.clone() as LoreHud).also {
-        it.linesState = mutableStateOf(emptyList())
-        it.tickHandler = null
+    override fun onCloned() {
+        linesState = mutableStateOf(emptyList())
+        tickHandler = null
     }
 }

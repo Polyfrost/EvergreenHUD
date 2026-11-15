@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
@@ -32,6 +34,7 @@ import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
 import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.math.abs
@@ -304,7 +307,7 @@ class ItemTrackerHud : Hud(
                 color = color,
                 fontSize = FONT_SIZE * scale,
                 shadow = showShadow,
-                shadowColor = PolyColor(shadowColor, shadowChroma, shadowChromaSpeed),
+                shadowColor = shadowPolyColor,
                 shadowOffset = shadowOffsetX,
                 font = getPoppinsFontName(),
                 modifier = modifier,
@@ -312,12 +315,12 @@ class ItemTrackerHud : Hud(
         }
     }
 
-    override fun clone(): Hud = (super.clone() as ItemTrackerHud).also {
-        it.changes = ArrayList()
-        it.counts = null
-        it.trackedPlayer = null
-        it.tickHandler = null
-        it.entries = mutableStateOf(emptyList())
-        it.rev = mutableStateOf(0)
+    override fun onCloned() {
+        changes = ArrayList()
+        counts = null
+        trackedPlayer = null
+        tickHandler = null
+        entries = mutableStateOf(emptyList())
+        rev = mutableStateOf(0)
     }
 }

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud.keystrokes
 
 import androidx.compose.runtime.Composable
@@ -20,13 +22,13 @@ import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.mc.McFontQueue
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.compose.render.snappedRect
 import org.polyfrost.evergreenhud.client.utils.applyCase
-import org.polyfrost.evergreenhud.client.utils.copy
+import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.evergreenhud.client.utils.fastRemoveIfReversed
 import org.polyfrost.evergreenhud.client.utils.isHeld
 import org.polyfrost.evergreenhud.client.utils.matchesKeyCode
 import org.polyfrost.evergreenhud.client.utils.matchesMouseButton
-import org.polyfrost.evergreenhud.client.utils.snapToPixels
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
@@ -42,11 +44,12 @@ import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.platform.v1.Platform
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.api.ui.v1.keybind.KeyModifiers
 import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindHelper
 import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindManager
+import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindMetadata
 import org.polyfrost.oneconfig.api.ui.v1.keybind.OneConfigKeybind
-import org.polyfrost.oneconfig.internal.ui.keybind.MinecraftKeybindRegistrar
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.experimental.or
 import kotlin.math.abs
@@ -193,12 +196,7 @@ class KeystrokesHud : Hud(
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
-    override fun clone(): Hud = (super.clone() as KeystrokesHud).apply {
-        unpressedBg = unpressedBg.copy()
-        unpressedText = unpressedText.copy()
-        pressedBg = pressedBg.copy()
-        pressedText = pressedText.copy()
-        rows = rows.copyOf()
+    override fun onCloned() {
         customBind = customBind.copyWith(customBind.keyCodes?.copyOf(), customBind.mouseBtns?.copyOf(), customBind.mods)
         keys = KeyState()
         handlers = ArrayList(2)
@@ -207,7 +205,7 @@ class KeystrokesHud : Hud(
     override fun setup() {
         super.setup()
         if (isReal) {
-            tree?.getProp("customBind")?.addMetadata(MinecraftKeybindRegistrar.NO_MIRROR_METADATA, true)
+            tree?.getProp("customBind")?.addMetadata(KeybindMetadata.NO_MIRROR, true)
             KeybindManager.unregister(customBind)
             addDependency("arrows", null) {
                 if (isCustom || font != Font.Minecraft) Property.Display.DISABLED else Property.Display.SHOWN
@@ -273,14 +271,12 @@ class KeystrokesHud : Hud(
     }
 
     private fun pushTextToDesigner() {
-        textColor = unpressedText.rawArgb
-        textChroma = unpressedText.chroma
-        textChromaSpeed = unpressedText.chromaSpeed
+        textPolyColor = unpressedText
     }
 
     private fun pullTextFromDesigner(): Boolean {
         if (textColor == unpressedText.rawArgb && textChroma == unpressedText.chroma && textChromaSpeed == unpressedText.chromaSpeed) return false
-        unpressedText = PolyColor(textColor, textChroma, textChromaSpeed)
+        unpressedText = textPolyColor
         keys.rev.value++
         return true
     }
@@ -449,8 +445,8 @@ class KeystrokesHud : Hud(
         if (color.alpha == 0) return
         PolyCanvas(PolyModifier.size(w, h)) { x, y, cw, ch ->
             deviceTransform()?.get(0)?.let { if (it > 0f && abs(it - keys.px.value) > 1e-3f) keys.px.value = it }
-            val r = snapToPixels(this, x, y, cw, ch)
-            rect(r[0], r[1], r[2] - r[0], r[3] - r[1], color, radius.coerceAtLeast(0f))
+            val r = snappedRect(x, y, cw, ch)
+            rect(r[0], r[1], r[2], r[3], color, radius.coerceAtLeast(0f))
         }
     }
 

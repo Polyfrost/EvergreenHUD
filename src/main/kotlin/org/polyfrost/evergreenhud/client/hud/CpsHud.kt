@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud
 
 import org.polyfrost.evergreenhud.client.utils.CachedTextHud
@@ -11,7 +13,7 @@ import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.KeyInputEvent
 import org.polyfrost.oneconfig.api.event.v1.events.MouseInputEvent
 import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
-import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -76,7 +78,8 @@ class CpsHud : CachedTextHud(
         }
     }
 
-    override fun clone(): Hud = (super.clone() as CpsHud).apply {
+    override fun onCloned() {
+        super.onCloned()
         left = ArrayList(20)
         right = ArrayList(10)
         handlers = ArrayList(2)

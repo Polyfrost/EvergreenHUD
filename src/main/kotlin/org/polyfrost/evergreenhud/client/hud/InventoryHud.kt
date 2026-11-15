@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
@@ -41,6 +43,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindHelper
 import org.polyfrost.oneconfig.api.ui.v1.keybind.OneConfigKeybind
@@ -373,9 +376,9 @@ class InventoryHud : Hud(
     @Composable
     private fun Title(raw: String, content: Float, originX: Float, originY: Float) {
         val title = applyCase(raw)
-        val color = PolyColor(textColor, textChroma, textChromaSpeed)
+        val color = textPolyColor
         val modifier = PolyModifier.absoluteAt(originX + EDGE * content, originY + TITLE_Y * content)
-        val shadowCol = PolyColor(shadowColor, shadowChroma, shadowChromaSpeed)
+        val shadowCol = shadowPolyColor
         val outline = showShadow && fullShadow
         if (font == Font.Minecraft) {
             PolyMcText(title, if (outline) shadowCol else null, color = color, shadow = showShadow && !outline, scale = content, modifier = modifier)
@@ -400,11 +403,8 @@ class InventoryHud : Hud(
         }
     }
 
-    override fun clone(): Hud = (super.clone() as InventoryHud).also {
-        it.grid = mutableStateOf(null)
-        it.rev = mutableStateOf(0)
-        it._staticW = mutableStateOf(staticW)
-        it._staticH = mutableStateOf(staticH)
-        it.sizedForHeight = sizedForHeight
+    override fun onCloned() {
+        grid = mutableStateOf(null)
+        rev = mutableStateOf(0)
     }
 }

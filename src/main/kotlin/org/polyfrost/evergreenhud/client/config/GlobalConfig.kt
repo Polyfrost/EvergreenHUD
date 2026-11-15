@@ -1,9 +1,10 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.config
 
-import androidx.compose.runtime.snapshots.Snapshot
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hud.clock.ClockHud
-import org.polyfrost.evergreenhud.client.utils.copy
+import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.oneconfig.api.config.v1.Config
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
@@ -12,8 +13,9 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
-import org.polyfrost.oneconfig.api.hud.v1.HudManager
+import org.polyfrost.oneconfig.api.hud.v1.HudStyles
 import org.polyfrost.oneconfig.api.hud.v1.Weight
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 
 object GlobalConfig : Config(
     "evergreenhud.json",
@@ -92,9 +94,7 @@ object GlobalConfig : Config(
     private val appliers: Map<String, (Hud) -> Unit> = linkedMapOf(
         "font" to { h -> h.font = font },
         "textColor" to { h ->
-            h.textColor = textColor.rawArgb
-            h.textChroma = textColor.chroma
-            h.textChromaSpeed = textColor.chromaSpeed
+            h.textPolyColor = textColor
             if (h is ClockHud) h.applyGlobalColor(textColor)
         },
         "textScale" to { h -> h.textScale = textScale },
@@ -110,17 +110,13 @@ object GlobalConfig : Config(
         },
         "bgColor" to { h ->
             if (h.hasBackground()) {
-                h.bgColor = bgColor.rawArgb
-                h.bgChroma = bgColor.chroma
-                h.bgChromaSpeed = bgColor.chromaSpeed
+                h.bgPolyColor = bgColor
             }
         },
         "bgRadius" to { h -> if (h.hasBackground()) h.bgRadius = bgRadius },
         "showShadow" to { h -> h.showShadow = showShadow },
         "shadowColor" to { h ->
-            h.shadowColor = shadowColor.rawArgb
-            h.shadowChroma = shadowColor.chroma
-            h.shadowChromaSpeed = shadowColor.chromaSpeed
+            h.shadowPolyColor = shadowColor
         },
         "shadowOffsetX" to { h -> h.shadowOffsetX = shadowOffsetX },
         "shadowOffsetY" to { h -> h.shadowOffsetY = shadowOffsetY },
@@ -153,14 +149,5 @@ object GlobalConfig : Config(
         }
     }
 
-    private fun broadcast(apply: (Hud) -> Unit) = broadcast(listOf(apply))
-
-    private fun broadcast(applies: Collection<(Hud) -> Unit>) {
-        Snapshot.withMutableSnapshot {
-            for (apply in applies) {
-                HudManager.providers().forEach(apply)
-                HudManager.activeInstances.forEach(apply)
-            }
-        }
-    }
+    private fun broadcast(apply: (Hud) -> Unit) = HudStyles.applyToAll(id, apply)
 }

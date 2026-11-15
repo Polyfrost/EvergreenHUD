@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
@@ -6,9 +8,6 @@ import androidx.compose.runtime.mutableStateOf
 import net.minecraft.world.level.Level
 import org.polyfrost.evergreenhud.client.utils.Facing
 import org.polyfrost.evergreenhud.client.utils.GenericNumberHud
-import org.polyfrost.evergreenhud.client.utils.HudStyledCells
-import org.polyfrost.evergreenhud.client.utils.StyledCell
-import org.polyfrost.evergreenhud.client.utils.StyledRun
 import org.polyfrost.evergreenhud.client.utils.cameraYaw
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.oneconfig.api.config.v1.annotations.Checkbox
@@ -18,7 +17,9 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
 import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
-import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.hud.v1.HudCellText
+import org.polyfrost.oneconfig.api.hud.v1.TextRun
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
 private const val NO_SIGN = ' '
@@ -101,7 +102,7 @@ class PositionHud : GenericNumberHud(
     private var yaw = 0.0
     private var pitch = 0.0
 
-    private var linesState: MutableState<List<List<StyledCell>>> = mutableStateOf(emptyList())
+    private var linesState: MutableState<List<List<List<TextRun>>>> = mutableStateOf(emptyList())
     private var alignState: MutableState<Boolean> = mutableStateOf(false)
 
     private var tickHandler: EventHandler<*>? = null
@@ -140,7 +141,7 @@ class PositionHud : GenericNumberHud(
     }
 
     @Composable
-    override fun Content() = HudStyledCells(linesState.value, alignColumns = alignState.value)
+    override fun Content() = HudCellText(linesState.value, alignColumns = alignState.value)
 
     override fun update(): Boolean {
         val player = if (isReal) mc.player else null
@@ -165,8 +166,9 @@ class PositionHud : GenericNumberHud(
         val result = super.update()
         if (isReal && player == null) return result
 
+        val aligned = alignDirection && showDirection && displayMode == 0
         linesState.value = buildLines(entries)
-        alignState.value = alignDirection && showDirection && displayMode == 0
+        alignState.value = aligned
         return result
     }
 
@@ -192,25 +194,22 @@ class PositionHud : GenericNumberHud(
         val plain get() = label + value + (direction ?: "")
     }
 
-    private fun run(text: String, color: PolyColor? = null) = StyledRun(text, color, false, false)
+    private fun run(text: String, color: PolyColor? = null) = TextRun(text, color)
 
-    private fun cells(entry: Entry): List<MutableList<StyledRun>> {
-        val main = mutableListOf<StyledRun>()
-        if (entry.label.isNotEmpty()) main.add(run(entry.label, entry.color))
-        main.add(run(entry.value))
-
+    private fun cells(entry: Entry): List<MutableList<TextRun>> {
+        val main = mutableListOf(run(""), run(entry.label, entry.color.takeIf { entry.label.isNotEmpty() }), run(entry.value))
         return if (entry.direction != null) listOf(main, mutableListOf(run(entry.direction)))
         else listOf(main)
     }
 
-    private fun buildLines(entries: List<Entry>): List<List<StyledCell>> {
-        val lines: MutableList<MutableList<MutableList<StyledRun>>> = when {
+    private fun buildLines(entries: List<Entry>): List<List<List<TextRun>>> {
+        val lines: MutableList<MutableList<MutableList<TextRun>>> = when {
             entries.isEmpty() -> mutableListOf(mutableListOf(mutableListOf(run(""))))
 
             displayMode == 0 -> entries.mapTo(ArrayList()) { cells(it).toMutableList() }
 
             else -> {
-                val line = ArrayList<MutableList<StyledRun>>(entries.size * 2)
+                val line = ArrayList<MutableList<TextRun>>(entries.size * 2)
                 for ((i, entry) in entries.withIndex()) {
                     if (i > 0) line.add(mutableListOf(run(", ")))
                     line.addAll(cells(entry))
@@ -219,17 +218,25 @@ class PositionHud : GenericNumberHud(
             }
         }
 
-        if (prefix.isNotEmpty()) lines.first().first().add(0, run("$prefix$concatString"))
-        if (suffix.isNotEmpty()) lines.last().last().add(run("$concatString$suffix"))
+        if (prefix.isNotEmpty()) lines.first().first().prepend("$prefix$concatString")
+        if (suffix.isNotEmpty()) lines.last().last().append("$concatString$suffix")
 
         if (brackets) {
             for (line in lines) {
                 if (line.all { cell -> cell.all { it.text.isEmpty() } }) continue
-                line.first().add(0, run("["))
-                line.last().add(run("]"))
+                line.first().prepend("[")
+                line.last().append("]")
             }
         }
-        return lines.map { line -> line.map { StyledCell(it) } }
+        return lines
+    }
+
+    private fun MutableList<TextRun>.prepend(text: String) {
+        this[0] = this[0].let { it.copy(text = text + it.text) }
+    }
+
+    private fun MutableList<TextRun>.append(text: String) {
+        this[lastIndex] = this[lastIndex].let { it.copy(text = it.text + text) }
     }
 
     private fun entry(axis: Char, value: Double, sign: Char, color: PolyColor): Entry = Entry(
@@ -273,10 +280,11 @@ class PositionHud : GenericNumberHud(
         return entries
     }
 
-    override fun clone(): Hud = (super.clone() as PositionHud).also {
-        it.linesState = mutableStateOf(emptyList())
-        it.alignState = mutableStateOf(false)
-        it.tickHandler = null
+    override fun onCloned() {
+        super.onCloned()
+        linesState = mutableStateOf(emptyList())
+        alignState = mutableStateOf(false)
+        tickHandler = null
     }
 
     override fun defaultPosition(): Pair<Float, Float> = 10f to 30f

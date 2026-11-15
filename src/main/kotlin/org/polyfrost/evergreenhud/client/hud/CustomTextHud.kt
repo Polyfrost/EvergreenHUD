@@ -1,12 +1,15 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import org.polyfrost.evergreenhud.client.utils.HudTextLines
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text
-import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.hud.v1.HudText
 import org.polyfrost.oneconfig.api.hud.v1.TextHud
+import org.polyfrost.oneconfig.api.hud.v1.TextRun
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 
 private const val DEFAULT_TEXT = "Custom Text"
 
@@ -19,7 +22,7 @@ class CustomTextHud : TextHud(
     @Text(title = "Text", description = "Shown as-is. Use new lines for multiple lines.", multiline = true)
     var customText = DEFAULT_TEXT
 
-    private var linesState: MutableState<List<String>> = mutableStateOf(lines())
+    private var linesState: MutableState<List<List<TextRun>>> = mutableStateOf(lines())
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
@@ -37,11 +40,11 @@ class CustomTextHud : TextHud(
     }
 
     @Composable
-    override fun Content() = HudTextLines(linesState.value)
+    override fun Content() = HudText(linesState.value)
 
-    private fun lines(): List<String> = getText().split('\n')
+    private fun lines(): List<List<TextRun>> = getText().split('\n').map { listOf(TextRun(it)) }
 
-    override fun clone(): Hud = (super.clone() as CustomTextHud).also {
-        it.linesState = mutableStateOf(it.lines())
+    override fun onCloned() {
+        linesState = mutableStateOf(lines())
     }
 }

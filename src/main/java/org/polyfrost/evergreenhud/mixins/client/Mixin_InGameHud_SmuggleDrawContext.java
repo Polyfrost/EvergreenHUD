@@ -1,24 +1,22 @@
 package org.polyfrost.evergreenhud.mixins.client;
 
-//? if > 1.8.9 {
-import net.minecraft.client.DeltaTracker;
-//? if < 26.2
+//? if < 26.2 && > 1.8.9
 //import net.minecraft.client.gui.Gui;
 //? if >= 26.2
 import net.minecraft.client.gui.Hud;
-//? if < 26
-//import net.minecraft.client.gui.GuiGraphics;
-//? if >= 26
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-//?} else
+//? if = 1.8.9
 //import net.minecraft.client.gui.GameGui;
-//? if < 1.21.10
-//import org.polyfrost.evergreenhud.client.hooks.PlayerPreviewOffscreen;
-import org.polyfrost.evergreenhud.client.hooks.SmuggledHudDrawContext;
-import org.spongepowered.asm.mixin.Mixin;
+//? if > 1.8.9 && < 1.21.10 {
+/*import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.gui.GuiGraphics;
+*///?}
+//? if < 1.21.10 {
+/*import org.polyfrost.evergreenhud.client.hooks.PlayerPreviewOffscreen;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+*///?}
+import org.spongepowered.asm.mixin.Mixin;
 
 //? if = 1.8.9
 //@Mixin(GameGui.class)
@@ -28,30 +26,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Hud.class)
 public class Mixin_InGameHud_SmuggleDrawContext {
 
-    //? if > 1.8.9 {
-    @Inject(
-        //? if < 26
-        //method = "render",
-        //? if >= 26
-        method = "extractRenderState",
-        at = @At("HEAD")
-    )
-    private void evergreenhud$smuggleDrawContext(
-            //? if < 26
-            //GuiGraphics graphics,
-            //? if >= 26
-            GuiGraphicsExtractor graphics,
-            DeltaTracker deltaTracker,
-            CallbackInfo ci
-    ) {
-        SmuggledHudDrawContext.setSmuggledHudPartialTick(deltaTracker.getGameTimeDeltaPartialTick(false));
-        //? if < 1.21.10
-        //PlayerPreviewOffscreen.render();
-    }
-    //?} else {
+    //? if > 1.8.9 && < 1.21.10 {
     /*@Inject(method = "render", at = @At("HEAD"))
-    private void evergreenhud$smuggleHudState(float partialTick, CallbackInfo ci) {
-        SmuggledHudDrawContext.setSmuggledHudPartialTick(partialTick);
+    private void evergreenhud$renderPlayerPreview(GuiGraphics graphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+        PlayerPreviewOffscreen.render();
+    }
+    *///?} else if = 1.8.9 {
+    /*@Inject(method = "render", at = @At("HEAD"))
+    private void evergreenhud$renderPlayerPreview(float partialTick, CallbackInfo ci) {
         PlayerPreviewOffscreen.render();
     }
     *///?}

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
@@ -11,11 +13,12 @@ import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.evergreenhud.client.hooks.PlayerPreviewOffscreen
-import org.polyfrost.evergreenhud.client.hooks.smuggledHudPartialTick
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.platform.v1.Platform
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
 private const val WIDTH = 80f
@@ -74,16 +77,12 @@ class PlayerPreviewHud : Hud(
         }
     }
 
-    override fun clone(): Hud = (super.clone() as PlayerPreviewHud).apply {
-        _staticW = mutableStateOf(this@PlayerPreviewHud.staticW)
-        _staticH = mutableStateOf(this@PlayerPreviewHud.staticH)
-    }
 
     override fun update(): Boolean = queue(if (isReal) effectiveScale else 1f)
 
     private fun queue(scale: Float): Boolean {
         val player = mc.player ?: return false
-        val partialTick = smuggledHudPartialTick
+        val partialTick = HudManager.partialTick
         val boxW = staticW.coerceAtLeast(1f)
         val boxH = staticH.coerceAtLeast(1f)
         val entitySize = modelScale * (boxH / HEIGHT)

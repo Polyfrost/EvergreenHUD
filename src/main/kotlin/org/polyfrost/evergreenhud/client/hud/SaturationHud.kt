@@ -5,7 +5,6 @@ import org.polyfrost.evergreenhud.client.utils.GenericNumberHud
 import org.polyfrost.evergreenhud.client.utils.SaturationTracker
 import org.polyfrost.oneconfig.api.config.v1.annotations.RangeSlider
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
-import org.polyfrost.oneconfig.api.hud.v1.Hud
 
 class SaturationHud : GenericNumberHud(
     title = "Saturation",
@@ -26,9 +25,6 @@ class SaturationHud : GenericNumberHud(
         }
     }
 
-    override fun clone(): Hud = (super.clone() as SaturationHud).apply {
-        showRange = this@SaturationHud.showRange.copyOf()
-    }
 
     override fun getText(): String {
         return format(if (isReal) SaturationTracker.saturation else value)

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud.battery
 
 import androidx.compose.runtime.Composable
@@ -18,12 +20,13 @@ import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.utils.capHeight
 import org.polyfrost.evergreenhud.client.utils.battery.Battery
-import org.polyfrost.evergreenhud.client.utils.copy
+import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import kotlin.time.Duration.Companion.seconds
 
@@ -145,7 +148,7 @@ class BatteryHud : Hud(
             padRight + (if (hasText && font == Font.Minecraft) BASE_PADDING - MC_TRAILING_SPACE else BASE_PADDING) * scale,
             padBottom + BASE_PADDING * scale,
         )
-        val color = PolyColor(textColor, textChroma, textChromaSpeed)
+        val color = textPolyColor
         val rowModifier = PolyModifier.height(CELL_HEIGHT * scale).align(if (isStatic) alignment else PolyAlign.Center)
 
         PolyBox(modifier = modifier) {
@@ -178,7 +181,7 @@ class BatteryHud : Hud(
                 color = color,
                 fontSize = FONT_SIZE * scale,
                 shadow = showShadow,
-                shadowColor = PolyColor(shadowColor, shadowChroma, shadowChromaSpeed),
+                shadowColor = shadowPolyColor,
                 shadowOffset = shadowOffsetX,
                 font = getPoppinsFontName(),
                 modifier = modifier,
@@ -192,10 +195,7 @@ class BatteryHud : Hud(
     private fun inkOffset(rowHeight: Float, inkTop: Float, inkHeight: Float): Float =
         ((rowHeight - inkHeight) / 2f - inkTop).coerceAtLeast(0f)
 
-    override fun clone(): Hud = (super.clone() as BatteryHud).also {
-        it.chargingColor = chargingColor.copy()
-        it.saverColor = saverColor.copy()
-        it.lowColor = lowColor.copy()
-        it.display = mutableStateOf(null)
+    override fun onCloned() {
+        display = mutableStateOf(null)
     }
 }

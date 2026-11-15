@@ -12,7 +12,6 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.RangeSlider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text
-import org.polyfrost.oneconfig.api.hud.v1.Hud
 
 private const val WORST_RATIO = 0.5
 private const val PREVIEW_BASELINE = 144.0
@@ -56,9 +55,6 @@ class FpsHud : GenericNumberHud(
         }
     }
 
-    override fun clone(): Hud = (super.clone() as FpsHud).apply {
-        showRange = this@FpsHud.showRange.copyOf()
-    }
 
     private val data get() = if (isReal) FrameTimeHelper.latest else PREVIEW_DATA
 

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalOneConfigUiApi::class)
+
 package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
@@ -13,6 +15,8 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.File
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
+import org.polyfrost.oneconfig.api.ui.v1.components.fromFile
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import kotlin.math.min
 
@@ -86,9 +90,7 @@ class CustomImageHud : Hud(
         releaseImage()
     }
 
-    override fun clone(): Hud = (super.clone() as CustomImageHud).apply {
-        _staticW = mutableStateOf(this@CustomImageHud.staticW)
-        _staticH = mutableStateOf(this@CustomImageHud.staticH)
+    override fun onCloned() {
         cachedImage = null
         cachedPath = null
         cachedStamp = 0L
@@ -157,9 +159,9 @@ class CustomImageHud : Hud(
         releaseImage()
         cachedPath = path
         cachedStamp = stamp
-        if (stamp < 0L || file.length() > MAX_FILE_BYTES) return null
+        if (stamp < 0L) return null
 
-        cachedImage = PolyBitmap.decode(file.readBytes())
+        cachedImage = PolyBitmap.fromFile(file.toPath(), MAX_FILE_BYTES)
         return cachedImage
     }
 
