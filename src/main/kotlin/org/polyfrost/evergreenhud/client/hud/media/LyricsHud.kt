@@ -25,7 +25,9 @@ import org.polyfrost.evergreenhud.client.utils.media.MediaInfo
 import org.polyfrost.evergreenhud.client.utils.media.MediaService
 import org.polyfrost.evergreenhud.client.utils.media.PROVIDERS
 import org.polyfrost.evergreenhud.client.utils.media.parseLrc
+import org.polyfrost.oneconfig.api.config.v1.Properties.ktProperty
 import org.polyfrost.oneconfig.api.config.v1.Property
+import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
@@ -34,10 +36,12 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.hud.v1.HudAnchor
 import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.platform.v1.Platform
 import java.util.IdentityHashMap
+import java.util.function.Supplier
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
@@ -54,6 +58,7 @@ private const val ROW_HEIGHT = 11f
 private const val LINE_GAP = 5f
 private const val MIN_WIDTH = 60f
 private const val MAX_WIDTH = 220f
+private const val CARD_GAP = 4f
 private const val FRAME_MS = 16L
 
 private const val FADE_MS = 320f
@@ -271,6 +276,10 @@ class LyricsHud : Hud(
     @Transient
     private var acquired = false
 
+    private var mediaAnchorChecked = false
+
+    private var mediaAnchorId = ""
+
     override fun defaultPosition(): Pair<Float, Float> =
         (HudManager.guiScreenWidth - scaledWidth) / 2f to HudManager.guiScreenHeight * 0.62f
 
@@ -293,10 +302,56 @@ class LyricsHud : Hud(
         if (isReal) {
             applyProviders()
             addCallback("providers") { applyProviders() }
+            addCallback("matchMediaWidth") { if (matchMediaWidth) mediaAnchorChecked = false }
         }
         if (!isReal || acquired) return
         acquired = true
         MediaService.acquire()
+    }
+
+    override fun addToSerialized(tree: Tree) {
+        super.addToSerialized(tree)
+        tree.set("mediaAnchorChecked", ktProperty(this::mediaAnchorChecked).addDisplayCondition(Supplier { Property.Display.HIDDEN }))
+        tree.set("mediaAnchorId", ktProperty(this::mediaAnchorId).addDisplayCondition(Supplier { Property.Display.HIDDEN }))
+    }
+
+    private fun anchorToMediaCard() {
+        if (isStatic) return
+        if (!matchMediaWidth || isAnchored) {
+            mediaAnchorChecked = true
+            return
+        }
+        val cx = x + scaledWidth / 2f
+        val cy = y + scaledHeight / 2f
+        val card = HudManager.getHudsOfType(MediaHud::class.java)
+            .filter { !it.hidden && it.tree != null }
+            .minByOrNull { (it.x + it.scaledWidth / 2f - cx).pow(2) + (it.y + it.scaledHeight / 2f - cy).pow(2) }
+            ?: return
+        val snap = isAtDefaultPosition
+        val below = if (snap) card.y + card.scaledHeight + CARD_GAP + scaledHeight <= HudManager.guiScreenHeight
+        else cy >= card.y + card.scaledHeight / 2f
+        val pivot = if (card.isAnchored) card.effectiveSelfAnchorPoint else card.effectiveGrowthAnchor
+        val (top, bottom) = when (pivot) {
+            HudAnchor.TopLeft, HudAnchor.Left, HudAnchor.BottomLeft -> HudAnchor.TopLeft to HudAnchor.BottomLeft
+            HudAnchor.TopRight, HudAnchor.Right, HudAnchor.BottomRight -> HudAnchor.TopRight to HudAnchor.BottomRight
+            else -> HudAnchor.Top to HudAnchor.Bottom
+        }
+        if (below) anchorTo(card, bottom, top) else anchorTo(card, top, bottom)
+        if (snap) {
+            anchorOffsetX = 0f
+            anchorOffsetY = if (below) CARD_GAP else -CARD_GAP
+            setAbsolutePosition(x, y)
+        }
+        mediaAnchorId = anchorTargetId
+        mediaAnchorChecked = true
+        save()
+    }
+
+    private fun rearmIfCardGone() {
+        if (mediaAnchorId.isEmpty() || anchorTargetId == mediaAnchorId) return
+        if (anchorTargetId.isEmpty() && HudManager.instanceById(mediaAnchorId) == null) mediaAnchorChecked = false
+        mediaAnchorId = ""
+        save()
     }
 
     private fun applyProviders() {
@@ -318,6 +373,8 @@ class LyricsHud : Hud(
     override fun shouldShow(): Boolean = frame.value != null && (!onlyInGuis || screenOpen())
 
     override fun update(): Boolean {
+        if (isReal) rearmIfCardGone()
+        if (isReal && !mediaAnchorChecked && !HudManager.isEditing && MediaHud.shownWidth > 0f && frame.value != null) anchorToMediaCard()
         val now = System.currentTimeMillis()
         if (onlyInGuis && !screenOpen()) popStart = now
         val next = buildFrame(now)
