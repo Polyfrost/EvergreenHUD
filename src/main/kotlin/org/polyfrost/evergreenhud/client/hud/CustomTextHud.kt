@@ -22,6 +22,8 @@ class CustomTextHud : TextHud(
     @Text(title = "Text", description = "Shown as-is. Use new lines for multiple lines.", multiline = true)
     var customText = DEFAULT_TEXT
 
+    private var linesText: String? = null
+
     private var linesState: MutableState<List<List<TextRun>>> = mutableStateOf(lines())
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
@@ -31,18 +33,25 @@ class CustomTextHud : TextHud(
         if (isReal) updateWhenChanged("customText")
     }
 
+    override fun updateFrequency(): Long = if (isReal) Long.MAX_VALUE else -1L
+
     override fun getText(): String = customText.ifEmpty { DEFAULT_TEXT }
 
     override fun update(): Boolean {
         val result = super.update()
-        linesState.value = lines()
+        val text = getText()
+        if (text != linesText) linesState.value = lines()
         return result
     }
 
     @Composable
     override fun Content() = HudText(linesState.value)
 
-    private fun lines(): List<List<TextRun>> = getText().split('\n').map { listOf(TextRun(it)) }
+    private fun lines(): List<List<TextRun>> {
+        val text = getText()
+        linesText = text
+        return text.split('\n').map { listOf(TextRun(it)) }
+    }
 
     override fun onCloned() {
         linesState = mutableStateOf(lines())

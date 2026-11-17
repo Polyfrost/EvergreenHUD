@@ -79,6 +79,8 @@ class BatteryHud : Hud(
 
     private var display = mutableStateOf<Display?>(null)
 
+    private var acquired = false
+
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
     override fun canMergeBackground(): Boolean = true
@@ -89,21 +91,30 @@ class BatteryHud : Hud(
         for (option in listOf("showPercentage", "showTimeRemaining", "hideWhileCharging", "lowThreshold", "chargingColor", "saverColor", "lowColor")) {
             updateWhenChanged(option)
         }
+        if (acquired) return
+        acquired = true
+        Battery.acquire()
+    }
+
+    override fun remove() {
+        if (acquired) Battery.release()
+        acquired = false
     }
 
     override fun update(): Boolean {
+        if (isReal && Battery.latest == null) return false
         val next = read()
         if (next == display.value) return false
         display.value = next
         return true
     }
 
-    override fun updateFrequency(): Long = 1.seconds.inWholeNanoseconds
+    override fun updateFrequency(): Long = if (isReal && Battery.latest == null) -1L else 1.seconds.inWholeNanoseconds
 
     override fun shouldShow(): Boolean = display.value != null
 
     private fun read(): Display? {
-        val live = if (isReal) Battery.get() else EXAMPLE
+        val live = if (isReal) Battery.latest ?: Battery.UnknownBattery else EXAMPLE
         val battery = when {
             live !is Battery.UnknownBattery -> live
             HudManager.isEditing -> EXAMPLE
@@ -197,5 +208,6 @@ class BatteryHud : Hud(
 
     override fun onCloned() {
         display = mutableStateOf(null)
+        acquired = false
     }
 }

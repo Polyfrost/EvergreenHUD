@@ -164,6 +164,15 @@ class MouseStrokesHud : Hud(
     @Transient
     private var polyline = FloatArray(0)
 
+    @Transient
+    private var xs = FloatArray(0)
+
+    @Transient
+    private var ys = FloatArray(0)
+
+    @Transient
+    private var ages = FloatArray(0)
+
     private var _staticW = mutableStateOf(DEFAULT_SIDE)
     override var staticW: Float get() = _staticW.value; set(v) { _staticW.value = v }
 
@@ -341,9 +350,14 @@ class MouseStrokesHud : Hud(
 
         val oldest = trail.first().timeMs
         val span = (trail.last().timeMs - oldest).toFloat()
-        val xs = FloatArray(trail.size)
-        val ys = FloatArray(trail.size)
-        val ages = FloatArray(trail.size)
+        if (xs.size < trail.size) {
+            xs = FloatArray(trail.size)
+            ys = FloatArray(trail.size)
+            ages = FloatArray(trail.size)
+        }
+        val xs = xs
+        val ys = ys
+        val ages = ages
         var count = 0
 
         for (point in trail) {
@@ -381,6 +395,7 @@ class MouseStrokesHud : Hud(
             var size = 2
             for (i in start until end) size = appendSpline(polyline, size, xs, ys, i, count)
             val segmentColor = color.withAlphaScaled((step + 1).toFloat() / FADE_STEPS)
+            // strokePolyline has no length parameter and reads points.size, so it needs an exact-size array.
             renderer.strokePolyline(polyline.copyOf(size), false, segmentColor.argb, width, PolyRenderer.CAP_ROUND, PolyRenderer.JOIN_ROUND)
 
             start = end

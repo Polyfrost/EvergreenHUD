@@ -1,6 +1,11 @@
 package org.polyfrost.evergreenhud.client.utils.battery
 
 import org.apache.commons.lang3.SystemUtils
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
+
+private const val POLL_SECONDS = 5L
 
 sealed interface Battery {
     companion object {
@@ -16,6 +21,34 @@ sealed interface Battery {
 
         @JvmStatic
         fun isSupported(): Boolean = get() !is UnknownBattery
+
+        private val executor by lazy {
+            Executors.newSingleThreadScheduledExecutor { task ->
+                Thread(task, "EvergreenHUD Battery").apply { isDaemon = true }
+            }
+        }
+
+        private var task: ScheduledFuture<*>? = null
+        private var users = 0
+
+        @Volatile
+        var latest: Battery? = null
+            private set
+
+        @Synchronized
+        fun acquire() {
+            if (users++ > 0) return
+            task = executor.scheduleWithFixedDelay({
+                latest = runCatching { get() }.getOrDefault(UnknownBattery)
+            }, 0L, POLL_SECONDS, TimeUnit.SECONDS)
+        }
+
+        @Synchronized
+        fun release() {
+            if (users == 0 || --users > 0) return
+            task?.cancel(false)
+            task = null
+        }
     }
 
     data object UnknownBattery : Battery {

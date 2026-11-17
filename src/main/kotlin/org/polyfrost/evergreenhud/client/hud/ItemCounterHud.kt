@@ -5,6 +5,7 @@ package org.polyfrost.evergreenhud.client.hud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 //? if > 1.8.9 {
+import net.minecraft.core.component.DataComponents
 import net.minecraft.core.registries.BuiltInRegistries
 //? if < 1.21.11
 //import net.minecraft.resources.ResourceLocation
@@ -29,7 +30,6 @@ import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
 //? if > 1.8.9 {
 import org.polyfrost.evergreenhud.client.hooks.isShulkerBox
-import org.polyfrost.evergreenhud.client.hooks.shulkerContents
 //?}
 import org.polyfrost.evergreenhud.client.hud.item.ANY_POTION
 import org.polyfrost.evergreenhud.client.hud.item.ANY_POTION_LABEL
@@ -112,6 +112,10 @@ class ItemCounterHud : Hud(
 
     private class Display(val stack: ItemStack, val text: String, val showIcon: Boolean)
 
+    private var cachedItem: Item? = null
+    private var cachedPotion: String? = null
+    private var cachedStack: ItemStack? = null
+
     private var display = mutableStateOf<Display?>(null)
 
     private var tickHandler: EventHandler<*>? = null
@@ -137,7 +141,7 @@ class ItemCounterHud : Hud(
         updateWhenChanged("potion")
         updateWhenChanged("showIcon")
         hideIf("potion") { currentItem()?.hasPotionContents != true }
-        tickHandler = eventHandler { _: TickEvent.End -> updateAndRecalculate() }
+        tickHandler = eventHandler { _: TickEvent.End -> if (!hidden || HudManager.isEditing) updateAndRecalculate() }
     }
 
     override fun updateFrequency(): Long = if (isReal) Long.MAX_VALUE else -1L
@@ -197,26 +201,32 @@ class ItemCounterHud : Hud(
     private fun count(target: Item): Int {
         if (!isReal) return EXAMPLE_COUNT
         val inventory = mc.player?.inventory ?: return 0
-        var count = countIn((0 until inventory.containerSize).map(inventory::getItem), target)
-        if (countEnderChest) count += countIn(EnderChestTracker.contents().orEmpty(), target)
+        var count = 0
+        for (i in 0 until inventory.containerSize) count += countIn(inventory.getItem(i), target)
+        if (countEnderChest) EnderChestTracker.contents()?.forEach { count += countIn(it, target) }
         return count
     }
 
-    //~ if = 1.8.9 'Iterable<ItemStack>' -> 'Iterable<ItemStack?>'
-    private fun countIn(stacks: Iterable<ItemStack>, target: Item): Int {
-        var count = 0
-        for (slot in stacks) {
-            //~ if = 1.8.9 'slot.isEmpty' -> 'slot == null || slot.isEmpty'
-            if (slot.isEmpty) continue
-            if (matches(slot, target)) count += slot.count
-            //? if > 1.8.9 {
-            if (countShulkers && slot.isShulkerBox) {
-                for (inner in slot.shulkerContents()) {
-                    if (matches(inner, target)) count += inner.count
-                }
+    //~ if = 1.8.9 'slot: ItemStack' -> 'slot: ItemStack?'
+    private fun countIn(slot: ItemStack, target: Item): Int {
+        //~ if = 1.8.9 'slot.isEmpty' -> 'slot == null || slot.isEmpty'
+        if (slot.isEmpty) return 0
+        var count = if (matches(slot, target)) slot.count else 0
+        //? if > 1.8.9 {
+        if (countShulkers && slot.isShulkerBox) {
+            val inner = slot.get(DataComponents.CONTAINER)?.nonEmptyItems() ?: return count
+            //? if >= 26 {
+            val anyPotion = potionFilter(target) == null
+            for (template in inner) {
+                if (template.item().value() == target && (anyPotion || matches(template.create(), target))) count += template.count()
             }
-            //?}
+            //?} else {
+            /*for (stack in inner) {
+                if (matches(stack, target)) count += stack.count
+            }
+            *///?}
         }
+        //?}
         return count
     }
 
@@ -229,9 +239,9 @@ class ItemCounterHud : Hud(
     private fun potionFilter(target: Item): String? =
         potion.takeIf { target.hasPotionContents && potionVariant(it) != null }
 
-    private fun countText(count: Int, target: Item): String {
+    private fun countText(count: Int, stack: ItemStack): String {
         if (format == TOTAL) return count.toString()
-        val stackSize = ItemStack(target).maxStackSize
+        val stackSize = stack.maxStackSize
         if (stackSize <= 1 || count < stackSize) return count.toString()
         val stacks = count / stackSize
         val remainder = count % stackSize
@@ -246,12 +256,21 @@ class ItemCounterHud : Hud(
         if (!editing && hideWhenEmpty && count <= 0) return null
 
         val variant = potionFilter(target)?.let(::potionVariant)
-        val stack = if (variant == null) ItemStack(target) else potionStack(target, variant.id)
+        val stack = displayStack(target, variant?.id)
         val text = buildString {
             if (showName) append(stack.hoverName.string).append(variant?.suffix.orEmpty()).append(": ")
-            append(countText(count, target))
+            append(countText(count, stack))
         }
         return Display(stack, text, showIcon)
+    }
+
+    private fun displayStack(target: Item, potionId: String?): ItemStack {
+        cachedStack?.let { if (target == cachedItem && potionId == cachedPotion) return it }
+        val next = if (potionId == null) ItemStack(target) else potionStack(target, potionId)
+        cachedItem = target
+        cachedPotion = potionId
+        cachedStack = next
+        return next
     }
 
     @Composable
@@ -315,5 +334,6 @@ class ItemCounterHud : Hud(
     override fun onCloned() {
         display = mutableStateOf(null)
         tickHandler = null
+        cachedStack = null
     }
 }

@@ -5,6 +5,33 @@ import java.net.URI
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import kotlin.math.ceil
+
+private const val BLUR_MAX_SIDE = 128
+
+class BlurSource(val art: PolyBitmap, val width: Int, val height: Int, val pixels: FloatArray)
+
+fun blurFactor(art: PolyBitmap): Int = ceil(maxOf(art.width, art.height) / BLUR_MAX_SIDE.toFloat()).toInt().coerceAtLeast(1)
+
+fun blurSource(art: PolyBitmap): BlurSource {
+    val factor = blurFactor(art)
+    val width = (art.width / factor).coerceAtLeast(1)
+    val height = (art.height / factor).coerceAtLeast(1)
+    val pixels = FloatArray(width * height * 4)
+    val factorX = minOf(factor, art.width)
+    val factorY = minOf(factor, art.height)
+    val area = factorX * factorY
+    for (y in 0 until height) for (x in 0 until width) {
+        val dst = (y * width + x) * 4
+        for (sy in 0 until factorY) for (sx in 0 until factorX) {
+            val src = ((y * factorY + sy) * art.width + x * factorX + sx) * 4
+            val alpha = (art.pixels[src + 3].toInt() and 0xFF) / 255f
+            for (c in 0..2) pixels[dst + c] += (art.pixels[src + c].toInt() and 0xFF) * alpha / area
+            pixels[dst + 3] += alpha * 255f / area
+        }
+    }
+    return BlurSource(art, width, height, pixels)
+}
 
 object MediaService {
     private const val POLL_MS = 1000L
@@ -44,6 +71,10 @@ object MediaService {
         private set
 
     @Volatile
+    var artBlurSource: BlurSource? = null
+        private set
+
+    @Volatile
     var sources: List<String> = emptyList()
 
     fun isSupported(): Boolean = backend != null
@@ -65,6 +96,7 @@ object MediaService {
         art = null
         artAccent = null
         artAverage = null
+        artBlurSource = null
         artKey = null
     }
 
@@ -90,6 +122,7 @@ object MediaService {
         art = null
         artAccent = null
         artAverage = null
+        artBlurSource = null
         if (info == null || key == null) return
         val image = runCatching {
             val bytes = info.artBytes ?: fetch(info.artUrl!!)
@@ -97,6 +130,7 @@ object MediaService {
         }.getOrNull()
         artAccent = image?.let(::vividColor)
         artAverage = image?.let(::averageColor)
+        artBlurSource = image?.let(::blurSource)
         art = image
     }
 

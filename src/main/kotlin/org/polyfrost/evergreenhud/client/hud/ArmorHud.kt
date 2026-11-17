@@ -47,6 +47,7 @@ import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.math.ceil
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val TEXT_GAP = 2f
 private const val FONT_SIZE = 8f
@@ -154,6 +155,11 @@ class ArmorHud : Hud(
 
     private var rev = mutableStateOf(0)
 
+    //? if > 1.8.9 {
+    private var countCache: Map<Item, Int>? = null
+    //?} else
+    //private var countCache: Map<Pair<Item, Int>, Int>? = null
+
     override fun defaultPosition(): Pair<Float, Float> {
         val (width, height) = defaultSize()
         val hotbarLeft = (HudManager.guiScreenWidth - HOTBAR_WIDTH) / 2f
@@ -199,9 +205,13 @@ class ArmorHud : Hud(
         }
     }
 
+    override fun updateFrequency(): Long = if (isReal) 50.milliseconds.inWholeNanoseconds else -1L
+
     override fun update(): Boolean {
+        countCache = null
         val next = buildEntries()
-        if (next.size == entries.value.size && next.zip(entries.value).all { (a, b) -> a.sameAs(b) }) return false
+        val current = entries.value
+        if (next.size == current.size && next.indices.all { next[it].sameAs(current[it]) }) return false
         entries.value = next
         return true
     }
@@ -286,33 +296,41 @@ class ArmorHud : Hud(
 
     private fun arrowCount(): Int {
         if (!isReal) return 64
-        val player = mc.player ?: return 0
-        val inv = player.inventory
-        var count = 0
-        for (i in 0 until inv.containerSize) {
-            val s = inv.getItem(i)
-            //? if > 1.8.9 {
-            if (s.item == Items.ARROW || s.item == Items.SPECTRAL_ARROW || s.item == Items.TIPPED_ARROW) count += s.count
-            //?} else
-            //if (s != null && s.item == Items.ARROW) count += s.count
-        }
-        return count
+        //? if > 1.8.9 {
+        return carried(Items.ARROW) + carried(Items.SPECTRAL_ARROW) + carried(Items.TIPPED_ARROW)
+        //?} else
+        //return mc.player?.let { carriedCounts()[Items.ARROW to 0] } ?: 0
     }
 
     //~ if = 1.8.9 'item: Item' -> 'stack: ItemStack'
     private fun carried(item: Item): Int {
         if (!isReal) return 64
-        val inv = mc.player?.inventory ?: return 0
-        var count = 0
-        for (i in 0 until inv.containerSize) {
-            val s = inv.getItem(i)
-            //? if > 1.8.9 {
-            if (s.item == item) count += s.count
-            //?} else
-            //if (s != null && s.item == stack.item && (!stack.item.hasCustomData() || s.metadata == stack.metadata)) count += s.count
-        }
-        return count
+        if (mc.player == null) return 0
+        //? if > 1.8.9 {
+        return carriedCounts()[item] ?: 0
+        //?} else
+        //return carriedCounts()[stack.item to if (stack.item.hasCustomData()) stack.metadata else 0] ?: 0
     }
+
+    //? if > 1.8.9 {
+    private fun carriedCounts(): Map<Item, Int> = countCache ?: HashMap<Item, Int>().also { counts ->
+        val inv = mc.player?.inventory
+        if (inv != null) for (i in 0 until inv.containerSize) {
+            val s = inv.getItem(i)
+            if (!s.isEmpty) counts.merge(s.item, s.count, Int::plus)
+        }
+        countCache = counts
+    }
+    //?} else {
+    /*private fun carriedCounts(): Map<Pair<Item, Int>, Int> = countCache ?: HashMap<Pair<Item, Int>, Int>().also { counts ->
+        val inv = mc.player?.inventory
+        if (inv != null) for (i in 0 until inv.containerSize) {
+            val s = inv.getItem(i) ?: continue
+            counts.merge(s.item to if (s.item.hasCustomData()) s.metadata else 0, s.count, Int::plus)
+        }
+        countCache = counts
+    }
+    *///?}
 
     private fun durabilityColor(percent: Int): Int {
         val p = percent.coerceIn(0, 100) / 100f

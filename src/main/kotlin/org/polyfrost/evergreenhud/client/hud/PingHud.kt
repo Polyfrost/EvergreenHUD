@@ -25,6 +25,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.time.Duration.Companion.milliseconds
@@ -75,6 +76,8 @@ class PingHud : CachedTextHud(
     private var highest = 0L
     private var lastPing: Long? = null
 
+    private var handlers = emptyList<EventHandler<*>>()
+
     //? if > 1.8.9 {
     private val sampleIntervalTicks get() = (updateRate / MS_PER_TICK).coerceAtLeast(1)
     //?} else {
@@ -90,12 +93,12 @@ class PingHud : CachedTextHud(
 
     override fun setup() {
         super.setup()
-        eventHandler { _: ServerChangedEvent ->
+        handlers = listOf(eventHandler { _: ServerChangedEvent ->
             resetStats()
-        }
+        })
 
         //? if = 1.8.9 {
-        /*eventHandler<TickEvent.Start> {
+        /*handlers += eventHandler<TickEvent.Start> {
             connection?.let { if (it.isConnected) it.tick() else it.handleDisconnection() }
             val address = mc.currentServer?.ip?.takeIf { mc.level != null }
             if (address != statusAddress) {
@@ -112,6 +115,14 @@ class PingHud : CachedTextHud(
             updateWhenChanged("formatString")
             updateWhenChanged("colorByValue")
         }
+    }
+
+    override fun remove() {
+        super.remove()
+        handlers.forEach { it.unregister() }
+        handlers = emptyList()
+        //? if = 1.8.9
+        //cancelPing()
     }
 
     override fun updateFrequency(): Long {

@@ -9,6 +9,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
 class ComboHud : CachedTextHud(
@@ -28,6 +29,7 @@ class ComboHud : CachedTextHud(
 
     private var lastHitTime = 0L
     private var lastAttackId = -1
+    private var handlers = emptyList<EventHandler<*>>()
 
     private var currentCombo = 0
         set(value) {
@@ -42,33 +44,34 @@ class ComboHud : CachedTextHud(
     override fun setup() {
         super.setup()
 
-        eventHandler<TickEvent.Start> {
-            if (currentCombo == 0) return@eventHandler
-            if (System.currentTimeMillis() - lastHitTime >= discardTime * 1000L) {
-                currentCombo = 0
-                lastAttackId = -1
-            }
-        }
+        handlers = listOf(
+            eventHandler<TickEvent.Start> {
+                if (currentCombo == 0) return@eventHandler
+                if (System.currentTimeMillis() - lastHitTime >= discardTime * 1000L) {
+                    currentCombo = 0
+                    lastAttackId = -1
+                }
+            },
+            eventHandler { (attacker, target): ServerDamageEntityEvent ->
+                if (target == mc.player) {
+                    currentCombo = 0
+                    return@eventHandler
+                }
 
-        eventHandler { (attacker, target): ServerDamageEntityEvent ->
-            if (target == mc.player) {
-                currentCombo = 0
-                return@eventHandler
-            }
+                if (attacker != mc.player) {
+                    return@eventHandler
+                }
 
-            if (attacker != mc.player) {
-                return@eventHandler
-            }
+                if (target.uniqueEntityId == lastAttackId) {
+                    currentCombo++
+                } else {
+                    currentCombo = 1
+                }
 
-            if (target.uniqueEntityId == lastAttackId) {
-                currentCombo++
-            } else {
-                currentCombo = 1
-            }
-
-            lastHitTime = System.currentTimeMillis()
-            lastAttackId = target.uniqueEntityId
-        }
+                lastHitTime = System.currentTimeMillis()
+                lastAttackId = target.uniqueEntityId
+            },
+        )
 
         if (isReal) {
             updateWhenChanged("noHitMessage")
@@ -77,4 +80,10 @@ class ComboHud : CachedTextHud(
     }
 
     override fun shouldShow(): Boolean = minCombo <= 0F || currentCombo >= minCombo.toInt()
+
+    override fun remove() {
+        super.remove()
+        handlers.forEach { it.unregister() }
+        handlers = emptyList()
+    }
 }

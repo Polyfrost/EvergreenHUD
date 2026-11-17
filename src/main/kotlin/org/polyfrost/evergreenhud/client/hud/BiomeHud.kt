@@ -11,6 +11,7 @@ import org.polyfrost.evergreenhud.client.BlockPositionChangedEvent
 import org.polyfrost.evergreenhud.client.utils.CachedTextHud
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 //? if > 1.8.9
 import kotlin.jvm.optionals.getOrNull
@@ -131,6 +132,8 @@ class BiomeHud : CachedTextHud(
 
     private var biomeColor = BIOME_COLORS.getValue("plains")
 
+    private var handler: EventHandler<*>? = null
+
     override fun getText(): String? = if (isReal) super.getText() else "Plains"
 
     override fun valueColor(): PolyColor? = if (colorByBiome) PolyColor(biomeColor or 0xFF000000.toInt()) else null
@@ -138,7 +141,7 @@ class BiomeHud : CachedTextHud(
     override fun setup() {
         super.setup()
         if (isReal) updateWhenChanged("colorByBiome")
-        eventHandler { (pos): BlockPositionChangedEvent ->
+        handler = eventHandler { (pos): BlockPositionChangedEvent ->
 
             val level = mc.level ?: return@eventHandler
 
@@ -171,5 +174,11 @@ class BiomeHud : CachedTextHud(
 
             updateWithText(text)
         }
+    }
+
+    override fun remove() {
+        super.remove()
+        handler?.unregister()
+        handler = null
     }
 }

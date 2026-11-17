@@ -68,6 +68,7 @@ class FpsHud : GenericNumberHud(
         val hiddenByNumber = hideAboveNumber > 0 && fps > hideAboveNumber
 
         inRange = !hiddenByRange && !hiddenByNumber
+        if (isReal && "#low" in formatString) FrameTimeHelper.requestLows()
 
         return StringBuilder().append(formatString)
             .replace("#fps", format(fps))

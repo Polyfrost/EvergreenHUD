@@ -7,6 +7,7 @@ import org.polyfrost.evergreenhud.client.utils.settledAttackHandler
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import org.polyfrost.oneconfig.api.event.v1.events.AttackEntityEvent
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.time.Duration.Companion.seconds
 
@@ -30,11 +31,13 @@ class ReachHud : GenericNumberHud(
 
     private var lastTime = 0L
 
+    private var handler: EventHandler<*>? = null
+
     private val hideAfterMillis get() = (hideAfter * 1000f).toLong()
 
     override fun setup() {
         super.setup()
-        settledAttackHandler { event: AttackEntityEvent ->
+        handler = settledAttackHandler { event: AttackEntityEvent ->
             if (event.cancelled) return@settledAttackHandler
             val target = event.getTarget<Any>() as? Entity ?: return@settledAttackHandler
             val player = mc.player
@@ -57,6 +60,12 @@ class ReachHud : GenericNumberHud(
                 updateAndRecalculate()
             }
         }
+    }
+
+    override fun remove() {
+        super.remove()
+        handler?.unregister()
+        handler = null
     }
 
     override fun getText(): String? {

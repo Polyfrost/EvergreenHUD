@@ -16,6 +16,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.PacketEvent
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 
 class TpsHud : GenericNumberHud(
     title = "TPS",
@@ -39,30 +40,40 @@ class TpsHud : GenericNumberHud(
 
     private val recent = ArrayDeque<Float>()
 
+    private var handlers = emptyList<EventHandler<*>>()
+
     override fun setup() {
         super.setup()
 
-        eventHandler { (ip, _, _): ServerChangedEvent ->
-            useTickPings = isHypixel(ip)
-            lastUpdated = 0L
-            pingTimes.clear()
-            resetStats()
-        }
-
-        eventHandler { (packet): PacketEvent.Receive ->
-            when (packet) {
-                is ClientboundSetTimePacket -> if (!useTickPings) onTimeUpdate()
-                //? if > 1.8.9 {
-                is ClientboundPingPacket -> if (useTickPings) onTickPing()
-                //?} else
-                //is InventoryMenuConfirmS2CPacket -> if (useTickPings && packet.menuId == 0 && !packet.accepted) onTickPing()
-            }
-        }
+        handlers = listOf(
+            eventHandler { (ip, _, _): ServerChangedEvent ->
+                useTickPings = isHypixel(ip)
+                lastUpdated = 0L
+                pingTimes.clear()
+                resetStats()
+                updateAndRecalculate()
+            },
+            eventHandler { (packet): PacketEvent.Receive ->
+                when (packet) {
+                    is ClientboundSetTimePacket -> if (!useTickPings) onTimeUpdate()
+                    //? if > 1.8.9 {
+                    is ClientboundPingPacket -> if (useTickPings) onTickPing()
+                    //?} else
+                    //is InventoryMenuConfirmS2CPacket -> if (useTickPings && packet.menuId == 0 && !packet.accepted) onTickPing()
+                }
+            },
+        )
 
         if (isReal) {
             updateWhenChanged("formatString")
             updateWhenChanged("colorByValue")
         }
+    }
+
+    override fun remove() {
+        super.remove()
+        handlers.forEach { it.unregister() }
+        handlers = emptyList()
     }
 
     private fun onTimeUpdate() {

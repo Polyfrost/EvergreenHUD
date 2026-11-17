@@ -276,6 +276,12 @@ class LyricsHud : Hud(
     @Transient
     private var acquired = false
 
+    @Transient
+    private var offscreen = false
+
+    @Transient
+    private var hiddenLookup: MediaInfo? = null
+
     private var mediaAnchorChecked = false
 
     private var mediaAnchorId = ""
@@ -368,7 +374,7 @@ class LyricsHud : Hud(
         acquired = false
     }
 
-    override fun updateFrequency(): Long = FRAME_MS.milliseconds.inWholeNanoseconds
+    override fun updateFrequency(): Long = if (offscreen && screenOpen()) -1L else FRAME_MS.milliseconds.inWholeNanoseconds
 
     override fun shouldShow(): Boolean = frame.value != null && (!onlyInGuis || screenOpen())
 
@@ -376,7 +382,17 @@ class LyricsHud : Hud(
         if (isReal) rearmIfCardGone()
         if (isReal && !mediaAnchorChecked && !HudManager.isEditing && MediaHud.shownWidth > 0f && frame.value != null) anchorToMediaCard()
         val now = System.currentTimeMillis()
-        if (onlyInGuis && !screenOpen()) popStart = now
+        offscreen = onlyInGuis && !screenOpen()
+        if (offscreen) {
+            popStart = now
+            shownHeight = 0f
+            val info = MediaService.current
+            if (isReal && info !== hiddenLookup) {
+                hiddenLookup = info
+                LyricsService.lyricsFor(info)
+            }
+            return false
+        }
         val next = buildFrame(now)
         val changed = next != frame.value
         frame.value = next
@@ -662,6 +678,7 @@ class LyricsHud : Hud(
         shownTitle = null
         popStart = 0L
         acquired = false
+        offscreen = false
     }
 }
 
@@ -687,12 +704,12 @@ private fun RenderContext.drawGlyph(mark: GlyphMark, label: Label, plain: Label)
     val x = -mark.width / 2f
     if (mark.glow > 0f) {
         val halo = mark.sung.withAlphaScale(GLOW_ALPHA * mark.glow)
-        if (halo.visible) for ((dx, dy) in GLOW_OFFSETS) with(plain) { draw(mark.text, x + dx, dy, PolyColor(halo)) }
+        if (halo.visible) for ((dx, dy) in GLOW_OFFSETS) with(plain) { draw(mark.text, x + dx, dy, halo) }
     }
-    if (mark.progress < 1f && mark.base.visible) with(label) { draw(mark.text, x, 0f, PolyColor(mark.base)) }
+    if (mark.progress < 1f && mark.base.visible) with(label) { draw(mark.text, x, 0f, mark.base) }
     if (mark.progress <= 0f || !mark.sung.visible) return
     if (mark.progress >= 1f) {
-        with(label) { draw(mark.text, x, 0f, PolyColor(mark.sung)) }
+        with(label) { draw(mark.text, x, 0f, mark.sung) }
         return
     }
     val edge = -FEATHER + (mark.width + FEATHER) * mark.progress
@@ -702,7 +719,7 @@ private fun RenderContext.drawGlyph(mark: GlyphMark, label: Label, plain: Label)
         if (right <= left || !color.visible) return
         save()
         clipRect(x + left, -ROW_HEIGHT * 2f, right - left, ROW_HEIGHT * 3f)
-        with(plain) { draw(mark.text, x, 0f, PolyColor(color)) }
+        with(plain) { draw(mark.text, x, 0f, color) }
         restore()
     }
     slice(-1f, edge, mark.sung)

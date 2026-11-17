@@ -54,12 +54,14 @@ private const val HEIGHT_CATCHUP = 12f
 
 private const val STALE_NANOS = 1_000_000_000L
 
+private const val MIN_RENDER_NANOS = 1_000_000_000L / 60
+
 object PlayerPreviewOffscreen {
     private val LOGGER = LoggerFactory.getLogger("EvergreenHUD/Player Preview")
 
     private val client: Minecraft get() = mc
 
-    class Request(
+    data class Request(
         val widthPx: Int,
         val heightPx: Int,
         val sizePx: Float,
@@ -79,6 +81,9 @@ object PlayerPreviewOffscreen {
         var lastAnchorNanos = 0L
 
         var lastUsedNanos = 0L
+
+        var lastRequest: Request? = null
+        var lastRenderNanos = 0L
 
         fun invalidate() {
             offscreen?.close()
@@ -116,10 +121,21 @@ object PlayerPreviewOffscreen {
         for ((owner, request) in requests) {
             val slot = slots.getOrPut(owner) { Slot() }
             slot.lastUsedNanos = now
+            if (!renderDue(slot, request, now)) continue
+            slot.lastRequest = request
+            val behind = now - slot.lastRenderNanos
+            slot.lastRenderNanos = if (behind in MIN_RENDER_NANOS until 2 * MIN_RENDER_NANOS) slot.lastRenderNanos + MIN_RENDER_NANOS else now
             renderSlot(slot, request, player)
             if (failed) break
         }
         evictStale(now)
+    }
+
+    private fun renderDue(slot: Slot, request: Request, now: Long): Boolean {
+        val last = slot.lastRequest ?: return true
+        if (slot.offscreen?.hasContent != true) return true
+        if (last.widthPx != request.widthPx || last.heightPx != request.heightPx) return true
+        return request != last && now - slot.lastRenderNanos >= MIN_RENDER_NANOS
     }
 
     private fun renderSlot(slot: Slot, request: Request, player: Player) {

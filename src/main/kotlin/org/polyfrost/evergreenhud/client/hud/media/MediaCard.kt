@@ -14,6 +14,10 @@ import org.polyfrost.compose.render.RenderContext
 import org.polyfrost.compose.render.addShape
 import org.polyfrost.evergreenhud.client.hud.shape.oval
 import org.polyfrost.evergreenhud.client.utils.capHeight
+import org.polyfrost.evergreenhud.client.utils.media.BlurSource
+import org.polyfrost.evergreenhud.client.utils.media.MediaService
+import org.polyfrost.evergreenhud.client.utils.media.blurFactor
+import org.polyfrost.evergreenhud.client.utils.media.blurSource
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import java.awt.BasicStroke
@@ -170,7 +174,6 @@ private const val ICON_STROKE = 1f
 private const val ICON_INSET = ICON_STROKE / 2f
 private const val ICON_TIP_INSET = 0.8f
 val PLAY_GLYPH = PolyColor(0xFF101014.toInt())
-private const val BLUR_MAX_SIDE = 128
 private const val BLUR_CACHE_SIZE = 4
 
 private val blurCache = object : LinkedHashMap<Pair<PolyBitmap, Int>, PolyBitmap>(BLUR_CACHE_SIZE * 2, 0.75f, true) {
@@ -184,7 +187,7 @@ fun MediaCard(
     fontName: String?,
     shadow: Boolean,
     hovered: Int,
-    scrollMs: Long,
+    scrollOffset: Float,
     scale: Float,
     textWidth: Float = textWidth(state, fontName),
     backdrop: MediaCardBackdrop? = null,
@@ -207,7 +210,7 @@ fun MediaCard(
         translate(0f, MediaCardLayout.contentTop(style.seekPosition))
         if (style.showArt) drawArt(state.art, colors.title, style.artRadius)
         val left = MediaCardLayout.textX(style.showArt)
-        drawLabels(state, left, textWidth, colors, fontName, shadow, scrollMs, style.bounce)
+        drawLabels(state, left, textWidth, colors, fontName, shadow, scrollOffset, style.bounce)
         for (button in BUTTON_PREVIOUS..BUTTON_NEXT) {
             val enabled = when (button) {
                 BUTTON_PREVIOUS -> state.canPrevious
@@ -310,25 +313,17 @@ internal fun Hud.mediaMergePiece(originX: Float, originY: Float, scale: Float): 
 }
 
 private fun blurred(art: PolyBitmap, sigma: Float): PolyBitmap {
-    val factor = ceil(maxOf(art.width, art.height) / BLUR_MAX_SIDE.toFloat()).toInt().coerceAtLeast(1)
-    val halfSteps = (sigma / factor * 2f).roundToInt()
-    return blurCache.getOrPut(art to halfSteps) { blur(art, factor, halfSteps / 2f) }
+    val halfSteps = (sigma / blurFactor(art) * 2f).roundToInt()
+    return blurCache.getOrPut(art to halfSteps) {
+        val source = MediaService.artBlurSource?.takeIf { it.art === art } ?: blurSource(art)
+        blur(source, halfSteps / 2f)
+    }
 }
 
-private fun blur(art: PolyBitmap, factor: Int, sigma: Float): PolyBitmap {
-    val width = (art.width / factor).coerceAtLeast(1)
-    val height = (art.height / factor).coerceAtLeast(1)
-    val pixels = FloatArray(width * height * 4)
-    val area = factor * factor
-    for (y in 0 until height) for (x in 0 until width) {
-        val dst = (y * width + x) * 4
-        for (sy in 0 until factor) for (sx in 0 until factor) {
-            val src = ((y * factor + sy) * art.width + x * factor + sx) * 4
-            val alpha = (art.pixels[src + 3].toInt() and 0xFF) / 255f
-            for (c in 0..2) pixels[dst + c] += (art.pixels[src + c].toInt() and 0xFF) * alpha / area
-            pixels[dst + 3] += alpha * 255f / area
-        }
-    }
+private fun blur(source: BlurSource, sigma: Float): PolyBitmap {
+    val width = source.width
+    val height = source.height
+    val pixels = source.pixels.copyOf()
     if (sigma > 0f) {
         val radius = ((sqrt(4f * sigma * sigma + 1f) - 1f) / 2f).roundToInt().coerceAtLeast(1)
         val scratch = FloatArray(pixels.size)
@@ -414,9 +409,15 @@ internal class Label(size: Float, fontName: String?, private val shadow: Boolean
         if (poly != null) return text(text, x, baseline, color, poly)
         mcText(text, x, baseline - MC_CAP_HEIGHT * mcScale, color.argb, shadow, mcScale)
     }
-}
 
-private val DIGIT = Regex("\\d")
+    fun RenderContext.draw(text: String, x: Float, baseline: Float, argb: Int) {
+        if (poly != null) {
+            if (argb ushr 24 != 0 && text.isNotEmpty()) renderer.text(text, x, baseline, argb, poly)
+            return
+        }
+        mcText(text, x, baseline - MC_CAP_HEIGHT * mcScale, argb, shadow, mcScale)
+    }
+}
 
 private const val MC_LINE_HEIGHT = 9f
 private const val MC_CAP_HEIGHT = 7f
@@ -427,8 +428,20 @@ fun textWidth(state: MediaCardState, fontName: String?): Float {
     return maxOf(title, artist).coerceIn(MediaCardLayout.MIN_TEXT_WIDTH, MediaCardLayout.MAX_TEXT_WIDTH)
 }
 
-fun titleOverflows(title: String, fontName: String?, maxWidth: Float = MediaCardLayout.MAX_TEXT_WIDTH): Boolean =
-    Label(TITLE_SIZE, fontName).width(title) > maxWidth
+fun titleScrollOffset(title: String, fontName: String?, textWidth: Float, scrollMs: Long, bounce: Boolean): Float {
+    val titleWidth = Label(TITLE_SIZE, fontName).width(title)
+    if (titleWidth <= textWidth) return 0f
+    if (bounce) {
+        val overflow = titleWidth - textWidth
+        val legMs = SCROLL_PAUSE_MS + (overflow / SCROLL_SPEED).toLong()
+        val t = scrollMs % (legMs * 2)
+        val slid = ((t % legMs - SCROLL_PAUSE_MS).coerceAtLeast(0L) * SCROLL_SPEED).coerceAtMost(overflow)
+        return if (t < legMs) slid else overflow - slid
+    }
+    val lap = titleWidth + SCROLL_GAP
+    val lapMs = SCROLL_PAUSE_MS + (lap / SCROLL_SPEED).toLong()
+    return ((scrollMs % lapMs - SCROLL_PAUSE_MS).coerceAtLeast(0L) * SCROLL_SPEED).coerceAtMost(lap)
+}
 
 private fun RenderContext.drawLabels(
     state: MediaCardState,
@@ -437,7 +450,7 @@ private fun RenderContext.drawLabels(
     colors: MediaCardColors,
     fontName: String?,
     shadow: Boolean,
-    scrollMs: Long,
+    scrollOffset: Float,
     bounce: Boolean,
 ) {
     val text = colors.title
@@ -448,32 +461,35 @@ private fun RenderContext.drawLabels(
     } else {
         save()
         clipRect(left, -MediaCardLayout.INSET, textWidth, ARTIST_BASELINE + MediaCardLayout.INSET)
-        if (bounce) {
-            val overflow = titleWidth - textWidth
-            val legMs = SCROLL_PAUSE_MS + (overflow / SCROLL_SPEED).toLong()
-            val t = scrollMs % (legMs * 2)
-            val slid = ((t % legMs - SCROLL_PAUSE_MS).coerceAtLeast(0L) * SCROLL_SPEED).coerceAtMost(overflow)
-            val offset = if (t < legMs) slid else overflow - slid
-            with(title) { draw(state.title, left - offset, TITLE_BASELINE, text) }
-        } else {
-            val lap = titleWidth + SCROLL_GAP
-            val lapMs = SCROLL_PAUSE_MS + (lap / SCROLL_SPEED).toLong()
-            val offset = ((scrollMs % lapMs - SCROLL_PAUSE_MS).coerceAtLeast(0L) * SCROLL_SPEED).coerceAtMost(lap)
-            with(title) { draw(state.title, left - offset, TITLE_BASELINE, text) }
-            with(title) { draw(state.title, left - offset + lap, TITLE_BASELINE, text) }
-        }
+        with(title) { draw(state.title, left - scrollOffset, TITLE_BASELINE, text) }
+        if (!bounce) with(title) { draw(state.title, left - scrollOffset + (titleWidth + SCROLL_GAP), TITLE_BASELINE, text) }
         restore()
     }
     if (state.artist.isEmpty()) return
     val artist = Label(ARTIST_SIZE, fontName, shadow)
-    with(artist) { draw(fit(state.artist, artist, textWidth), left, ARTIST_BASELINE, colors.artist) }
+    with(artist) { draw(fit(state.artist, artist, fontName, textWidth), left, ARTIST_BASELINE, colors.artist) }
 }
 
-private fun fit(text: String, font: Label, width: Float): String {
-    if (font.width(text) <= width) return text
+private data class FitKey(val text: String, val fontName: String?, val width: Float, val fullWidth: Float)
+
+private var fitCache: Pair<FitKey, String>? = null
+
+private fun fit(text: String, font: Label, fontName: String?, width: Float): String {
+    val full = font.width(text)
+    if (full <= width) return text
+    val key = FitKey(text, fontName, width, full)
+    fitCache?.takeIf { it.first == key }?.let { return it.second }
     var end = text.length
     while (end > 1 && font.width(text.substring(0, end).trimEnd() + "…") > width) end--
-    return text.substring(0, end).trimEnd() + "…"
+    return (text.substring(0, end).trimEnd() + "…").also { fitCache = key to it }
+}
+
+private var widestDigitCache: Pair<Pair<String?, Float>, Char>? = null
+
+private fun widestDigit(font: Label, fontName: String?): Char {
+    val key = fontName to font.width("0")
+    widestDigitCache?.takeIf { it.first == key }?.let { return it.second }
+    return "0123456789".maxBy { font.width(it.toString()) }.also { widestDigitCache = key to it }
 }
 
 private fun RenderContext.drawProgress(
@@ -501,8 +517,9 @@ private fun RenderContext.drawProgress(
             draw(left, barLeft, baseline, colors.time)
             draw(right, barRight - width(right), baseline, colors.time)
         }
-        val digit = "0123456789".maxBy { font.width(it.toString()) }
-        val template = formatTime(maxOf(state.positionMs, state.lengthMs)).replace(DIGIT, digit.toString())
+        val digit = widestDigit(font, fontName)
+        val longest = formatTime(maxOf(state.positionMs, state.lengthMs))
+        val template = CharArray(longest.length) { if (longest[it] in '0'..'9') digit else longest[it] }.concatToString()
         val slot = maxOf(font.width(template), font.width(right))
         barLeft += slot + TIME_GAP
         barRight -= slot + TIME_GAP
@@ -545,15 +562,14 @@ private fun RenderContext.drawWave(
     if (known && filled > 0f && accent.alpha > 0) {
         val amplitude = if (state.playing) WAVE_AMPLITUDE else 0f
         val phase = state.positionMs / WAVE_PERIOD_MS * 2f * PI.toFloat()
-        val points = ArrayList<Float>()
-        var dx = 0f
-        while (true) {
-            points.add(left + dx)
-            points.add(mid + amplitude * sin(dx / WAVE_LENGTH * 2f * PI.toFloat() - phase))
-            if (dx >= filled) break
-            dx = (dx + WAVE_STEP).coerceAtMost(filled)
+        val count = ceil(filled / WAVE_STEP).toInt() + 1
+        val points = FloatArray(count * 2)
+        for (i in 0 until count) {
+            val dx = (i * WAVE_STEP).coerceAtMost(filled)
+            points[i * 2] = left + dx
+            points[i * 2 + 1] = mid + amplitude * sin(dx / WAVE_LENGTH * 2f * PI.toFloat() - phase)
         }
-        renderer.strokePolyline(points.toFloatArray(), false, accent.argb, WAVE_STROKE, PolyRenderer.CAP_ROUND, PolyRenderer.JOIN_ROUND)
+        renderer.strokePolyline(points, false, accent.argb, WAVE_STROKE, PolyRenderer.CAP_ROUND, PolyRenderer.JOIN_ROUND)
     }
     if (!known) return
     val knobHeight = MediaCardLayout.PROGRESS_HEIGHT
@@ -715,5 +731,13 @@ fun formatTime(ms: Long): String {
     val hours = total / 3600
     val minutes = total % 3600 / 60
     val seconds = total % 60
-    return if (hours > 0) "%d:%02d:%02d".format(hours, minutes, seconds) else "%d:%02d".format(minutes, seconds)
+    return buildString(8) {
+        if (hours > 0) {
+            append(hours).append(':')
+            if (minutes < 10) append('0')
+        }
+        append(minutes).append(':')
+        if (seconds < 10) append('0')
+        append(seconds)
+    }
 }

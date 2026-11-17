@@ -29,22 +29,31 @@ object ShulkerPreview {
     var pinnedStack: ItemStack? = null
         private set
 
+    private const val STALE_AFTER_NANOS = 250_000_000L
+
     private var slots: List<Slot> = emptyList()
+    private var owner: Any? = null
+    private var publishedAt = 0L
 
     @JvmStatic
     fun togglePin() {
         pinnedStack = if (pinnedStack != null) null else mc.player?.heldShulkerBox()?.copy()
     }
 
-    fun publishSlots(slots: List<Slot>) {
+    fun publishSlots(owner: Any, slots: List<Slot>) {
+        this.owner = owner
         this.slots = slots
+        publishedAt = System.nanoTime()
+    }
+
+    fun clearSlots(owner: Any) {
+        if (this.owner === owner) slots = emptyList()
     }
 
     @JvmStatic
     fun consumeHovered(mouseX: Int, mouseY: Int): ItemStack? {
-        val current = slots
-        slots = emptyList()
-        return current.firstOrNull {
+        if (System.nanoTime() - publishedAt >= STALE_AFTER_NANOS) slots = emptyList()
+        return slots.firstOrNull {
             mouseX >= it.x && mouseX < it.x + it.size && mouseY >= it.y && mouseY < it.y + it.size
         }?.stack
     }

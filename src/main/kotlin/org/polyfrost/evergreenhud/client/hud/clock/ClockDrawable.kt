@@ -1,9 +1,11 @@
 package org.polyfrost.evergreenhud.client.hud.clock
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import org.polyfrost.compose.composables.PolyCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
+import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.RenderContext
@@ -19,6 +21,26 @@ private val SECOND_HAND = PolyColor.rgba(170, 170, 170, 255)
 private val MINUTE_HAND = PolyColor.rgba(255, 255, 255, 255)
 private val HOUR_HAND = PolyColor.rgba(120, 180, 255, 255)
 private val DETAIL = PolyColor.rgba(255, 255, 255, 255)
+
+private val HOUR_LABELS = Array(12) { (it + 1).toString() }
+
+private class HourLabels {
+    private var font: PolyFont? = null
+    private var fontName: String? = null
+    private var revision = -1
+    val widths = FloatArray(HOUR_LABELS.size)
+
+    fun font(name: String?, size: Float): PolyFont {
+        font?.let { if (it.size == size && fontName == name && revision == FontManager.revision) return it }
+        val currentRevision = FontManager.revision
+        val created = if (name != null) PolyFont(name, size) else PolyFont.default(size)
+        for (i in widths.indices) widths[i] = created.measureTextWidth(HOUR_LABELS[i])
+        font = created
+        fontName = name
+        revision = currentRevision
+        return created
+    }
+}
 
 private class Outline(val hw: Float, val hh: Float, val cornerRadius: Float?) {
     private val inscribed = minOf(hw, hh)
@@ -55,6 +77,7 @@ fun Clock(
     modifier: PolyModifier = PolyModifier
         .size(200f, 200f)
 ) {
+    val hourLabels = remember { HourLabels() }
     PolyCanvas(modifier) { _, _, width, height ->
 
         val radius = minOf(width, height) / 2f
@@ -65,7 +88,7 @@ fun Clock(
         if (fiveMinuteMarks || minuteMarks) {
             marks(cx, cy, radius, outline, handWidth, fiveMinuteMarks, minuteMarks, detailColor)
         }
-        if (numbers) numbers(cx, cy, radius, outline, fiveMinuteMarks || minuteMarks, detailColor, fontName)
+        if (numbers) numbers(cx, cy, radius, outline, fiveMinuteMarks || minuteMarks, detailColor, hourLabels.font(fontName, radius * 0.2f), hourLabels.widths)
 
         val millis = millisOfDay()
         val secs = if (ticking) floor(millis / 1000.0) else millis / 1000.0
@@ -150,9 +173,9 @@ private fun RenderContext.numbers(
     outline: Outline,
     marks: Boolean,
     color: PolyColor,
-    fontName: String?,
+    font: PolyFont,
+    widths: FloatArray,
 ) {
-    val font = if (fontName != null) PolyFont(fontName, radius * 0.2f) else PolyFont.default(radius * 0.2f)
     val metrics = font.metrics
     val inset = radius * if (marks) 0.32f else 0.2f
 
@@ -161,9 +184,8 @@ private fun RenderContext.numbers(
         val dx = cos(angle)
         val dy = sin(angle)
         val ring = (outline.distance(dx, dy) - inset).coerceAtLeast(0f)
-        val text = hour.toString()
-        val x = cx + ring * dx - font.measureTextWidth(text) / 2f
+        val x = cx + ring * dx - widths[hour - 1] / 2f
         val y = cy + ring * dy - (metrics.ascent + metrics.descent) / 2f
-        text(text, x, y, color, font)
+        text(HOUR_LABELS[hour - 1], x, y, color, font)
     }
 }

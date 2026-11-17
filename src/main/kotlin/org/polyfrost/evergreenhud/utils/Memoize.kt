@@ -7,10 +7,7 @@ interface Memoize {
 class Memoize1<T, R>(private val f: (T) -> R) : (T) -> R, Memoize {
     private val cache = mutableMapOf<T, R>()
 
-    override operator fun invoke(t: T): R {
-        val time = System.nanoTime()
-        return f(t).also { println("Memoized in ${(System.nanoTime() - time) / 1e6}ms") }
-    }
+    override operator fun invoke(t: T): R = cache.getOrPut(t) { f(t) }
 
     override fun clear() = cache.clear()
 }

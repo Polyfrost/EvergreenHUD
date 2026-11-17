@@ -19,10 +19,13 @@ import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.api.ui.v1.components.fromFile
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import kotlin.math.min
+import java.io.File as JFile
 
 private const val DEFAULT_SIDE = 48f
 
 private const val MAX_FILE_BYTES = 16L * 1024L * 1024L
+
+private const val FILE_CHECK_MS = 1000L
 
 private val PLACEHOLDER_COLOR = PolyColor(0x40FFFFFF)
 private val PLACEHOLDER_OUTLINE = PolyColor(0x80FFFFFF.toInt())
@@ -66,6 +69,9 @@ class CustomImageHud : Hud(
 
     @Transient
     private var cachedStamp = 0L
+
+    @Transient
+    private var nextFileCheckMs = 0L
 
     init {
         showBackground = false
@@ -152,7 +158,11 @@ class CustomImageHud : Hud(
             return null
         }
 
-        val file = java.io.File(path)
+        val now = System.currentTimeMillis()
+        if (path == cachedPath && now < nextFileCheckMs) return cachedImage
+        nextFileCheckMs = now + FILE_CHECK_MS
+
+        val file = JFile(path)
         val stamp = if (file.isFile) file.lastModified() else -1L
         if (path == cachedPath && stamp == cachedStamp) return cachedImage
 

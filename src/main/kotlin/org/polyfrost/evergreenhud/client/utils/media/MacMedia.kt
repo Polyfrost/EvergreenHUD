@@ -199,7 +199,11 @@ object MacMedia : MediaBackend {
             if (!extracted || !staging.resolve("MediaRemoteAdapter.framework").isDirectory) return null
             archive.delete()
             root.parentFile.mkdirs()
-            runCatching { Files.move(staging.toPath(), root.toPath(), StandardCopyOption.ATOMIC_MOVE) }
+            val moved = runCatching { Files.move(staging.toPath(), root.toPath(), StandardCopyOption.ATOMIC_MOVE) }.isSuccess
+            if (!moved && !(readyScript.isFile && readyFramework.isDirectory)) {
+                root.deleteRecursively()
+                runCatching { Files.move(staging.toPath(), root.toPath(), StandardCopyOption.ATOMIC_MOVE) }
+            }
         } finally {
             staging.deleteRecursively()
         }

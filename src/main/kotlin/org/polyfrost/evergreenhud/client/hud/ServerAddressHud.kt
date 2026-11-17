@@ -5,6 +5,7 @@ import org.polyfrost.evergreenhud.client.utils.CachedTextHud
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
+import org.polyfrost.oneconfig.api.event.v1.invoke.EventHandler
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
 class ServerAddressHud : CachedTextHud(
@@ -21,6 +22,8 @@ class ServerAddressHud : CachedTextHud(
 
     override val defaultText: String by ::noServerText
 
+    private var handler: EventHandler<*>? = null
+
     override fun setup() {
         super.setup()
         if (!isReal) {
@@ -28,7 +31,7 @@ class ServerAddressHud : CachedTextHud(
             return
         }
 
-        eventHandler { (ip, _, _): ServerChangedEvent ->
+        handler = eventHandler { (ip, _, _): ServerChangedEvent ->
             applyServer(ip)
         }
 
@@ -36,6 +39,12 @@ class ServerAddressHud : CachedTextHud(
 
         updateWhenChanged("showInSinglePlayer")
         updateWhenChanged("noServerText")
+    }
+
+    override fun remove() {
+        super.remove()
+        handler?.unregister()
+        handler = null
     }
 
     private fun applyServer(ip: String?) {

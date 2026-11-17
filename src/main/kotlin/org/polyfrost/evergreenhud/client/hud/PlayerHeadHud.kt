@@ -19,6 +19,8 @@ import kotlin.math.min
 private const val DEFAULT_SIDE = 16f
 private const val MIN_SIDE = 8f
 
+private const val UPDATE_NANOS = 500_000_000L
+
 class PlayerHeadHud : Hud(
     id = "player_head.json",
     title = "Player Head",
@@ -60,6 +62,8 @@ class PlayerHeadHud : Hud(
         headImage.value = next
         return true
     }
+
+    override fun updateFrequency(): Long = if (isReal) UPDATE_NANOS else -1L
 
     override fun onCloned() {
         headImage = mutableStateOf(null)

@@ -5,7 +5,6 @@ package org.polyfrost.evergreenhud.client.hud.media
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import org.polyfrost.compose.composables.PolyBox
 import org.polyfrost.compose.composables.PolyModifier
@@ -230,10 +229,16 @@ class MediaHud : Hud(
 
     private var hovered = mutableIntStateOf(-1)
 
-    private var scrollMs = mutableLongStateOf(0L)
+    private var scrollOffset = mutableFloatStateOf(0f)
 
     @Transient
     private var scrollStart = 0L
+
+    @Transient
+    private var scrollTitle: String? = null
+
+    @Transient
+    private var offscreen = false
 
     @Transient
     private var shownPosition = 0.0
@@ -300,13 +305,18 @@ class MediaHud : Hud(
     }
 
     override fun update(): Boolean {
-        if (isReal) shownWidth = if (hidden || card.value == null) 0f else scaledWidth
-        val next = read()
         val now = System.currentTimeMillis()
-        if (next?.title != card.value?.title) scrollStart = now
-        scrollMs.longValue = if (next != null && titleOverflows(next.title, cardFont(), if (isStatic) cardTextWidth(next) else MediaCardLayout.MAX_TEXT_WIDTH)) now - scrollStart else 0L
-        if (onlyInGuis && !screenOpen()) popStart = now
+        offscreen = onlyInGuis && !screenOpen()
+        if (offscreen) popStart = now
         pop.floatValue = if (onlyInGuis && popIn && !HudManager.isEditing) ((now - popStart) / POP_MS).coerceIn(0f, 1f) else 1f
+        val next = read()
+        if (isReal) shownWidth = if (hidden || next == null) 0f else scaledWidth
+        trackTitle(next?.title, now)
+        if (offscreen) return false
+        scrollOffset.floatValue = if (next == null) 0f else {
+            val textWidth = if (isStatic) cardTextWidth(next) else MediaCardLayout.MAX_TEXT_WIDTH
+            titleScrollOffset(next.title, cardFont(), textWidth, now - scrollStart, titleScroll == SCROLL_BOUNCE)
+        }
         val nextStyle = next?.let(::cardStyle)
         val changed = next != card.value || nextStyle != style.value
         card.value = next
@@ -315,7 +325,13 @@ class MediaHud : Hud(
         return changed
     }
 
-    override fun updateFrequency(): Long = SCROLL_STEP_MS.milliseconds.inWholeNanoseconds
+    private fun trackTitle(title: String?, now: Long) {
+        if (title == scrollTitle) return
+        scrollTitle = title
+        scrollStart = now
+    }
+
+    override fun updateFrequency(): Long = if (offscreen && screenOpen()) -1L else SCROLL_STEP_MS.milliseconds.inWholeNanoseconds
 
     override fun shouldShow(): Boolean {
         lastDrawCheck = System.nanoTime()
@@ -517,7 +533,7 @@ class MediaHud : Hud(
                 fontName = cardFont(),
                 shadow = showShadow,
                 hovered = hovered.intValue,
-                scrollMs = scrollMs.longValue,
+                scrollOffset = scrollOffset.floatValue,
                 scale = scale,
                 textWidth = textWidth,
                 backdrop = backdrop,
@@ -563,8 +579,10 @@ class MediaHud : Hud(
         pop = mutableFloatStateOf(1f)
         popStart = 0L
         hovered = mutableIntStateOf(-1)
-        scrollMs = mutableLongStateOf(0L)
+        scrollOffset = mutableFloatStateOf(0f)
         scrollStart = 0L
+        scrollTitle = null
+        offscreen = false
         shownPosition = 0.0
         shownAt = 0L
         shownTitle = null

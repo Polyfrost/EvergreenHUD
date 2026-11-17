@@ -24,6 +24,8 @@ abstract class CachedTextHud(
 
     private var styledLinesState: MutableState<List<List<TextRun>>?> = mutableStateOf(null)
 
+    private var styledKey: StyleKey? = null
+
     fun updateWithText(text: Any?) {
         this.currentText = text?.toString() ?: defaultText
         updateAndRecalculate()
@@ -32,6 +34,8 @@ abstract class CachedTextHud(
     override fun getText(): String? = currentText
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
+
+    override fun updateFrequency(): Long = if (isReal) Long.MAX_VALUE else -1L
 
     protected open fun valueColor(): PolyColor? = null
 
@@ -42,7 +46,17 @@ abstract class CachedTextHud(
 
     override fun update(): Boolean {
         val result = super.update()
-        styledLinesState.value = valueColor()?.let(::styledLines)
+        val color = valueColor()
+        if (color == null) {
+            styledKey = null
+            styledLinesState.value = null
+            return result
+        }
+        val key = StyleKey(lastValue, color, prefix, suffix, brackets, concatString)
+        if (key != styledKey) {
+            styledKey = key
+            styledLinesState.value = styledLines(color)
+        }
         return result
     }
 
@@ -76,6 +90,16 @@ abstract class CachedTextHud(
     override fun onCloned() {
         super.onCloned()
         lastValue = defaultText
+        styledKey = null
         styledLinesState = mutableStateOf(null)
     }
+
+    private data class StyleKey(
+        val value: String,
+        val color: PolyColor,
+        val prefix: String,
+        val suffix: String,
+        val brackets: Boolean,
+        val separator: String,
+    )
 }

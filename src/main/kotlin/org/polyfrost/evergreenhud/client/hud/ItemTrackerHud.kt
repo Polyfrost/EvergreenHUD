@@ -124,7 +124,7 @@ class ItemTrackerHud : Hud(
         if (!isReal) return
         tickHandler = eventHandler { _: TickEvent.End ->
             track()
-            updateAndRecalculate()
+            if (!hidden || HudManager.isEditing) updateAndRecalculate()
         }
         for (option in listOf("spacing", "textPosition", "showIcon")) {
             addCallback(option) { rev.value++ }
