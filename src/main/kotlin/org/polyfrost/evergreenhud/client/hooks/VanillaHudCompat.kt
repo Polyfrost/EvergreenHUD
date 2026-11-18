@@ -13,6 +13,9 @@ object VanillaHudCompat {
 
     private val statusEffects: Hud? by lazy { hud("getStatusEffects") }
 
+    /** VanillaHUD only has a status effects element where the game draws effects on the HUD (not on 1.8.9). */
+    val hasStatusEffects: Boolean get() = statusEffects != null
+
     private var previousStatusEffectsHidden: Boolean? = null
 
     fun hideStatusEffects(hide: Boolean) {
@@ -33,6 +36,9 @@ object VanillaHudCompat {
             val huds = Class.forName("org.polyfrost.vanillahud.hud.Huds")
             val instance = huds.getField("INSTANCE").get(null)
             huds.getMethod(getter).invoke(instance) as? Hud
+        } catch (e: NoSuchMethodException) {
+            // This VanillaHUD build has no such element (for example status effects on 1.8.9), so there is nothing to hide
+            null
         } catch (e: Throwable) {
             LOGGER.warn("Failed to find VanillaHUD's hud through {}, its compat option will do nothing", getter, e)
             null
