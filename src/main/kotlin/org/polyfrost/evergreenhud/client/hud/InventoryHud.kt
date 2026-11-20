@@ -11,11 +11,11 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 //? if > 1.8.9
 import net.minecraft.world.item.component.ItemContainerContents
-import org.polyfrost.compose.composables.PolyBox
-import org.polyfrost.compose.composables.PolyCanvas
-import org.polyfrost.compose.composables.PolyMcText
+import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.compose.composables.NodeCanvas
+import org.polyfrost.compose.composables.NodeMcText
+import org.polyfrost.compose.composables.NodeText
 import org.polyfrost.compose.composables.PolyModifier
-import org.polyfrost.compose.composables.PolyText
 import org.polyfrost.compose.composables.absoluteAt
 import org.polyfrost.compose.composables.background
 import org.polyfrost.compose.composables.size
@@ -358,9 +358,9 @@ class InventoryHud : Hud(
         val originX = offsetX(content)
         val originY = offsetY(content)
 
-        PolyBox(modifier = hudBackground().size(boxW, boxH)) {
+        NodeBox(modifier = hudBackground().size(boxW, boxH)) {
             if (style == VANILLA) {
-                PolyCanvas(PolyModifier.absoluteAt(0f, 0f).size(boxW, boxH)) { x, y, _, _ ->
+                NodeCanvas(PolyModifier.absoluteAt(0f, 0f).size(boxW, boxH)) { x, y, _, _ ->
                     VanillaTextures.container(type == HELD_SHULKER)
                         ?.drawContainer(this, x + originX, y + originY, ROWS, showTitle, content)
                 }
@@ -373,7 +373,7 @@ class InventoryHud : Hud(
             if (slotBounds && style != VANILLA) {
                 for (row in 0 until ROWS) {
                     for (col in 0 until COLS) {
-                        PolyBox(
+                        NodeBox(
                             modifier = PolyModifier
                                 .absoluteAt(
                                     originX + (EDGE + col * SLOT - boundInset) * content,
@@ -414,16 +414,16 @@ class InventoryHud : Hud(
         val shadowCol = shadowPolyColor
         val outline = showShadow && fullShadow
         if (font == Font.Minecraft) {
-            PolyMcText(title, if (outline) shadowCol else null, color = color, shadow = showShadow && !outline, scale = content, modifier = modifier)
+            NodeMcText(title, if (outline) shadowCol else null, color = color, shadow = showShadow && !outline, scale = content, modifier = modifier)
         } else if (outline) {
             val polyFont = PolyFont(getPoppinsFontName(), FONT_SIZE * content)
             val metrics = polyFont.metrics
-            PolyCanvas(modifier.size(polyFont.measureTextWidth(title), metrics.descent - metrics.ascent)) { x, y, _, _ ->
+            NodeCanvas(modifier.size(polyFont.measureTextWidth(title), metrics.descent - metrics.ascent)) { x, y, _, _ ->
                 textOutline(title, x, y - metrics.ascent, shadowCol, polyFont, content)
                 text(title, x, y - metrics.ascent, color, polyFont)
             }
         } else {
-            PolyText(
+            NodeText(
                 title,
                 color = color,
                 fontSize = FONT_SIZE * content,

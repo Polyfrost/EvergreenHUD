@@ -16,11 +16,11 @@ import net.minecraft.resources.Identifier as ResourceLocation
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
-import org.polyfrost.compose.composables.PolyBox
-import org.polyfrost.compose.composables.PolyMcText
+import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.compose.composables.NodeMcText
+import org.polyfrost.compose.composables.NodeRow
+import org.polyfrost.compose.composables.NodeText
 import org.polyfrost.compose.composables.PolyModifier
-import org.polyfrost.compose.composables.PolyRow
-import org.polyfrost.compose.composables.PolyText
 import org.polyfrost.compose.composables.align
 import org.polyfrost.compose.composables.margin
 import org.polyfrost.compose.composables.padding
@@ -287,8 +287,8 @@ class ItemCounterHud : Hud(
 
         val iconSize = if (current.showIcon) ITEM_SIZE * scale else 0f
 
-        PolyBox(modifier = modifier) {
-            PolyRow(gap = if (current.showIcon) TEXT_GAP * scale else 0f) {
+        NodeBox(modifier = modifier) {
+            NodeRow(gap = if (current.showIcon) TEXT_GAP * scale else 0f) {
                 if (current.showIcon) {
                     ItemIcon(
                         current.stack,
@@ -307,12 +307,12 @@ class ItemCounterHud : Hud(
         val color = textPolyColor
         if (font == Font.Minecraft) {
             val modifier = topAlign(inkOffset(iconSize, 0f, MC_INK_HEIGHT * scale))
-            PolyMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
+            NodeMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
         } else {
             val polyFont = PolyFont(getPoppinsFontName(), FONT_SIZE * scale)
             val inkTop = -polyFont.metrics.ascent - polyFont.capHeight
             val modifier = topAlign(inkOffset(iconSize, inkTop, polyFont.capHeight))
-            PolyText(
+            NodeText(
                 text,
                 color = color,
                 fontSize = FONT_SIZE * scale,

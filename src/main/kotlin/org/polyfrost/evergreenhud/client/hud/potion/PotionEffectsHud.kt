@@ -27,13 +27,13 @@ import net.ornithemc.osl.resource.loader.api.resource.manager.ResourceManager
 import java.util.function.BiConsumer
 import kotlin.math.roundToInt
 *///?}
-import org.polyfrost.compose.composables.PolyBox
-import org.polyfrost.compose.composables.PolyCanvas
-import org.polyfrost.compose.composables.PolyColumn
-import org.polyfrost.compose.composables.PolyMcText
+import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.compose.composables.NodeCanvas
+import org.polyfrost.compose.composables.NodeColumn
+import org.polyfrost.compose.composables.NodeMcText
+import org.polyfrost.compose.composables.NodeRow
+import org.polyfrost.compose.composables.NodeText
 import org.polyfrost.compose.composables.PolyModifier
-import org.polyfrost.compose.composables.PolyRow
-import org.polyfrost.compose.composables.PolyText
 import org.polyfrost.compose.composables.align
 import org.polyfrost.compose.composables.fade
 import org.polyfrost.compose.composables.padding
@@ -42,7 +42,6 @@ import org.polyfrost.compose.composables.width
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.layout.PolyInsets
 import org.polyfrost.compose.mc.McFontQueue
-import org.polyfrost.compose.mc.McFontQueue.measureWidth
 import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyFont
 
@@ -147,7 +146,7 @@ class PotionEffectsHud : Hud(
             arrayOf("M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I")
 
         private fun charWidth(scale: Float): Float =
-            measureWidth?.invoke(" ", scale) ?: (FONT_SIZE * scale * 0.5f)
+            McFontQueue.measureTextWidth(" ", scale)
 
         private val EXAMPLES = listOf(
             Example("speed", 1200, 1),
@@ -949,13 +948,13 @@ class PotionEffectsHud : Hud(
         val outline = outlineInsets(list, scale, maxRowWidth, layout)
         val modifier = hudBackground().padding(padLeft + outline.left, padTop + outline.top, padRight + outline.right, padBottom + outline.bottom)
 
-        PolyBox(modifier = modifier) {
+        NodeBox(modifier = modifier) {
             if (horizontal) {
-                PolyRow(gap = layout.spacing * scale) {
+                NodeRow(gap = layout.spacing * scale) {
                     for (row in list) Effect(row, scale, maxRowWidth, layout)
                 }
             } else {
-                PolyColumn(gap = layout.spacing * scale) {
+                NodeColumn(gap = layout.spacing * scale) {
                     for (row in list) Effect(row, scale, maxRowWidth, layout)
                 }
             }
@@ -1047,8 +1046,8 @@ class PotionEffectsHud : Hud(
             if (row.icon != null) Icon(row.icon, ICON * scale, style.alpha, style.iconBlink)
         }
 
-        PolyBox(modifier = boxModifier) {
-            PolyRow(gap = row.iconGap * scale, modifier = rowModifier) {
+        NodeBox(modifier = boxModifier) {
+            NodeRow(gap = row.iconGap * scale, modifier = rowModifier) {
                 if (align != PolyAlign.Right) iconBlock()
 
                 if (row.name != null || row.duration != null) {
@@ -1063,7 +1062,7 @@ class PotionEffectsHud : Hud(
 
     @Composable
     private fun CompactText(row: Row, scale: Float, style: RowStyle, align: PolyAlign) {
-        PolyRow(gap = charWidth(scale), modifier = CENTERED) {
+        NodeRow(gap = charWidth(scale), modifier = CENTERED) {
             if (align == PolyAlign.Right) {
                 if (row.duration != null) Line(row.duration, scale, style.alpha, style.durationColor, row.durationStyle, style.durationBlink)
                 if (row.name != null) Line(row.name, scale, style.alpha, style.nameColor, row.nameStyle, style.nameBlink)
@@ -1077,7 +1076,7 @@ class PotionEffectsHud : Hud(
     @Composable
     private fun FullText(row: Row, scale: Float, style: RowStyle, align: PolyAlign) {
         val lineModifier = remember(align) { PolyModifier.align(align) }
-        PolyColumn(gap = LINE_GAP * scale, modifier = CENTERED) {
+        NodeColumn(gap = LINE_GAP * scale, modifier = CENTERED) {
             if (row.name != null) Line(row.name, scale, style.alpha, style.nameColor, row.nameStyle, style.nameBlink, modifier = lineModifier)
             if (row.duration != null) Line(row.duration, scale, style.alpha, style.durationColor, row.durationStyle, style.durationBlink, modifier = lineModifier)
         }
@@ -1099,7 +1098,7 @@ class PotionEffectsHud : Hud(
         }
 
         val textBlock: @Composable () -> Unit = {
-            PolyColumn(gap = LINE_GAP * scale, modifier = CENTERED) {
+            NodeColumn(gap = LINE_GAP * scale, modifier = CENTERED) {
                 if (reversed) {
                     durationBlock(); nameBlock()
                 } else {
@@ -1115,8 +1114,8 @@ class PotionEffectsHud : Hud(
             }
         }
 
-        PolyBox(modifier = boxModifier) {
-            PolyColumn(gap = row.iconGap * scale, modifier = CENTERED) {
+        NodeBox(modifier = boxModifier) {
+            NodeColumn(gap = row.iconGap * scale, modifier = CENTERED) {
                 if (reversed) {
                     if (hasText) textBlock()
                     iconBlock()
@@ -1131,7 +1130,7 @@ class PotionEffectsHud : Hud(
     @Composable
     private fun Icon(icon: PolyBitmap, size: Float, alpha: Float, blink: (() -> Float)?, modifier: PolyModifier = PolyModifier) {
         val sized = remember(modifier, size, blink) { modifier.size(size, size).fade(blink) }
-        PolyCanvas(sized) { x, y, w, h ->
+        NodeCanvas(sized) { x, y, w, h ->
             val tint = PolyColor.WHITE.withAlpha((255f * alpha).toInt().coerceIn(0, 255))
             val pixelsPerUnit = Platform.screen().let { if (it.guiWidth() > 0) it.viewportWidth().toFloat() / it.guiWidth() else 1f }
             val downscaled = w * pixelsPerUnit * (if (isReal) effectiveScale else 1f) < icon.width
@@ -1183,7 +1182,7 @@ class PotionEffectsHud : Hud(
         val blinking = remember(modifier, blink) { modifier.fade(blink) }
         if (font == Font.Minecraft) {
             if ((style and ITALIC) == 0) {
-                PolyMcText(
+                NodeMcText(
                     mcText(text, style),
                     outlineColor = if (outline) shadowPaint else null,
                     color = color,
@@ -1200,7 +1199,7 @@ class PotionEffectsHud : Hud(
             val width = lines.maxOf { McFontQueue.measureTextWidth(it, scale) }
             val totalHeight = McFontQueue.measureBlockHeight(lines.size, scale)
             val sized = remember(blinking, width, totalHeight) { blinking.size(width, totalHeight) }
-            PolyCanvas(sized, live = color.chroma || (outline && shadowPaint.chroma)) { x, y, _, _ ->
+            NodeCanvas(sized, live = color.chroma || (outline && shadowPaint.chroma)) { x, y, _, _ ->
                 val argb = color.argb
                 for ((i, formatted) in lines.withIndex()) {
                     val top = y + i * lineHeight
@@ -1218,7 +1217,7 @@ class PotionEffectsHud : Hud(
             val fontName = poppinsFont(style)
             val underline = (style and UNDERLINE) != 0
             if (!underline && !outline) {
-                PolyText(
+                NodeText(
                     text,
                     color,
                     fontSize = FONT_SIZE * scale,
@@ -1238,7 +1237,7 @@ class PotionEffectsHud : Hud(
             val position = metrics.underlinePosition
             val thickness = metrics.underlineThickness
             val sized = remember(blinking, width, height) { PolyModifier.size(width, height).then(blinking) }
-            PolyCanvas(sized, live = color.chroma || (showShadow && shadowPaint.chroma)) { x, y, w, _ ->
+            NodeCanvas(sized, live = color.chroma || (showShadow && shadowPaint.chroma)) { x, y, w, _ ->
                 val baseline = y - metrics.ascent
                 if (outline) {
                     textOutline(text, x, baseline, shadowPaint, polyFont, scale)

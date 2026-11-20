@@ -2,7 +2,7 @@ package org.polyfrost.evergreenhud.client.hud.clock
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import org.polyfrost.compose.composables.PolyCanvas
+import org.polyfrost.compose.composables.NodeCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.FontManager
@@ -78,7 +78,7 @@ fun Clock(
         .size(200f, 200f)
 ) {
     val hourLabels = remember { HourLabels() }
-    PolyCanvas(modifier) { _, _, width, height ->
+    NodeCanvas(modifier) { _, _, width, height ->
 
         val radius = minOf(width, height) / 2f
         val cx = width / 2f

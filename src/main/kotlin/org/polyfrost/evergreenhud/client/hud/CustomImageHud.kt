@@ -4,7 +4,7 @@ package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import org.polyfrost.compose.composables.PolyCanvas
+import org.polyfrost.compose.composables.NodeCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.FilterQuality
@@ -105,7 +105,7 @@ class CustomImageHud : Hud(
     @Composable
     override fun Content() {
         val sizeModifier = PolyModifier.size(scaledWidth, scaledHeight)
-        PolyCanvas(sizeModifier) { x, y, w, h -> draw(x, y, w, h) }
+        NodeCanvas(sizeModifier) { x, y, w, h -> draw(x, y, w, h) }
     }
 
     private fun RenderContext.draw(x: Float, y: Float, width: Float, height: Float) {

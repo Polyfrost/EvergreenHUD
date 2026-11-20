@@ -11,13 +11,13 @@ import net.minecraft.world.entity.HumanoidArm
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
-import org.polyfrost.compose.composables.PolyBox
-import org.polyfrost.compose.composables.PolyCanvas
-import org.polyfrost.compose.composables.PolyColumn
-import org.polyfrost.compose.composables.PolyMcText
+import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.compose.composables.NodeCanvas
+import org.polyfrost.compose.composables.NodeColumn
+import org.polyfrost.compose.composables.NodeMcText
+import org.polyfrost.compose.composables.NodeRow
+import org.polyfrost.compose.composables.NodeText
 import org.polyfrost.compose.composables.PolyModifier
-import org.polyfrost.compose.composables.PolyRow
-import org.polyfrost.compose.composables.PolyText
 import org.polyfrost.compose.composables.absoluteAt
 import org.polyfrost.compose.composables.align
 import org.polyfrost.compose.composables.padding
@@ -356,9 +356,9 @@ class ArmorHud : Hud(
         }
         val modifier = hudBackground().padding(padLeft, padTop, padRight, padBottom)
 
-        PolyBox(modifier = modifier) {
+        NodeBox(modifier = modifier) {
             if (direction == HORIZONTAL) {
-                PolyRow(gap = padding * scale) {
+                NodeRow(gap = padding * scale) {
                     for (entry in list) Entry(entry, scale, PolyAlign.Center)
                 }
             } else {
@@ -367,7 +367,7 @@ class ArmorHud : Hud(
                     LEFT -> PolyAlign.Right
                     else -> PolyAlign.Center
                 }
-                PolyColumn(gap = padding * scale) {
+                NodeColumn(gap = padding * scale) {
                     for (entry in list) Entry(entry, scale, rowAlign)
                 }
             }
@@ -416,8 +416,8 @@ class ArmorHud : Hud(
         val width = if (horizontal) before + stripWidth + after else stripWidth + gap + labelWidth
         val height = if (horizontal) stripHeight + gap + labelHeight else stripHeight
 
-        PolyBox(modifier = PolyModifier.size(width, height)) {
-            PolyCanvas(PolyModifier.absoluteAt(stripX, stripY).size(stripWidth, stripHeight)) { x, y, _, _ ->
+        NodeBox(modifier = PolyModifier.size(width, height)) {
+            NodeCanvas(PolyModifier.absoluteAt(stripX, stripY).size(stripWidth, stripHeight)) { x, y, _, _ ->
                 VanillaTextures.hotbar()?.drawHotbar(this, x, y, list.size, !horizontal, scale)
             }
 
@@ -485,9 +485,9 @@ class ArmorHud : Hud(
         }
 
         if (stacked) {
-            PolyColumn(gap = gap, modifier = modifier, content = body)
+            NodeColumn(gap = gap, modifier = modifier, content = body)
         } else {
-            PolyRow(gap = gap, modifier = modifier, content = body)
+            NodeRow(gap = gap, modifier = modifier, content = body)
         }
     }
 
@@ -496,9 +496,9 @@ class ArmorHud : Hud(
         val color = PolyColor(entry.textColor, textChroma, textChromaSpeed)
         val text = applyCase(entry.text)
         if (font == Font.Minecraft) {
-            PolyMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
+            NodeMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
         } else {
-            PolyText(
+            NodeText(
                 text,
                 color = color,
                 fontSize = FONT_SIZE * scale,

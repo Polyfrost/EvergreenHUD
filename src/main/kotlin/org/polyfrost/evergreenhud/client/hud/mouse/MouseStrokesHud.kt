@@ -8,8 +8,8 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
-import org.polyfrost.compose.composables.PolyBox
-import org.polyfrost.compose.composables.PolyCanvas
+import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.compose.composables.NodeCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.clip
 import org.polyfrost.compose.composables.size
@@ -236,8 +236,8 @@ class MouseStrokesHud : Hud(
         }
 
         val modifier = hudBackground(PolyModifier.size(scaledWidth, scaledHeight))
-        PolyBox(modifier = modifier.clip(bgRadius)) {
-            PolyCanvas(PolyModifier.size(scaledWidth, scaledHeight)) { x, y, w, h ->
+        NodeBox(modifier = modifier.clip(bgRadius)) {
+            NodeCanvas(PolyModifier.size(scaledWidth, scaledHeight)) { x, y, w, h ->
                 frame.longValue
                 draw(x, y, w, h)
             }

@@ -4,8 +4,8 @@ package org.polyfrost.evergreenhud.client.hud.shape
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import org.polyfrost.compose.composables.PolyBox
-import org.polyfrost.compose.composables.PolyCanvas
+import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.compose.composables.NodeCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
@@ -121,7 +121,7 @@ class ShapeHud : Hud(
     override fun Content() {
         val sizeModifier = PolyModifier.size(scaledWidth, scaledHeight)
         if (showBackground) {
-            PolyBox(modifier = hudBackground(sizeModifier)) {
+            NodeBox(modifier = hudBackground(sizeModifier)) {
                 Shape(sizeModifier)
             }
         } else {
@@ -131,7 +131,7 @@ class ShapeHud : Hud(
 
     @Composable
     private fun Shape(modifier: PolyModifier) {
-        PolyCanvas(modifier) { x, y, width, height -> draw(x, y, width, height) }
+        NodeCanvas(modifier) { x, y, width, height -> draw(x, y, width, height) }
     }
 
     private fun RenderContext.draw(x: Float, y: Float, width: Float, height: Float) {

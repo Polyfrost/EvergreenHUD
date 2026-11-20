@@ -4,11 +4,11 @@ package org.polyfrost.evergreenhud.client.hud.battery
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import org.polyfrost.compose.composables.PolyBox
-import org.polyfrost.compose.composables.PolyMcText
+import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.compose.composables.NodeMcText
+import org.polyfrost.compose.composables.NodeRow
+import org.polyfrost.compose.composables.NodeText
 import org.polyfrost.compose.composables.PolyModifier
-import org.polyfrost.compose.composables.PolyRow
-import org.polyfrost.compose.composables.PolyText
 import org.polyfrost.compose.composables.align
 import org.polyfrost.compose.composables.height
 import org.polyfrost.compose.composables.margin
@@ -162,8 +162,8 @@ class BatteryHud : Hud(
         val color = textPolyColor
         val rowModifier = PolyModifier.height(CELL_HEIGHT * scale).align(if (isStatic) alignment else PolyAlign.Center)
 
-        PolyBox(modifier = modifier) {
-            PolyRow(gap = if (hasText) TEXT_GAP * scale else 0f, modifier = rowModifier) {
+        NodeBox(modifier = modifier) {
+            NodeRow(gap = if (hasText) TEXT_GAP * scale else 0f, modifier = rowModifier) {
                 BatteryCell(
                     percent = current.percent,
                     fill = current.fill ?: color,
@@ -182,12 +182,12 @@ class BatteryHud : Hud(
         val rowHeight = CELL_HEIGHT * scale
         if (font == Font.Minecraft) {
             val modifier = topAlign(inkOffset(rowHeight, 0f, MC_INK_HEIGHT * scale))
-            PolyMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
+            NodeMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
         } else {
             val polyFont = PolyFont(getPoppinsFontName(), FONT_SIZE * scale)
             val inkTop = -polyFont.metrics.ascent - polyFont.capHeight
             val modifier = topAlign(inkOffset(rowHeight, inkTop, polyFont.capHeight))
-            PolyText(
+            NodeText(
                 text,
                 color = color,
                 fontSize = FONT_SIZE * scale,

@@ -4,8 +4,8 @@ package org.polyfrost.evergreenhud.client.hud.media
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import org.polyfrost.compose.composables.PolyBox
-import org.polyfrost.compose.composables.PolyCanvas
+import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.compose.composables.NodeCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
@@ -623,8 +623,8 @@ class LyricsHud : Hud(
         val sized = if (isStatic) box.size(staticW, staticH) else box
         val bounds = boxBounds(current, scale)
         val inset = INSET * scale
-        PolyBox(modifier = sized.padding(padLeft + inset, padTop + inset, padRight + inset, padBottom + inset)) {
-            PolyCanvas(PolyModifier.size(current.width * scale, current.height * scale)) { x, y, _, h ->
+        NodeBox(modifier = sized.padding(padLeft + inset, padTop + inset, padRight + inset, padBottom + inset)) {
+            NodeCanvas(PolyModifier.size(current.width * scale, current.height * scale)) { x, y, _, h ->
                 val unit = h / current.height.coerceAtLeast(0.01f)
                 save()
                 translate(x, y)

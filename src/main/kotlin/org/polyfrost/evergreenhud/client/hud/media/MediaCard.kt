@@ -1,7 +1,7 @@
 package org.polyfrost.evergreenhud.client.hud.media
 
 import androidx.compose.runtime.Composable
-import org.polyfrost.compose.composables.PolyCanvas
+import org.polyfrost.compose.composables.NodeCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.mc.McFontQueue
@@ -195,7 +195,7 @@ fun MediaCard(
 ) {
     val width = MediaCardLayout.width(style.showArt, textWidth)
     val height = MediaCardLayout.height(style.seekPosition)
-    PolyCanvas(PolyModifier.size(width * scale, height * scale)) { x, y, _, h ->
+    NodeCanvas(PolyModifier.size(width * scale, height * scale)) { x, y, _, h ->
         val unit = h / height
         save()
         translate(x, y)
