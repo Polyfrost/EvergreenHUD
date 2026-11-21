@@ -4,8 +4,8 @@ package org.polyfrost.evergreenhud.client.hud
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import org.polyfrost.compose.composables.PolyBox
-import org.polyfrost.compose.composables.PolyCanvas
+import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.compose.composables.NodeCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.FilterQuality
@@ -72,9 +72,9 @@ class PlayerHeadHud : Hud(
     @Composable
     override fun Content() {
         if (!isReal) headImage.value
-        PolyBox(modifier = hudBackground().size(staticW, staticH)) {
-            PolyCanvas(PolyModifier.size(staticW, staticH)) { x, y, w, h ->
-                val head = headImage.value ?: return@PolyCanvas
+        NodeBox(modifier = hudBackground().size(staticW, staticH)) {
+            NodeCanvas(PolyModifier.size(staticW, staticH)) { x, y, w, h ->
+                val head = headImage.value ?: return@NodeCanvas
                 val side = min(w, h)
                 val left = x + (w - side) / 2f
                 val top = y + (h - side) / 2f

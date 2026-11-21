@@ -1,7 +1,7 @@
 package org.polyfrost.evergreenhud.client.hud.battery
 
 import androidx.compose.runtime.Composable
-import org.polyfrost.compose.composables.PolyCanvas
+import org.polyfrost.compose.composables.NodeCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
@@ -46,7 +46,7 @@ fun BatteryCell(
     scale: Float = 1f,
     modifier: PolyModifier = PolyModifier.size(CELL_WIDTH * scale, CELL_HEIGHT * scale),
 ) {
-    PolyCanvas(modifier) { x, y, _, height ->
+    NodeCanvas(modifier) { x, y, _, height ->
         val unit = height / CELL_HEIGHT
         save()
         translate(x, y)

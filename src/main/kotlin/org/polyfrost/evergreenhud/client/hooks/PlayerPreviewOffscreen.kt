@@ -37,11 +37,11 @@ import net.minecraft.world.phys.Vec3
 //? if > 1.8.9 {
 import org.joml.Quaternionf
 //?}
+import org.polyfrost.compose.minecraft.canvas.PolyOffscreen
 import org.polyfrost.compose.render.RenderContext
 import org.polyfrost.oneconfig.api.event.v1.eventHandler
 import org.polyfrost.oneconfig.api.event.v1.events.WorldEvent
 import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
-import org.polyfrost.oneconfig.api.ui.v1.platform.PolyOffscreen
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import org.slf4j.LoggerFactory
 

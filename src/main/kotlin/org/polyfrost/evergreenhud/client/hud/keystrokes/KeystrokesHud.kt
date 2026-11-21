@@ -9,13 +9,13 @@ import com.mojang.blaze3d.platform.InputConstants
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.client.KeyMapping
-import org.polyfrost.compose.composables.PolyBox
-import org.polyfrost.compose.composables.PolyCanvas
-import org.polyfrost.compose.composables.PolyColumn
-import org.polyfrost.compose.composables.PolyMcText
+import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.compose.composables.NodeCanvas
+import org.polyfrost.compose.composables.NodeColumn
+import org.polyfrost.compose.composables.NodeMcText
+import org.polyfrost.compose.composables.NodeRow
+import org.polyfrost.compose.composables.NodeText
 import org.polyfrost.compose.composables.PolyModifier
-import org.polyfrost.compose.composables.PolyRow
-import org.polyfrost.compose.composables.PolyText
 import org.polyfrost.compose.composables.align
 import org.polyfrost.compose.composables.margin
 import org.polyfrost.compose.composables.size
@@ -417,13 +417,13 @@ class KeystrokesHud : Hud(
             return
         }
 
-        PolyColumn(gap = gap) {
+        NodeColumn(gap = gap) {
             for (row in rows) when (row) {
                 ROW_MOVEMENT -> {
-                    PolyBox(modifier = PolyModifier.size(rowW, keyH)) {
+                    NodeBox(modifier = PolyModifier.size(rowW, keyH)) {
                         Key(if (useArrows) UP else o.keyUp.label(), keys.forward, keyW, keyH, PolyAlign.Center)
                     }
-                    PolyRow(gap = gap) {
+                    NodeRow(gap = gap) {
                         Key(if (useArrows) LEFT else o.keyLeft.label(), keys.left, keyW, keyH)
                         Key(if (useArrows) DOWN else o.keyDown.label(), keys.back, keyW, keyH)
                         Key(if (useArrows) RIGHT else o.keyRight.label(), keys.right, keyW, keyH)
@@ -432,7 +432,7 @@ class KeystrokesHud : Hud(
 
                 ROW_SPACEBAR -> SpaceKey(keys.jump, rowW, spaceKeyH)
 
-                ROW_MOUSE -> PolyRow(gap = gap) {
+                ROW_MOUSE -> NodeRow(gap = gap) {
                     ClickKey(o.keyAttack.label(), keys.attack, keys.attackCps.value, clickW, keyH)
                     ClickKey(o.keyUse.label(), keys.use, keys.useCps.value, clickW2, keyH)
                 }
@@ -466,7 +466,7 @@ class KeystrokesHud : Hud(
         val color = keyBg(progress)
         val radius = keyRadius
         if (color.alpha == 0) return
-        PolyCanvas(PolyModifier.size(w, h)) { x, y, cw, ch ->
+        NodeCanvas(PolyModifier.size(w, h)) { x, y, cw, ch ->
             deviceTransform()?.get(0)?.let { if (it > 0f && abs(it - keys.px.value) > 1e-3f) keys.px.value = it }
             val r = snappedRect(x, y, cw, ch)
             rect(r[0], r[1], r[2], r[3], color, radius.coerceAtLeast(0f))
@@ -488,7 +488,7 @@ class KeystrokesHud : Hud(
     private fun Key(label: String, progress: KeyFade, w: Float, h: Float, align: PolyAlign? = null, sub: String? = null) {
         keys.rev.value
         val fg = keyFg(progress.text.value)
-        PolyBox(modifier = keyModifier(w, h, align)) {
+        NodeBox(modifier = keyModifier(w, h, align)) {
             KeyBackground(progress.bg.value, w, h)
             val subScale = textScale * CPS_SCALE
             if (font == Font.Minecraft) {
@@ -501,7 +501,7 @@ class KeystrokesHud : Hud(
             } else if (sub == null) {
                 KeyText(label, fg, textScale)
             } else {
-                PolyColumn(gap = LINE_GAP * textScale, modifier = PolyModifier.align(PolyAlign.Center)) {
+                NodeColumn(gap = LINE_GAP * textScale, modifier = PolyModifier.align(PolyAlign.Center)) {
                     KeyText(label, fg, textScale)
                     KeyText(sub, fg, subScale)
                 }
@@ -514,7 +514,7 @@ class KeystrokesHud : Hud(
         val text = applyCase(raw)
         val visibleW = (McFontQueue.measureTextWidth(text, scale) - scale).coerceAtLeast(0f)
         val leftPad = ((w - visibleW) / 2f).coerceAtLeast(0f)
-        PolyMcText(
+        NodeMcText(
             text,
             color = color,
             shadow = showShadow,
@@ -526,7 +526,7 @@ class KeystrokesHud : Hud(
     @Composable
     private fun KeyText(raw: String, color: PolyColor, scale: Float) {
         val text = applyCase(raw)
-        PolyText(
+        NodeText(
             text,
             color = color,
             fontSize = FONT * scale,
@@ -539,9 +539,9 @@ class KeystrokesHud : Hud(
     private fun SpaceKey(progress: KeyFade, w: Float, h: Float) {
         keys.rev.value
         val fg = keyFg(progress.text.value)
-        PolyBox(modifier = keyModifier(w, h)) {
+        NodeBox(modifier = keyModifier(w, h)) {
             KeyBackground(progress.bg.value, w, h)
-            PolyCanvas(PolyModifier.size(w, h)) { x, y, cw, ch ->
+            NodeCanvas(PolyModifier.size(w, h)) { x, y, cw, ch ->
                 val s = textScale
                 val half = spaceLineW * s / 2f
                 val thickness = spaceLineH * s

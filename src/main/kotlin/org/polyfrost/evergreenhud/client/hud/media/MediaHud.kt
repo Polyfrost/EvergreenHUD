@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import org.polyfrost.compose.composables.PolyBox
+import org.polyfrost.compose.composables.NodeBox
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
@@ -526,7 +526,7 @@ class MediaHud : Hud(
         val box = if (backdrop != null) PolyModifier else hudBackground()
         val sized = if (isStatic) box.size(staticW, staticH) else box
         val modifier = sized.padding(padLeft + inset, padTop + inset, padRight + inset, padBottom + inset)
-        PolyBox(modifier = modifier) {
+        NodeBox(modifier = modifier) {
             MediaCard(
                 state = current,
                 style = cardStyle,

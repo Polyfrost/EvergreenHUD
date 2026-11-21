@@ -8,7 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameMillis
-import org.polyfrost.compose.composables.PolyBox
+import org.polyfrost.compose.composables.NodeBox
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
@@ -116,7 +116,7 @@ class ClockHud : Hud(
         val detailColor = textPolyColor
         val fontName = getPoppinsFontName()
         if (showBackground) {
-            PolyBox(modifier = hudBackground(sizeModifier)) {
+            NodeBox(modifier = hudBackground(sizeModifier)) {
                 Clock(timeMillis, handWidth, ticking, fiveMinuteMarks, minuteMarks, numbers, hourHandColor, minuteHandColor, secondHandColor, detailColor, fontName, bgRadius, sizeModifier)
             }
         } else {

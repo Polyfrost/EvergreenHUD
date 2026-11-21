@@ -8,8 +8,8 @@ import androidx.compose.runtime.mutableStateOf
 import net.minecraft.util.Mth
 //?} else
 //import net.minecraft.util.math.MathHelper
-import org.polyfrost.compose.composables.PolyBox
-import org.polyfrost.compose.composables.PolyCanvas
+import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.compose.composables.NodeCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.evergreenhud.client.hooks.PlayerPreviewOffscreen
@@ -138,8 +138,8 @@ class PlayerPreviewHud : Hud(
 
     @Composable
     override fun Content() {
-        PolyBox(modifier = hudBackground().size(staticW, staticH)) {
-            PolyCanvas(PolyModifier.size(staticW, staticH), live = true) { _, _, w, h ->
+        NodeBox(modifier = hudBackground().size(staticW, staticH)) {
+            NodeCanvas(PolyModifier.size(staticW, staticH), live = true) { _, _, w, h ->
                 PlayerPreviewOffscreen.drawInto(this@PlayerPreviewHud, this, w, h)
             }
         }

@@ -23,6 +23,7 @@
     "depends": {
         "minecraft": "${minecraft_version_range}",
         "fabricloader": ">=${loader_version}",
-        "oneconfigv1": ">=${oneconfig_version}"
+        "oneconfigv1": ">=${oneconfig_version}",
+        "polycompose": ">=1.0.0"
     }
 }
