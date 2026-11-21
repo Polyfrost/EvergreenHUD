@@ -80,6 +80,11 @@ private const val MODE_CUSTOM = 1
 
 private const val UNKNOWN_KEY = "?"
 
+private const val JUMP_PULSE_NS = 75_000_000L
+private const val JUMP_IDLE_NS = 1_000_000_000L
+
+private const val JUMP_HOLD_BACKDATE_NS = 100_000_000L
+
 private const val UP = "▲"
 private const val DOWN = "▼"
 private const val LEFT = "◀"
@@ -145,6 +150,9 @@ class KeystrokesHud : Hud(
 
     @Slider(title = "Spacebar Line Thickness", description = "Thickness of the spacebar line.", min = 0.5F, max = 6F, step = 0.5F)
     var spaceLineH = DEFAULT_SPACE_LINE_H
+
+    @Switch(title = "Show Each Jump", description = "While the spacebar is held, flash it once per jump instead of keeping it lit.")
+    var jumpPulse = false
 
     @Switch(title = "Per-Tick Updates", description = "Update keys once per game tick instead of in real time.")
     var perTick = false
@@ -213,7 +221,7 @@ class KeystrokesHud : Hud(
             addDependency("cpsMode", null) {
                 if (showClicks) Property.Display.SHOWN else Property.Display.DISABLED
             }
-            for (option in listOf("spaceH", "spaceLineW", "spaceLineH")) {
+            for (option in listOf("spaceH", "spaceLineW", "spaceLineH", "jumpPulse")) {
                 addDependency(option, null) {
                     if (showJump) Property.Display.SHOWN else Property.Display.DISABLED
                 }
@@ -325,7 +333,7 @@ class KeystrokesHud : Hud(
         poll(keys.left, o.keyLeft)
         poll(keys.back, o.keyDown)
         poll(keys.right, o.keyRight)
-        poll(keys.jump, o.keyJump)
+        if (jumpPulse) pollTo(keys.jump, if (isReal && jumpShown(o.keyJump, now)) 1f else 0f) else poll(keys.jump, o.keyJump)
         poll(keys.attack, o.keyAttack)
         poll(keys.use, o.keyUse)
         poll(keys.sprint, o.keySprint)
@@ -342,6 +350,21 @@ class KeystrokesHud : Hud(
             pollCps(keys.useClicks, keys.useCps)
         }
         return changed
+    }
+
+    private fun jumpShown(key: KeyMapping, now: Long): Boolean {
+        val held = if (perTick) key.isDown else key.isHeld()
+        if (!held) {
+            keys.jumpWasHeld = false
+            return false
+        }
+        if (!keys.jumpWasHeld) {
+            keys.jumpWasHeld = true
+            keys.jumpHeldSince = now - JUMP_HOLD_BACKDATE_NS
+        }
+        val last = LocalJump.lastNanos
+        val since = now - last
+        return last - keys.jumpHeldSince < 0 || since < JUMP_PULSE_NS || since > JUMP_IDLE_NS
     }
 
     private fun screenOpen(): Boolean = Platform.screen().current<Any?>() != null
@@ -582,6 +605,9 @@ private class KeyState {
 
     val custom = KeyFade()
 
+    var jumpWasHeld = false
+    var jumpHeldSince = 0L
+
     val rev = mutableStateOf(0)
 
     val px = mutableStateOf(0f)
@@ -589,4 +615,15 @@ private class KeyState {
     var dirty = false
 
     var lastNanos = System.nanoTime()
+}
+
+object LocalJump {
+    @JvmStatic
+    var lastNanos = System.nanoTime() - JUMP_IDLE_NS
+        private set
+
+    @JvmStatic
+    fun onJump(entity: Any) {
+        if (entity === mc.player) lastNanos = System.nanoTime()
+    }
 }
