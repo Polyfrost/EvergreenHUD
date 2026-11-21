@@ -44,7 +44,6 @@ import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.oneconfig.api.config.v1.Node
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Tree
-import org.polyfrost.oneconfig.api.config.v1.annotations.DraggableList
 import org.polyfrost.oneconfig.api.config.v1.annotations.Include
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
@@ -78,9 +77,6 @@ private const val OUTLINE_INSET = 1f
 
 const val ROMAN = 0
 
-private const val NAME = "Name"
-private const val DURATION = "Duration"
-private const val AMPLIFIER = "Amplifier"
 private const val AMBIENT_EFFECTS = "Ambient Effects"
 private const val BENEFICIAL_EFFECTS = "Beneficial Effects"
 private const val NEUTRAL_EFFECTS = "Neutral Effects"
@@ -222,13 +218,18 @@ class PotionEffectsHud : Hud(
     private var categoryScopes = PerCategoryEffectSettings()
     private var effectScopes = PerEffectSettings()
 
-    @DraggableList(
-        title = "Sorting",
-        description = "Which sorting rules to apply, by priority.",
-        subcategory = "Sorting",
-        checkable = true,
-    )
+    @Include
     var sorting = emptyArray<String>()
+
+    @SortRulesOption(
+        title = "Sorting",
+        description = "The first rule decides the order, ties fall through to the next.",
+        category = "Sorting",
+        subcategory = "Sorting",
+    )
+    var sortRulesData = ""
+
+    private var sortRules = SortRulesModel()
 
     @Include
     var overrides = emptyArray<String>()
@@ -247,8 +248,11 @@ class PotionEffectsHud : Hud(
 
     private var itemSnapshot = ItemSnapshot.EMPTY
 
-    @Switch(title = "Reversed", subcategory = "Sorting")
+    @Include
     var reversed = false
+
+    @Include
+    var sortingVersion = 0
 
     @Slider(title = "Spacing", min = 0F, max = 10F, step = 1F, subcategory = "Dimensions")
     var spacing = 2f
@@ -302,6 +306,8 @@ class PotionEffectsHud : Hud(
         super.setup()
         overrideGroups.sync(overrideGroupsData)
         overrideGroups.persist = { overrideGroupsData = it }
+        sortRules.sync(sortRulesData)
+        sortRules.persist = { sortRulesData = it }
         if (isReal) {
             hideIf("hideVanillaEffects") { !VanillaHudCompat.isPresent }
             tickHandler = eventHandler { _: TickEvent.End ->
@@ -335,6 +341,17 @@ class PotionEffectsHud : Hud(
             })
             overrideGroups.persist = { groupsProp.set(it) }
 
+            if (sortingVersion < 1) {
+                val titles = EffectCatalog.ENTRIES.associate { it.title to it.id }
+                sortRules.reverseAll = reversed
+                sortRules.replace(SortRulesModel.migrate(sorting, titles::get))
+                sorting = emptyArray()
+                reversed = false
+                sortingVersion = 1
+            }
+            val sortProp = Property.recast<String>(getProperty("sortRulesData"))
+            sortProp.addMetadata(SORT_RULES_MODEL, sortRules)
+            sortRules.persist = { sortProp.set(it) }
         }
     }
 
@@ -606,45 +623,14 @@ class PotionEffectsHud : Hud(
         val visible = if (editing) effects else effects.filter(::shouldDisplayEffect)
         if (visible.isEmpty()) return emptyList()
 
-        val ordered = sortEffects(visible, sorting, reversed)
+        sortRules.sync(sortRulesData)
+        val ordered = sortRules.sort(visible, ::sortSubject)
         return ordered.map { effect -> row(effect, dimmed = editing && !shouldDisplayEffect(effect)) }
     }
 
-    private fun sortEffects(effects: List<MobEffectInstance>, sortingStack: Array<String>, reversed: Boolean): List<MobEffectInstance> {
-        var sorted = effects
-
-        for (rule in sortingStack.reversed()) {
-            sorted = sortByRule(sorted, rule)
-        }
-
-        return if (reversed) sorted.asReversed() else sorted
-    }
-
-    private fun sortByRule(effects: List<MobEffectInstance>, rule: String): List<MobEffectInstance> {
-        return when (rule) {
-            NAME -> effects.map { it to displayNameOf(it) }
-                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.second })
-                .map { it.first }
-            DURATION -> effects.sortedBy { if (it.isInfiniteDuration) Int.MAX_VALUE else it.duration }
-            AMPLIFIER -> effects.sortedByDescending { amplifierOf(it) }
-            AMBIENT_EFFECTS -> effects.sortedBy { it.isAmbient }
-            //? if > 1.8.9 {
-            BENEFICIAL_EFFECTS -> effects.sortedByDescending { it.effect.value().category == MobEffectCategory.BENEFICIAL }
-            NEUTRAL_EFFECTS -> effects.sortedByDescending { it.effect.value().category == MobEffectCategory.NEUTRAL }
-            HARMFUL_EFFECTS -> effects.sortedByDescending { it.effect.value().category == MobEffectCategory.HARMFUL }
-            //?} else {
-            //BENEFICIAL_EFFECTS -> effects.sortedByDescending { !StatusEffect.BY_ID[it.id].isHarmful }
-            //NEUTRAL_EFFECTS -> effects
-            //HARMFUL_EFFECTS -> effects.sortedByDescending { StatusEffect.BY_ID[it.id].isHarmful }
-            //?}
-            else -> {
-                val path = EffectCatalog.titleToPath[rule] ?: return effects
-                //? if > 1.8.9 {
-                effects.sortedByDescending { BuiltInRegistries.MOB_EFFECT.getKey(it.effect.value())?.path == path }
-                //?} else
-                //effects.sortedByDescending { EffectCatalog.pathOf(it.id) == path }
-            }
-        }
+    private fun sortSubject(effect: MobEffectInstance): SortSubject {
+        val duration = if (effect.isInfiniteDuration) Int.MAX_VALUE else effect.duration
+        return SortSubject(factsFor(effect), displayNameOf(effect), duration, amplifierOf(effect))
     }
 
     private fun amplifierOf(effect: MobEffectInstance): Int {
@@ -1193,6 +1179,7 @@ class PotionEffectsHud : Hud(
     }
 
     override fun onCloned() {
+        sortRules = sortRules.deepCopy()
         overrideGroups = overrideGroups.deepCopy()
         effectStarts = EffectStarts()
         fontRevision = mutableIntStateOf(FontManager.revision)
@@ -1242,14 +1229,6 @@ class PotionEffectsHud : Hud(
     override fun addToSerialized(tree: Tree) {
         super.addToSerialized(tree)
         val collector = OneConfigCollector()
-
-        val liveSortOptions = buildList {
-            addAll(listOf(NAME, DURATION, AMPLIFIER, AMBIENT_EFFECTS, BENEFICIAL_EFFECTS, NEUTRAL_EFFECTS, HARMFUL_EFFECTS))
-            addAll(EffectCatalog.ENTRIES.map { it.title })
-        }.toTypedArray()
-
-        val sortingProp = tree.getProp("sorting") ?: throw IllegalStateException("sorting property not found on tree")
-        sortingProp.addMetadata("options", liveSortOptions)
 
         for (scope in categoryScopes.scopeDefs) {
             val t = Tree.tree(scope.key)
