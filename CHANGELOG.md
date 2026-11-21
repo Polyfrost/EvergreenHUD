@@ -1,3 +1,6 @@
+## 3.10.0
+- Updated to OneConfig 1.9.0, which needs PolyCompose installed
+
 ## 3.9.19
 - Updated to OneConfig 1.8.0
 - Added FPS lows, and percentiles are now shown as FPS
