@@ -7,7 +7,7 @@ import com.google.gson.JsonPrimitive
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
-import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
+import org.polyfrost.oneconfig.api.config.v1.annotations.Include
 import org.polyfrost.oneconfig.api.config.v1.annotations.MultiSelectDropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.Option
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
@@ -26,11 +26,7 @@ const val MAX_DURATION_SECONDS = 16_777_216F
 const val MAX_AMPLIFIER = 255F
 
 class EffectComponentSettings : EffectComponentValues {
-    @OverrideOptions(
-        title = "Overridden Options",
-        description = "Options this override changes. Anything not listed falls through to the next matching override, then Global.",
-        subcategory = "Overrides",
-    )
+    @Include
     var overriddenOptions = emptyArray<String>()
 
     @Switch(
@@ -77,17 +73,17 @@ class EffectComponentSettings : EffectComponentValues {
     override var showEffects = true
 
     @MultiSelectDropdown(title = "Ambient Effects", subcategory = "Filtering", options = ["Show all ambient", "Show all nonambient"])
-    override var ambientFilter = booleanArrayOf(true, true)
+    var ambientFilter = booleanArrayOf(true, true)
 
     @MultiSelectDropdown(title = "Effect Categories", subcategory = "Filtering", options = ["Show all beneficial", "Show all neutral", "Show all harmful"])
-    override var categoryFilter = booleanArrayOf(true, true, true)
+    var categoryFilter = booleanArrayOf(true, true, true)
 
     @MultiSelectDropdown(title = "Permanent Effects", subcategory = "Filtering", options = ["Show all permanent", "Show all finite"])
-    override var permanentEffects = booleanArrayOf(true, true)
+    var permanentEffects = booleanArrayOf(true, true)
 
     @RangeNumberList(
         title = "Duration Ranges",
-        description = "Only show effects with this many seconds left, in any of these ranges. Only applies to finite effects, permanent effects are controlled by Permanent Effects. Leave empty to show every duration.",
+        description = "Only show effects with this many seconds left, in any of these ranges. Leave empty to show every duration.",
         subcategory = "Filtering",
         min = 0F,
         max = MAX_DURATION_SECONDS,
