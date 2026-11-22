@@ -8,6 +8,12 @@
 
 ## 3.10.0
 - Updated to OneConfig 1.9.0, which needs PolyCompose installed
+- Split Armor Status into one HUD per slot, grouped by default so they move and resize together (#282)
+- Armor Status can be added from the HUD library as one card
+- The Horizontal, Vertical and Reverse Order arrangement of the armor HUDs lives in the HUD group settings
+- Empty armor slots take no space outside the editor, so anchored HUDs close up
+- Vanilla style armor slots that touch join into one hotbar strip, with extra info drawn outside the slot
+- Existing Armor Status settings and layout are migrated automatically
 
 ## 3.9.19
 - Updated to OneConfig 1.8.0

@@ -21,7 +21,7 @@ EvergreenHUD adds around 40 HUD elements to the OneConfig HUD editor. Place, sca
 ### Some highlights
 
 - Keystrokes with custom rows, colors and fade times, plus a trail for your mouse movement
-- Armor Status with durability, percentage, item name or count next to each piece
+- Armor Status with durability, percentage, item name or count, split into one HUD per slot and grouped by default
 - Inventory can show your ender chest, or the shulker box you're holding
 - FPS with average, median and percentile values
 - Combo and Reach for your last hits
