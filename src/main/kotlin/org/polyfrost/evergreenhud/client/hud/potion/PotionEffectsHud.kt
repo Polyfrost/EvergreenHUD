@@ -213,7 +213,7 @@ class PotionEffectsHud : Hud(
 
         private fun loadIcons() {
             val path = NamespacedIdentifiers.from("minecraft", "textures/gui/container/inventory.png")
-            val atlas = ResourceManager.client().getResource(path).orElse(null)?.open()?.use { ImageLoader.fromBytes(it.readBytes()) }
+            val atlas = ResourceManager.client().getResource(path).orElse(null)?.open()?.use { ImageLoader.fromBytes(it.readAllBytes()) }
             if (atlas == null) {
                 LOGGER.warn("Failed to read the potion effect icon atlas {}", path)
                 return

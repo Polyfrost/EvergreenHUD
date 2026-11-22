@@ -180,7 +180,7 @@ class ResourcePackHud : Hud(
                     supplier.get().use { ImageLoader.fromBytes(it.readAllBytes()) }
                 }
                 //?} else
-                //pack.open().getResource(ResourcePack.ICON_FILE).use { ImageLoader.fromBytes(it.readBytes()) }
+                //pack.open().getResource(ResourcePack.ICON_FILE).use { ImageLoader.fromBytes(it.readAllBytes()) }
             } catch (e: Exception) {
                 LOGGER.warn("Failed to load icon from pack {}", id, e)
                 null
