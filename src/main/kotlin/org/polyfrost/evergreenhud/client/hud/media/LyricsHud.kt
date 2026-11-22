@@ -10,6 +10,7 @@ import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
+import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.RenderContext
@@ -49,7 +50,6 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
-import kotlin.time.Duration.Companion.milliseconds
 
 private const val FONT_SIZE = 9f
 private const val INSET = MediaCardLayout.INSET
@@ -60,6 +60,11 @@ private const val MIN_WIDTH = 60f
 private const val MAX_WIDTH = 220f
 private const val CARD_GAP = 4f
 private const val FRAME_MS = 16L
+private const val IDLE_MS = 100L
+private const val NANOS_PER_MS = 1_000_000L
+private const val FRAME_NS = FRAME_MS * NANOS_PER_MS
+private const val IDLE_NS = IDLE_MS * NANOS_PER_MS
+private const val HEIGHT_SETTLED = 0.01f
 
 private const val FADE_MS = 320f
 private const val HEIGHT_SMOOTHING_MS = 120.0
@@ -111,7 +116,22 @@ private val EXAMPLE: Lyrics = parseLrc(
     """.trimIndent(),
 )!!
 
-private class Placed(val startMs: Long, val endMs: Long, val text: String, val x: Float, val ink: Float)
+private val NO_WIDTHS = FloatArray(0)
+
+private class Placed(val startMs: Long, val endMs: Long, val text: String, val trimmed: String, val x: Float, val ink: Float) {
+    private var letterTexts: Array<String>? = null
+
+    var letterWidths: FloatArray = NO_WIDTHS
+        private set
+
+    fun letters(label: Label): Array<String> {
+        letterTexts?.let { return it }
+        val texts = Array(trimmed.length) { trimmed[it].toString() }
+        letterWidths = FloatArray(texts.size) { label.width(texts[it]) }
+        letterTexts = texts
+        return texts
+    }
+}
 
 private class LineLayout(val rows: List<List<Placed>>) {
     val height: Float get() = rows.size.coerceAtLeast(1) * ROW_HEIGHT
@@ -250,13 +270,40 @@ class LyricsHud : Hud(
     private var layouts = IdentityHashMap<LyricLine, LineLayout>()
 
     @Transient
-    private var layoutKey: Any? = null
+    private var layoutLyrics: Lyrics? = null
+
+    @Transient
+    private var layoutWidth = Float.NaN
+
+    @Transient
+    private var layoutFont: String? = null
+
+    @Transient
+    private var layoutCase = 0
+
+    @Transient
+    private var layoutWrap = false
+
+    @Transient
+    private var layoutRevision = -1
+
+    @Transient
+    private var offsetBuffer = FloatArray(0)
+
+    @Transient
+    private var frameStepNs = FRAME_NS
 
     @Transient
     private var songWidth = 0f
 
     @Transient
-    private var songWidthKey: Any? = null
+    private var songLyrics: Lyrics? = null
+
+    @Transient
+    private var songM = Float.NaN
+
+    @Transient
+    private var songCase = 0
 
     @Transient
     private var shownHeight = 0f
@@ -374,7 +421,7 @@ class LyricsHud : Hud(
         acquired = false
     }
 
-    override fun updateFrequency(): Long = if (offscreen && screenOpen()) -1L else FRAME_MS.milliseconds.inWholeNanoseconds
+    override fun updateFrequency(): Long = if (onlyInGuis && offscreen == screenOpen()) -1L else frameStepNs
 
     override fun shouldShow(): Boolean = frame.value != null && (!onlyInGuis || screenOpen())
 
@@ -382,8 +429,11 @@ class LyricsHud : Hud(
         if (isReal) rearmIfCardGone()
         if (isReal && !mediaAnchorChecked && !HudManager.isEditing && MediaHud.shownWidth > 0f && frame.value != null) anchorToMediaCard()
         val now = System.currentTimeMillis()
+        val wasOffscreen = offscreen
         offscreen = onlyInGuis && !screenOpen()
+        if (!offscreen && wasOffscreen) popStart = maxOf(popStart, now - FRAME_MS)
         if (offscreen) {
+            frameStepNs = IDLE_NS
             popStart = now
             shownHeight = 0f
             val info = MediaService.current
@@ -394,6 +444,7 @@ class LyricsHud : Hud(
             return false
         }
         val next = buildFrame(now)
+        if (next == null) frameStepNs = IDLE_NS
         val changed = next != frame.value
         frame.value = next
         return changed
@@ -404,12 +455,19 @@ class LyricsHud : Hud(
         val live = if (isReal) LyricsService.lyricsFor(info) else null
         val lyrics = live ?: EXAMPLE.takeIf { !isReal || HudManager.isEditing } ?: return null
         val position = if (live != null && info != null) smoothPosition(info, now) + offsetMs.toLong() else now % EXAMPLE_LOOP_MS
+        val moving = live == null || info == null || info.playing
         val fontName = cardFont()
-        val label = Label(FONT_SIZE, fontName)
+        val label = label(FONT_SIZE, fontName)
         val width = contentWidth(lyrics, label)
-        val key = listOf(lyrics, width, fontName, caseType, wrapText)
-        if (key != layoutKey) {
-            layoutKey = key
+        val case = caseType
+        val revision = FontManager.revision
+        if (lyrics !== layoutLyrics || width != layoutWidth || fontName != layoutFont || case != layoutCase || wrapText != layoutWrap || revision != layoutRevision) {
+            layoutLyrics = lyrics
+            layoutWidth = width
+            layoutFont = fontName
+            layoutCase = case
+            layoutWrap = wrapText
+            layoutRevision = revision
             layouts.clear()
         }
 
@@ -422,7 +480,9 @@ class LyricsHud : Hud(
         val targetHeight = if (isStatic) {
             ((staticH - padTop - padBottom) / baseScale - 2f * INSET).coerceAtLeast(ROW_HEIGHT)
         } else {
-            (first..last).sumOf { height(it).toDouble() }.toFloat() + LINE_GAP * (last - first)
+            var sum = 0.0
+            for (i in first..last) sum += height(i).toDouble()
+            sum.toFloat() + LINE_GAP * (last - first)
         }
         shownHeight = if (isStatic || shownHeight <= 0f) targetHeight else {
             shownHeight + (targetHeight - shownHeight) * (1f - exp(-FRAME_MS / HEIGHT_SMOOTHING_MS).toFloat())
@@ -430,12 +490,22 @@ class LyricsHud : Hud(
 
         val drawFirst = (first - 1).coerceAtLeast(0)
         val drawLast = (last + 1).coerceAtMost(lines.lastIndex)
-        val offsets = FloatArray(drawLast - drawFirst + 2)
+        var offsets = offsetBuffer
+        if (offsets.size < drawLast - drawFirst + 2) {
+            offsets = FloatArray(drawLast - drawFirst + 2)
+            offsetBuffer = offsets
+        }
+        offsets[0] = 0f
         for (i in drawFirst..drawLast) offsets[i - drawFirst + 1] = offsets[i - drawFirst] + height(i) + LINE_GAP
         fun offset(i: Int): Float = offsets[i - drawFirst]
-        fun anchor(index: Int): Float =
-            ((index - linesBefore).coerceAtLeast(0) until index.coerceAtLeast(0)).sumOf { (height(it) + LINE_GAP).toDouble() }.toFloat()
+        fun anchor(index: Int): Float {
+            var sum = 0.0
+            for (i in (index - linesBefore).coerceAtLeast(0) until index.coerceAtLeast(0)) sum += (height(i) + LINE_GAP).toDouble()
+            return sum.toFloat()
+        }
         val sinceLine = (position - lines[current].startMs).toFloat()
+        val anchorCurrent = anchor(current)
+        val anchorPrevious = if (current == 0) 0f else anchor(current - 1)
 
         val colors = colors()
         val marks = ArrayList<GlyphMark>()
@@ -444,11 +514,14 @@ class LyricsHud : Hud(
         val wordLevel = wordSync && (lyrics.wordSynced || estimateWords)
         val motion = wordLevel && wordBounce
         val glowing = wordLevel && wordGlow
+        var transitioning = false
         for (i in drawFirst..drawLast) {
             val line = lines[i]
-            val settled = anchor(current) + offset(i) - offset(current)
-            val scroll = if (current == 0) 1f else spring(sinceLine - SCROLL_STAGGER_MS * (i - current + 1).coerceAtLeast(0))
-            val top = if (current == 0) settled else lerp(anchor(current - 1) + offset(i) - offset(current - 1), settled, scroll)
+            val settled = anchorCurrent + offset(i) - offset(current)
+            val scrollMs = sinceLine - SCROLL_STAGGER_MS * (i - current + 1).coerceAtLeast(0)
+            if (current != 0 && scrollMs < SPRING_SETTLED_MS) transitioning = true
+            val scroll = if (current == 0) 1f else spring(scrollMs)
+            val top = if (current == 0) settled else lerp(anchorPrevious + offset(i) - offset(current - 1), settled, scroll)
             val visibility = when {
                 i < current - linesBefore -> 1f - scroll
                 i > current + linesAfter -> 0f
@@ -471,10 +544,13 @@ class LyricsHud : Hud(
             fun place(x: Float): Float = anchorX + (x - anchorX) * lineScale
 
             val layout = layout(line, label, width)
-            for ((r, row) in layout.rows.withIndex()) {
+            val rows = layout.rows
+            for (r in rows.indices) {
+                val row = rows[r]
                 val rowOffset = (width - layout.rowWidth(row)) * align
                 val baseline = top + (r * ROW_HEIGHT + (ROW_HEIGHT + capHeight) / 2f) * lineScale
-                for (word in row) {
+                for (w in row.indices) {
+                    val word = row[w]
                     val progress = when {
                         emphasis <= 0f -> 0f
                         !wordLevel -> if (position >= line.startMs) 1f else 0f
@@ -487,18 +563,20 @@ class LyricsHud : Hud(
                     val lift = if (motion) LIFT * wordLift(settle) * emphasis else 0f
                     val glow = if (glowing) wordGlow(settle) * emphasis else 0f
                     val cx = place(rowOffset + word.x + word.ink / 2f)
-                    val trimmed = word.text.trimEnd()
+                    val trimmed = word.trimmed
                     val held = motion && progress > 0f && progress < 1f && word.endMs - word.startMs >= LETTER_MIN_MS && trimmed.length in 2..LETTER_MAX
                     if (!held) {
                         marks.add(GlyphMark(trimmed, cx, baseline - lift, word.ink, scale, base, sung, progress, glow))
                         continue
                     }
+                    val letters = word.letters(label)
+                    val letterWidths = word.letterWidths
                     val active = progress * trimmed.length
                     val envelope = (minOf(progress, 1f - progress) * 6f).coerceAtMost(1f)
                     var x = 0f
-                    for ((k, char) in trimmed.withIndex()) {
-                        val letter = char.toString()
-                        val letterWidth = label.width(letter)
+                    for (k in letters.indices) {
+                        val letter = letters[k]
+                        val letterWidth = letterWidths[k]
                         val falloff = envelope / (1f + abs(k + 0.5f - active).pow(2.8f))
                         val letterScale = scale * (1f + LETTER_SCALE * falloff)
                         val letterCx = cx + (x + letterWidth / 2f - word.ink / 2f) * scale
@@ -510,17 +588,53 @@ class LyricsHud : Hud(
             }
         }
 
+        val pop = if (onlyInGuis && popIn && !HudManager.isEditing) ((now - popStart) / POP_MS).coerceIn(0f, 1f) else 1f
+        frameStepNs = when {
+            live == null || HudManager.isEditing || pop < 1f || abs(targetHeight - shownHeight) > HEIGHT_SETTLED -> FRAME_NS
+            colors.sung.chroma || colors.unsung.chroma || colors.other.chroma -> FRAME_NS
+            !moving -> IDLE_NS
+            transitioning -> FRAME_NS
+            else -> nextEventStep(lines, current, position, wordLevel)
+        }
+
         return LyricsFrame(
             width = width,
             height = shownHeight,
             marks = marks,
             fontName = fontName,
             shadow = showShadow,
-            pop = if (onlyInGuis && popIn && !HudManager.isEditing) ((now - popStart) / POP_MS).coerceIn(0f, 1f) else 1f,
+            pop = pop,
             art = if (artBackground && live != null) MediaService.art else null,
             credit = live?.source?.takeIf { showProvider && it.isNotEmpty() },
             creditColor = colors.other.argb,
         )
+    }
+
+    private fun nextEventStep(lines: List<LyricLine>, current: Int, position: Long, wordLevel: Boolean): Long {
+        val line = lines[current]
+        val next = lines.getOrNull(current + 1)
+        if (position >= line.startMs && position - line.startMs < FADE_MS) return FRAME_NS
+        var event = Long.MAX_VALUE
+        if (line.startMs > position) event = line.startMs
+        if (next != null && next.startMs > position) event = minOf(event, next.startMs)
+        if ((next?.startMs ?: Long.MAX_VALUE) - line.endMs >= PAUSE_MS) {
+            val fadeStart = line.endMs + PAUSE_DELAY_MS
+            if (position >= fadeStart && position - fadeStart < FADE_MS) return FRAME_NS
+            if (fadeStart > position) event = minOf(event, fadeStart)
+        }
+        if (wordLevel) {
+            val words = line.words
+            for (i in words.indices) {
+                val word = words[i]
+                if (word.startMs > position) {
+                    event = minOf(event, word.startMs)
+                } else if (position - word.startMs < maxOf(word.endMs - word.startMs, MIN_MOTION_MS)) {
+                    return FRAME_NS
+                }
+            }
+        }
+        if (event == Long.MAX_VALUE) return IDLE_NS
+        return (event - position).coerceIn(FRAME_MS, IDLE_MS) * NANOS_PER_MS
     }
 
     private fun pauseFade(line: LyricLine, next: LyricLine?, position: Long): Float {
@@ -535,13 +649,14 @@ class LyricsHud : Hud(
         var x = 0f
         for (word in line.words) {
             val text = applyCase(word.text)
-            val ink = label.width(text.trimEnd())
+            val trimmed = text.trimEnd()
+            val ink = label.width(trimmed)
             if (wrapText && row.isNotEmpty() && x + ink > maxWidth) {
                 rows.add(row)
                 row = ArrayList()
                 x = 0f
             }
-            row.add(Placed(word.startMs, word.endMs, text, x, ink))
+            row.add(Placed(word.startMs, word.endMs, text, trimmed, x, ink))
             x += label.width(text)
         }
         if (row.isNotEmpty()) rows.add(row)
@@ -552,9 +667,12 @@ class LyricsHud : Hud(
         if (isStatic) return ((staticW - padLeft - padRight) / baseScale - 2f * INSET).coerceAtLeast(1f)
         val media = MediaHud.shownWidth
         if (matchMediaWidth && media > 0f) return ((media / effectiveScale.coerceAtLeast(0.01f) - padLeft - padRight) / baseScale - 2f * INSET).coerceAtLeast(MIN_WIDTH)
-        val key = listOf(lyrics, label.width("M"), caseType)
-        if (key != songWidthKey) {
-            songWidthKey = key
+        val m = label.width("M")
+        val case = caseType
+        if (lyrics !== songLyrics || m != songM || case != songCase) {
+            songLyrics = lyrics
+            songM = m
+            songCase = case
             songWidth = lyrics.lines.maxOfOrNull { label.width(applyCase(it.text.trimEnd())) } ?: 0f
         }
         return songWidth.coerceIn(MIN_WIDTH, if (wrapText) MAX_WIDTH else Float.MAX_VALUE)
@@ -669,9 +787,18 @@ class LyricsHud : Hud(
     override fun onCloned() {
         frame = mutableStateOf(null)
         layouts = IdentityHashMap()
-        layoutKey = null
+        layoutLyrics = null
+        layoutWidth = Float.NaN
+        layoutFont = null
+        layoutCase = 0
+        layoutWrap = false
+        layoutRevision = -1
+        offsetBuffer = FloatArray(0)
+        frameStepNs = FRAME_NS
         songWidth = 0f
-        songWidthKey = null
+        songLyrics = null
+        songM = Float.NaN
+        songCase = 0
         shownHeight = 0f
         shownPosition = 0.0
         shownAt = 0L
@@ -682,12 +809,15 @@ class LyricsHud : Hud(
     }
 }
 
-private val GLOW_OFFSETS = listOf(-GLOW_SPREAD to 0f, GLOW_SPREAD to 0f, 0f to -GLOW_SPREAD, 0f to GLOW_SPREAD)
+private val GLOW_DX = floatArrayOf(-GLOW_SPREAD, GLOW_SPREAD, 0f, 0f)
+private val GLOW_DY = floatArrayOf(0f, 0f, -GLOW_SPREAD, GLOW_SPREAD)
 
 private fun RenderContext.drawMarks(frame: LyricsFrame) {
-    val label = Label(FONT_SIZE, frame.fontName, frame.shadow)
-    val plain = Label(FONT_SIZE, frame.fontName)
-    for (mark in frame.marks) {
+    val label = label(FONT_SIZE, frame.fontName, frame.shadow)
+    val plain = label(FONT_SIZE, frame.fontName)
+    val marks = frame.marks
+    for (i in marks.indices) {
+        val mark = marks[i]
         save()
         translate(mark.cx, mark.baseline)
         if (mark.scale != 1f) scale(mark.scale, mark.scale)
@@ -696,7 +826,7 @@ private fun RenderContext.drawMarks(frame: LyricsFrame) {
     }
     val credit = frame.credit ?: return
     if (!frame.creditColor.visible) return
-    val small = Label(CREDIT_SIZE, frame.fontName)
+    val small = label(CREDIT_SIZE, frame.fontName)
     with(small) { draw(credit, frame.width - small.width(credit), frame.height + INSET - CREDIT_SIZE / 3f, PolyColor(frame.creditColor)) }
 }
 
@@ -704,7 +834,7 @@ private fun RenderContext.drawGlyph(mark: GlyphMark, label: Label, plain: Label)
     val x = -mark.width / 2f
     if (mark.glow > 0f) {
         val halo = mark.sung.withAlphaScale(GLOW_ALPHA * mark.glow)
-        if (halo.visible) for ((dx, dy) in GLOW_OFFSETS) with(plain) { draw(mark.text, x + dx, dy, halo) }
+        if (halo.visible) for (i in GLOW_DX.indices) with(plain) { draw(mark.text, x + GLOW_DX[i], GLOW_DY[i], halo) }
     }
     if (mark.progress < 1f && mark.base.visible) with(label) { draw(mark.text, x, 0f, mark.base) }
     if (mark.progress <= 0f || !mark.sung.visible) return

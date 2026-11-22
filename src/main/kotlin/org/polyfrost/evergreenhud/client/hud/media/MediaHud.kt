@@ -4,12 +4,12 @@ package org.polyfrost.evergreenhud.client.hud.media
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import org.polyfrost.compose.composables.NodeBox
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
+import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.oneconfig.api.config.v1.copy
@@ -31,17 +31,22 @@ import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.hud.v1.HudMouseButton
 import org.polyfrost.oneconfig.api.hud.v1.clickRegion
 import org.polyfrost.oneconfig.api.hud.v1.hoverRegion
+import org.polyfrost.oneconfig.api.hud.v1.isClickRegionHovered
 import org.polyfrost.oneconfig.api.hud.v1.removeClickRegion
 import org.polyfrost.oneconfig.api.platform.v1.Platform
 import org.polyfrost.oneconfig.api.ui.v1.keybind.KeybindHelper
 import org.polyfrost.oneconfig.api.ui.v1.keybind.OneConfigKeybind
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.exp
-import kotlin.time.Duration.Companion.milliseconds
 
 private const val SNAP_DISTANCE_MS = 2_000.0
 private const val SMOOTHING_MS = 250.0
 private const val SCROLL_STEP_MS = 16L
+private const val IDLE_STEP_MS = 100L
+private const val NANOS_PER_MS = 1_000_000L
+private const val SCROLL_STEP_NS = SCROLL_STEP_MS * NANOS_PER_MS
+private const val IDLE_STEP_NS = IDLE_STEP_MS * NANOS_PER_MS
 private const val ACCENT_ALBUM_ART = 1
 private const val ACCENT_ALBUM_AVERAGE = 2
 private const val SCROLL_BOUNCE = 1
@@ -227,9 +232,96 @@ class MediaHud : Hud(
     @Transient
     private var lastDrawCheck = 0L
 
-    private var hovered = mutableIntStateOf(-1)
+    private var regionsShown = mutableStateOf(false)
 
     private var scrollOffset = mutableFloatStateOf(0f)
+
+    @Transient
+    private var updateStepNs = SCROLL_STEP_NS
+
+    @Transient
+    private var livePosition = false
+
+    @Transient
+    private var textTitle: String? = null
+
+    @Transient
+    private var textArtist: String? = null
+
+    @Transient
+    private var textClean = false
+
+    @Transient
+    private var textCase = 0
+
+    @Transient
+    private var shownTitleText = ""
+
+    @Transient
+    private var shownArtistText = ""
+
+    @Transient
+    private var measuredTitle: String? = null
+
+    @Transient
+    private var measuredArtist: String? = null
+
+    @Transient
+    private var measuredFont: String? = null
+
+    @Transient
+    private var measuredRevision = -1
+
+    @Transient
+    private var measuredTitleWidth = 0f
+
+    @Transient
+    private var measuredTextWidth = 0f
+
+    @Transient
+    private var styleDirty = true
+
+    @Transient
+    private var styleArtRadius = Float.NaN
+
+    @Transient
+    private var styleAlbum: Int? = null
+
+    @Transient
+    private var styleAccent: Int? = null
+
+    @Transient
+    private var styleTextColor = 0
+
+    @Transient
+    private var styleTextChroma = false
+
+    @Transient
+    private var styleTextChromaSpeed = Float.NaN
+
+    @Transient
+    private var regionsDeclared = false
+
+    @Transient
+    private var regionScale = Float.NaN
+
+    @Transient
+    private var regionPadLeft = Float.NaN
+
+    @Transient
+    private var regionPadTop = Float.NaN
+
+    @Transient
+    private var regionTextWidth = Float.NaN
+
+    @Transient
+    private var regionShowArt = false
+
+    @Transient
+    private var regionSeek = -1
+
+    @Transient
+    private var regionEnabled = -1
 
     @Transient
     private var scrollStart = 0L
@@ -248,9 +340,6 @@ class MediaHud : Hud(
 
     @Transient
     private var shownTitle: String? = null
-
-    @Transient
-    private var textCache: Pair<List<Any>, Pair<String, String>>? = null
 
     @Transient
     private var acquired = false
@@ -280,7 +369,12 @@ class MediaHud : Hud(
             "albumTextSaturation", "albumTextLightness", "customControls", "controlColor", "glyphColor",
             "artBackground", "artBackgroundBlur", "artBackgroundOpacity", "onlyInGuis", "popIn",
         )
-        for (option in options) updateWhenChanged(option)
+        for (option in options) {
+            addCallback(option) {
+                styleDirty = true
+                updateAndRecalculate()
+            }
+        }
         applySources()
         addCallback("sources") { applySources() }
         if (acquired) return
@@ -306,23 +400,60 @@ class MediaHud : Hud(
 
     override fun update(): Boolean {
         val now = System.currentTimeMillis()
+        val wasOffscreen = offscreen
         offscreen = onlyInGuis && !screenOpen()
-        if (offscreen) popStart = now
+        if (offscreen) popStart = now else if (wasOffscreen) popStart = maxOf(popStart, now - SCROLL_STEP_MS)
         pop.floatValue = if (onlyInGuis && popIn && !HudManager.isEditing) ((now - popStart) / POP_MS).coerceIn(0f, 1f) else 1f
         val next = read()
         if (isReal) shownWidth = if (hidden || next == null) 0f else scaledWidth
         trackTitle(next?.title, now)
-        if (offscreen) return false
-        scrollOffset.floatValue = if (next == null) 0f else {
-            val textWidth = if (isStatic) cardTextWidth(next) else MediaCardLayout.MAX_TEXT_WIDTH
-            titleScrollOffset(next.title, cardFont(), textWidth, now - scrollStart, titleScroll == SCROLL_BOUNCE)
+        if (offscreen) {
+            updateStepNs = IDLE_STEP_NS
+            return false
         }
-        val nextStyle = next?.let(::cardStyle)
+        var scrolling = false
+        scrollOffset.floatValue = if (next == null) 0f else {
+            measure(next)
+            val textWidth = if (isStatic) cardTextWidth(next) else MediaCardLayout.MAX_TEXT_WIDTH
+            scrolling = measuredTitleWidth > textWidth
+            titleScrollOffset(measuredTitleWidth, textWidth, now - scrollStart, titleScroll == SCROLL_BOUNCE)
+        }
+        val nextStyle = next?.let(::cachedStyle)
         val changed = next != card.value || nextStyle != style.value
         card.value = next
         style.value = nextStyle
         syncButtons(next)
+        updateStepNs = nextStepNs(next, changed || scrolling || pop.floatValue < 1f)
         return changed
+    }
+
+    private fun nextStepNs(state: MediaCardState?, animating: Boolean): Long {
+        if (animating || HudManager.isEditing) return SCROLL_STEP_NS
+        if (state == null || !livePosition || !state.playing || seekPosition == SEEK_HIDDEN) return IDLE_STEP_NS
+        if (seekStyle == SEEK_WAVE) return SCROLL_STEP_NS
+        return msUntilNextStep(shownPosition, state.lengthMs).coerceIn(SCROLL_STEP_MS, IDLE_STEP_MS) * NANOS_PER_MS
+    }
+
+    private fun msUntilNextStep(position: Double, lengthMs: Long): Long {
+        val ms = position.toLong()
+        if (lengthMs > 0L && ms >= lengthMs) return Long.MAX_VALUE
+        val step = if (lengthMs > 0L) (lengthMs / SEEK_STEPS).coerceIn(1L, MAX_POSITION_STEP_MS) else 1000L
+        val second = ms % 1000L
+        var next = minOf(ms - second % step + step, ms - second + 1000L)
+        if (lengthMs > 0L) next = minOf(next, lengthMs)
+        return ceil(next - position).toLong()
+    }
+
+    private fun measure(state: MediaCardState) {
+        val font = cardFont()
+        val revision = FontManager.revision
+        if (state.title === measuredTitle && state.artist === measuredArtist && font == measuredFont && revision == measuredRevision) return
+        measuredTitle = state.title
+        measuredArtist = state.artist
+        measuredFont = font
+        measuredRevision = revision
+        measuredTitleWidth = titleWidth(state.title, font)
+        measuredTextWidth = textWidth(measuredTitleWidth, state.artist, font)
     }
 
     private fun trackTitle(title: String?, now: Long) {
@@ -331,7 +462,7 @@ class MediaHud : Hud(
         scrollStart = now
     }
 
-    override fun updateFrequency(): Long = if (offscreen && screenOpen()) -1L else SCROLL_STEP_MS.milliseconds.inWholeNanoseconds
+    override fun updateFrequency(): Long = if (onlyInGuis && offscreen == screenOpen()) -1L else updateStepNs
 
     override fun shouldShow(): Boolean {
         lastDrawCheck = System.nanoTime()
@@ -343,8 +474,23 @@ class MediaHud : Hud(
     private fun read(): MediaCardState? {
         val live = if (isReal) MediaService.current else EXAMPLE
         val info = live ?: EXAMPLE.takeIf { HudManager.isEditing } ?: return null
+        livePosition = info !== EXAMPLE
         val position = if (info === EXAMPLE) info.positionMs else steppedPosition(smoothPosition(info), info)
-        val (title, artist) = shownText(info.title, info.artist)
+        shownText(info.title, info.artist)
+        val title = shownTitleText
+        val artist = shownArtistText
+        val art = if (isReal && live != null) MediaService.art else null
+        val artAccent = when (accentSource) {
+            ACCENT_ALBUM_ART -> albumColor(average = false)
+            ACCENT_ALBUM_AVERAGE -> albumColor(average = true)
+            else -> null
+        }
+        val previous = card.value
+        if (
+            previous != null && previous.title === title && previous.artist === artist && previous.playing == info.playing &&
+            previous.positionMs == position && previous.lengthMs == info.lengthMs && previous.canPrevious == info.canPrevious &&
+            previous.canNext == info.canNext && previous.canToggle == info.canToggle && previous.art === art && previous.artAccent == artAccent
+        ) return previous
         return MediaCardState(
             title = title,
             artist = artist,
@@ -354,21 +500,20 @@ class MediaHud : Hud(
             canPrevious = info.canPrevious,
             canNext = info.canNext,
             canToggle = info.canToggle,
-            art = if (isReal && live != null) MediaService.art else null,
-            artAccent = when (accentSource) {
-                ACCENT_ALBUM_ART -> albumColor(average = false)
-                ACCENT_ALBUM_AVERAGE -> albumColor(average = true)
-                else -> null
-            },
+            art = art,
+            artAccent = artAccent,
         )
     }
 
-    private fun shownText(title: String, artist: String): Pair<String, String> {
-        val key = listOf(title, artist, cleanTitles, caseType)
-        textCache?.takeIf { it.first == key }?.let { return it.second }
-        val text = applyCase(if (cleanTitles) cleanTitle(title) else title) to applyCase(artist)
-        textCache = key to text
-        return text
+    private fun shownText(title: String, artist: String) {
+        val case = caseType
+        if (title == textTitle && artist == textArtist && cleanTitles == textClean && case == textCase) return
+        textTitle = title
+        textArtist = artist
+        textClean = cleanTitles
+        textCase = case
+        shownTitleText = applyCase(if (cleanTitles) cleanTitle(title) else title)
+        shownArtistText = applyCase(artist)
     }
 
     private fun albumColor(average: Boolean): Int? {
@@ -376,7 +521,28 @@ class MediaHud : Hud(
         return if (average) MediaService.artAverage else MediaService.artAccent
     }
 
-    private fun cardStyle(state: MediaCardState): MediaCardStyle = MediaCardStyle(
+    private fun cachedStyle(state: MediaCardState): MediaCardStyle {
+        val radius = artRadius(cardScale)
+        val album = textAlbumColor()
+        val current = style.value
+        val color = textColor
+        val chroma = textChroma
+        val chromaSpeed = textChromaSpeed
+        if (
+            isReal && !styleDirty && current != null && radius == styleArtRadius && album == styleAlbum && state.artAccent == styleAccent &&
+            color == styleTextColor && chroma == styleTextChroma && chromaSpeed == styleTextChromaSpeed
+        ) return current
+        styleDirty = false
+        styleArtRadius = radius
+        styleAlbum = album
+        styleAccent = state.artAccent
+        styleTextColor = color
+        styleTextChroma = chroma
+        styleTextChromaSpeed = chromaSpeed
+        return cardStyle(state, radius, album)
+    }
+
+    private fun cardStyle(state: MediaCardState, radius: Float, album: Int?): MediaCardStyle = MediaCardStyle(
         showArt = showAlbumArt,
         showTimes = showTimes,
         seekPosition = seekPosition,
@@ -385,16 +551,17 @@ class MediaHud : Hud(
         buttonStyle = buttonStyle,
         cutoutGlyph = cutoutGlyph,
         bounce = titleScroll == SCROLL_BOUNCE,
-        artRadius = artRadius(cardScale),
-        colors = cardColors(state),
+        artRadius = radius,
+        colors = cardColors(state, album),
     )
 
-    private fun cardColors(state: MediaCardState): MediaCardColors {
-        val album = when (textSource) {
-            TEXT_ALBUM_ART -> albumColor(average = false)
-            TEXT_ALBUM_AVERAGE -> albumColor(average = true)
-            else -> null
-        }
+    private fun textAlbumColor(): Int? = when (textSource) {
+        TEXT_ALBUM_ART -> albumColor(average = false)
+        TEXT_ALBUM_AVERAGE -> albumColor(average = true)
+        else -> null
+    }
+
+    private fun cardColors(state: MediaCardState, album: Int?): MediaCardColors {
         val base = album?.let { PolyColor(adjustColor(it, albumTextSaturation / 100f, albumTextLightness / 100f)) }
             ?: textPolyColor
         val custom = textSource == TEXT_CUSTOM
@@ -452,7 +619,10 @@ class MediaHud : Hud(
     private fun naturalHeight(): Float = padTop + padBottom + (MediaCardLayout.height(seekPosition) + 2f * MediaCardLayout.INSET) * baseScale
 
     private fun cardTextWidth(state: MediaCardState): Float {
-        if (!isStatic) return textWidth(state, cardFont())
+        if (!isStatic) {
+            measure(state)
+            return measuredTextWidth
+        }
         val inner = (staticW - padLeft - padRight) / cardScale - 2f * MediaCardLayout.INSET
         return (inner - MediaCardLayout.textX(showAlbumArt)).coerceAtLeast(MediaCardLayout.MIN_TEXT_WIDTH)
     }
@@ -474,28 +644,55 @@ class MediaHud : Hud(
             return
         }
         val scale = cardScale
-        val inset = MediaCardLayout.INSET * scale
         val textWidth = cardTextWidth(state)
-        var over = -1
+        val left = padLeft
+        val top = padTop
+        val showArt = showAlbumArt
+        val seek = seekPosition
+        var enabled = 0
+        for (button in BUTTON_PREVIOUS..BUTTON_NEXT) if (enabled(state, button)) enabled = enabled or (1 shl button)
+        if (
+            regionsDeclared && scale == regionScale && left == regionPadLeft && top == regionPadTop && textWidth == regionTextWidth &&
+            showArt == regionShowArt && seek == regionSeek && enabled == regionEnabled
+        ) return
+        regionScale = scale
+        regionPadLeft = left
+        regionPadTop = top
+        regionTextWidth = textWidth
+        regionShowArt = showArt
+        regionSeek = seek
+        regionEnabled = enabled
+        val inset = MediaCardLayout.INSET * scale
         for (button in BUTTON_PREVIOUS..BUTTON_NEXT) {
-            val bounds = MediaCardLayout.buttonBounds(button, showAlbumArt, textWidth, seekPosition)
-            val x = padLeft + inset + bounds.left * scale
-            val y = padTop + inset + bounds.top * scale
+            val bounds = MediaCardLayout.buttonBounds(button, showArt, textWidth, seek)
+            val x = left + inset + bounds.left * scale
+            val y = top + inset + bounds.top * scale
             val w = bounds.width * scale
             val h = bounds.height * scale
-            val hit = if (enabled(state, button)) {
-                clickRegion(BUTTON_REGIONS[button], x, y, w, h, anyScreen = true, buttons = CLICK_BUTTONS) { activate(button) }
+            if (enabled and (1 shl button) != 0) {
+                clickRegion(BUTTON_REGIONS[button], x, y, w, h, anyScreen = true, buttons = CLICK_BUTTONS, expireAfterMillis = Long.MAX_VALUE) { activate(button) }
             } else {
-                hoverRegion(BUTTON_REGIONS[button], x, y, w, h, anyScreen = true)
+                hoverRegion(BUTTON_REGIONS[button], x, y, w, h, anyScreen = true, expireAfterMillis = Long.MAX_VALUE)
             }
-            if (hit) over = button
         }
-        hovered.intValue = over
+        if (!regionsDeclared) {
+            regionsDeclared = true
+            regionsShown.value = true
+        }
     }
 
     private fun clearButtons() {
+        if (!regionsDeclared) return
+        regionsDeclared = false
         for (region in BUTTON_REGIONS) removeClickRegion(region)
-        hovered.intValue = -1
+        regionsShown.value = false
+    }
+
+    private fun hoveredButton(): Int {
+        if (!regionsShown.value) return -1
+        var over = -1
+        for (button in BUTTON_PREVIOUS..BUTTON_NEXT) if (isClickRegionHovered(BUTTON_REGIONS[button])) over = button
+        return over
     }
 
     private fun enabled(state: MediaCardState, button: Int): Boolean = when (button) {
@@ -532,7 +729,7 @@ class MediaHud : Hud(
                 style = cardStyle,
                 fontName = cardFont(),
                 shadow = showShadow,
-                hovered = hovered.intValue,
+                hovered = hoveredButton(),
                 scrollOffset = scrollOffset.floatValue,
                 scale = scale,
                 textWidth = textWidth,
@@ -578,15 +775,43 @@ class MediaHud : Hud(
         style = mutableStateOf(null)
         pop = mutableFloatStateOf(1f)
         popStart = 0L
-        hovered = mutableIntStateOf(-1)
+        regionsShown = mutableStateOf(false)
         scrollOffset = mutableFloatStateOf(0f)
+        updateStepNs = SCROLL_STEP_NS
+        livePosition = false
+        textTitle = null
+        textArtist = null
+        textClean = false
+        textCase = 0
+        shownTitleText = ""
+        shownArtistText = ""
+        measuredTitle = null
+        measuredArtist = null
+        measuredFont = null
+        measuredRevision = -1
+        measuredTitleWidth = 0f
+        measuredTextWidth = 0f
+        styleDirty = true
+        styleArtRadius = Float.NaN
+        styleAlbum = null
+        styleAccent = null
+        styleTextColor = 0
+        styleTextChroma = false
+        styleTextChromaSpeed = Float.NaN
+        regionsDeclared = false
+        regionScale = Float.NaN
+        regionPadLeft = Float.NaN
+        regionPadTop = Float.NaN
+        regionTextWidth = Float.NaN
+        regionShowArt = false
+        regionSeek = -1
+        regionEnabled = -1
         scrollStart = 0L
         scrollTitle = null
         offscreen = false
         shownPosition = 0.0
         shownAt = 0L
         shownTitle = null
-        textCache = null
         acquired = false
     }
 }

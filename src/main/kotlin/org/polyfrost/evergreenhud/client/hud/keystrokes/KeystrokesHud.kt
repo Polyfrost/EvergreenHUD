@@ -7,6 +7,7 @@ import com.mojang.blaze3d.platform.InputConstants
 //? if = 1.8.9
 //import org.polyfrost.oneconfig.internal.legacy.KeyCodes
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import net.minecraft.client.KeyMapping
 import org.polyfrost.compose.composables.NodeBox
@@ -310,11 +311,11 @@ class KeystrokesHud : Hud(
             else -> cur
         }
         fun pollTo(fade: KeyFade, target: Float) {
-            val bg = step(fade.bg.value, target, bgFadeInMs, bgFadeOutMs)
-            val text = step(fade.text.value, target, textFadeInMs, textFadeOutMs)
-            if (bg != fade.bg.value || text != fade.text.value) {
-                fade.bg.value = bg
-                fade.text.value = text
+            val bg = step(fade.bg.floatValue, target, bgFadeInMs, bgFadeOutMs)
+            val text = step(fade.text.floatValue, target, textFadeInMs, textFadeOutMs)
+            if (bg != fade.bg.floatValue || text != fade.text.floatValue) {
+                fade.bg.floatValue = bg
+                fade.text.floatValue = text
                 changed = true
             }
         }
@@ -487,9 +488,9 @@ class KeystrokesHud : Hud(
     @Composable
     private fun Key(label: String, progress: KeyFade, w: Float, h: Float, align: PolyAlign? = null, sub: String? = null) {
         keys.rev.value
-        val fg = keyFg(progress.text.value)
+        val fg = keyFg(progress.text.floatValue)
         NodeBox(modifier = keyModifier(w, h, align)) {
-            KeyBackground(progress.bg.value, w, h)
+            KeyBackground(progress.bg.floatValue, w, h)
             val subScale = textScale * CPS_SCALE
             if (font == Font.Minecraft) {
                 val lineH = McFontQueue.measureTextHeight(textScale)
@@ -538,9 +539,9 @@ class KeystrokesHud : Hud(
     @Composable
     private fun SpaceKey(progress: KeyFade, w: Float, h: Float) {
         keys.rev.value
-        val fg = keyFg(progress.text.value)
+        val fg = keyFg(progress.text.floatValue)
         NodeBox(modifier = keyModifier(w, h)) {
-            KeyBackground(progress.bg.value, w, h)
+            KeyBackground(progress.bg.floatValue, w, h)
             NodeCanvas(PolyModifier.size(w, h)) { x, y, cw, ch ->
                 val s = textScale
                 val half = spaceLineW * s / 2f
@@ -581,8 +582,8 @@ class KeystrokesHud : Hud(
 }
 
 private class KeyFade {
-    val bg = mutableStateOf(0f)
-    val text = mutableStateOf(0f)
+    val bg = mutableFloatStateOf(0f)
+    val text = mutableFloatStateOf(0f)
 }
 
 private class KeyState {

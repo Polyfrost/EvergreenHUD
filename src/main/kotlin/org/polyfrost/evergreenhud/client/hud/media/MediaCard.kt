@@ -397,7 +397,23 @@ private fun RenderContext.drawNote(cx: Float, cy: Float, color: PolyColor) {
     )
 }
 
-internal class Label(size: Float, fontName: String?, private val shadow: Boolean = false) {
+private const val LABEL_CACHE_SIZE = 32
+
+@Volatile
+private var labels = emptyArray<Label>()
+
+internal fun label(size: Float, fontName: String?, shadow: Boolean = false): Label {
+    val cached = labels
+    for (i in cached.indices) {
+        val label = cached[i]
+        if (label.size == size && label.shadow == shadow && label.fontName == fontName) return label
+    }
+    val label = Label(size, fontName, shadow)
+    labels = if (cached.size >= LABEL_CACHE_SIZE) arrayOf(label) else cached + label
+    return label
+}
+
+internal class Label(val size: Float, val fontName: String?, val shadow: Boolean = false) {
     private val poly: PolyFont? = fontName?.let { PolyFont(it, size) }
     private val mcScale = size / MC_LINE_HEIGHT
 
@@ -422,14 +438,17 @@ internal class Label(size: Float, fontName: String?, private val shadow: Boolean
 private const val MC_LINE_HEIGHT = 9f
 private const val MC_CAP_HEIGHT = 7f
 
-fun textWidth(state: MediaCardState, fontName: String?): Float {
-    val title = Label(TITLE_SIZE, fontName).width(state.title)
-    val artist = Label(ARTIST_SIZE, fontName).width(state.artist)
-    return maxOf(title, artist).coerceIn(MediaCardLayout.MIN_TEXT_WIDTH, MediaCardLayout.MAX_TEXT_WIDTH)
+fun textWidth(state: MediaCardState, fontName: String?): Float =
+    textWidth(titleWidth(state.title, fontName), state.artist, fontName)
+
+fun textWidth(titleWidth: Float, artist: String, fontName: String?): Float {
+    val artistWidth = label(ARTIST_SIZE, fontName).width(artist)
+    return maxOf(titleWidth, artistWidth).coerceIn(MediaCardLayout.MIN_TEXT_WIDTH, MediaCardLayout.MAX_TEXT_WIDTH)
 }
 
-fun titleScrollOffset(title: String, fontName: String?, textWidth: Float, scrollMs: Long, bounce: Boolean): Float {
-    val titleWidth = Label(TITLE_SIZE, fontName).width(title)
+fun titleWidth(title: String, fontName: String?): Float = label(TITLE_SIZE, fontName).width(title)
+
+fun titleScrollOffset(titleWidth: Float, textWidth: Float, scrollMs: Long, bounce: Boolean): Float {
     if (titleWidth <= textWidth) return 0f
     if (bounce) {
         val overflow = titleWidth - textWidth
@@ -454,7 +473,7 @@ private fun RenderContext.drawLabels(
     bounce: Boolean,
 ) {
     val text = colors.title
-    val title = Label(TITLE_SIZE, fontName, shadow)
+    val title = label(TITLE_SIZE, fontName, shadow)
     val titleWidth = title.width(state.title)
     if (titleWidth <= textWidth) {
         with(title) { draw(state.title, left, TITLE_BASELINE, text) }
@@ -466,7 +485,7 @@ private fun RenderContext.drawLabels(
         restore()
     }
     if (state.artist.isEmpty()) return
-    val artist = Label(ARTIST_SIZE, fontName, shadow)
+    val artist = label(ARTIST_SIZE, fontName, shadow)
     with(artist) { draw(fit(state.artist, artist, fontName, textWidth), left, ARTIST_BASELINE, colors.artist) }
 }
 
@@ -484,12 +503,47 @@ private fun fit(text: String, font: Label, fontName: String?, width: Float): Str
     return (text.substring(0, end).trimEnd() + "…").also { fitCache = key to it }
 }
 
-private var widestDigitCache: Pair<Pair<String?, Float>, Char>? = null
+private var widestDigitFont: String? = null
+private var widestDigitZero = Float.NaN
+private var widestDigitChar = '0'
 
 private fun widestDigit(font: Label, fontName: String?): Char {
-    val key = fontName to font.width("0")
-    widestDigitCache?.takeIf { it.first == key }?.let { return it.second }
-    return "0123456789".maxBy { font.width(it.toString()) }.also { widestDigitCache = key to it }
+    val zero = font.width("0")
+    if (zero == widestDigitZero && fontName == widestDigitFont) return widestDigitChar
+    return "0123456789".maxBy { font.width(it.toString()) }.also {
+        widestDigitFont = fontName
+        widestDigitZero = zero
+        widestDigitChar = it
+    }
+}
+
+private class TimeText {
+    private var seconds = Long.MIN_VALUE
+    private var text = ""
+
+    fun format(ms: Long): String {
+        val s = ms / 1000L
+        if (s == seconds) return text
+        return formatTime(ms).also {
+            seconds = s
+            text = it
+        }
+    }
+}
+
+private val positionText = TimeText()
+private val lengthText = TimeText()
+private var templateSource = ""
+private var templateDigit = ' '
+private var templateText = ""
+
+private fun timeTemplate(longest: String, digit: Char): String {
+    if (digit == templateDigit && longest == templateSource) return templateText
+    return CharArray(longest.length) { if (longest[it] in '0'..'9') digit else longest[it] }.concatToString().also {
+        templateSource = longest
+        templateDigit = digit
+        templateText = it
+    }
 }
 
 private fun RenderContext.drawProgress(
@@ -502,7 +556,7 @@ private fun RenderContext.drawProgress(
 ) {
     val colors = style.colors
     val mid = top + MediaCardLayout.PROGRESS_HEIGHT / 2f
-    val font = Label(TIME_SIZE, fontName, shadow)
+    val font = label(TIME_SIZE, fontName, shadow)
     val known = state.lengthMs > 0
 
     val span = width * style.seekWidth.coerceIn(0f, 1f)
@@ -510,16 +564,21 @@ private fun RenderContext.drawProgress(
     var barLeft = start
     var barRight = start + span
     if (style.showTimes) {
-        val left = formatTime(state.positionMs)
-        val right = if (known) formatTime(state.lengthMs) else "--:--"
+        val left = positionText.format(state.positionMs)
+        val right = if (known) lengthText.format(state.lengthMs) else "--:--"
         val baseline = mid + font.capHeight / 2f
         with(font) {
             draw(left, barLeft, baseline, colors.time)
             draw(right, barRight - width(right), baseline, colors.time)
         }
         val digit = widestDigit(font, fontName)
-        val longest = formatTime(maxOf(state.positionMs, state.lengthMs))
-        val template = CharArray(longest.length) { if (longest[it] in '0'..'9') digit else longest[it] }.concatToString()
+        val longestMs = maxOf(state.positionMs, state.lengthMs)
+        val longest = when {
+            longestMs == state.positionMs -> left
+            known -> right
+            else -> formatTime(longestMs)
+        }
+        val template = timeTemplate(longest, digit)
         val slot = maxOf(font.width(template), font.width(right))
         barLeft += slot + TIME_GAP
         barRight -= slot + TIME_GAP

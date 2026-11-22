@@ -1201,7 +1201,8 @@ class PotionEffectsHud : Hud(
             val sized = remember(blinking, width, totalHeight) { blinking.size(width, totalHeight) }
             NodeCanvas(sized, live = color.chroma || (outline && shadowPaint.chroma)) { x, y, _, _ ->
                 val argb = color.argb
-                for ((i, formatted) in lines.withIndex()) {
+                for (i in lines.indices) {
+                    val formatted = lines[i]
                     val top = y + i * lineHeight
                     save()
                     try {

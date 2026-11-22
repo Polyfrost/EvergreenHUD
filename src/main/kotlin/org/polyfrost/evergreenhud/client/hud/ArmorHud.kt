@@ -211,8 +211,13 @@ class ArmorHud : Hud(
         countCache = null
         val next = buildEntries()
         val current = entries.value
-        if (next.size == current.size && next.indices.all { next[it].sameAs(current[it]) }) return false
+        if (next.size == current.size && sameEntries(next, current)) return false
         entries.value = next
+        return true
+    }
+
+    private fun sameEntries(next: List<Entry>, current: List<Entry>): Boolean {
+        for (i in next.indices) if (!next[i].sameAs(current[i])) return false
         return true
     }
 

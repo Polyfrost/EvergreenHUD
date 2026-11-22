@@ -68,8 +68,18 @@ object LyricsService {
     var current: Lyrics? = null
         private set
 
+    private class InfoKey(val info: MediaInfo, val key: String)
+
+    @Volatile
+    private var lastInfoKey: InfoKey? = null
+
+    private fun keyOf(info: MediaInfo): String {
+        lastInfoKey?.let { if (it.info === info) return it.key }
+        return "${info.title}\u0000${info.artist}".also { lastInfoKey = InfoKey(info, it) }
+    }
+
     fun lyricsFor(info: MediaInfo?): Lyrics? {
-        val next = info?.let { "${it.title}\u0000${it.artist}" }
+        val next = info?.let(::keyOf)
         synchronized(LyricsService) {
             if (next == key && (current != null || System.currentTimeMillis() < retryAt)) return current
             key = next

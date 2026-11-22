@@ -58,13 +58,17 @@ class PlayerPreviewHud : Hud(
     @Slider(title = "Vertical Anchor", description = "Where the player sits inside the HUD, top to bottom.", min = 0F, max = 1F, step = 0.05F)
     var verticalAnchor = 0.5f
 
+    @Transient
+    private var lastRequest: PlayerPreviewOffscreen.Request? = null
+
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
     override fun canMergeBackground(): Boolean = true
 
     override fun minimumSize(): Pair<Float, Float> = MIN_WIDTH to MIN_HEIGHT
 
-    override val alwaysRedraw: Boolean get() = true
+    //? if > 1.8.9 && < 1.21.11
+    //override val alwaysRedraw: Boolean get() = true
 
     override fun setup() {
         super.setup()
@@ -114,16 +118,25 @@ class PlayerPreviewHud : Hud(
             modelTilt = pitch
         }
 
-        val pixelsPerGuiUnit = Platform.screen().let {
-            if (it.guiWidth() > 0) it.viewportWidth().toFloat() / it.guiWidth() else 1f
-        }
+        val screen = Platform.screen()
+        val guiWidth = screen.guiWidth()
+        val pixelsPerGuiUnit = if (guiWidth > 0) screen.viewportWidth().toFloat() / guiWidth else 1f
         val pixelScale = (scale * pixelsPerGuiUnit).coerceAtLeast(0.0001f)
-        PlayerPreviewOffscreen.submit(
-            this,
+        val widthPx = (boxW * pixelScale).toInt().coerceAtLeast(1)
+        val heightPx = (boxH * pixelScale).toInt().coerceAtLeast(1)
+        val sizePx = entitySize * pixelScale
+        val last = lastRequest
+        val request = if (
+            last != null && last.widthPx == widthPx && last.heightPx == heightPx && last.sizePx == sizePx && last.bodyRot == bodyRot &&
+            last.headRot == headRot && last.headPitch == headPitch && last.modelTilt == modelTilt && last.partialTick == partialTick &&
+            last.verticalAnchor == verticalAnchor && last.nametag == nametag
+        ) {
+            last
+        } else {
             PlayerPreviewOffscreen.Request(
-                widthPx = (boxW * pixelScale).toInt().coerceAtLeast(1),
-                heightPx = (boxH * pixelScale).toInt().coerceAtLeast(1),
-                sizePx = entitySize * pixelScale,
+                widthPx = widthPx,
+                heightPx = heightPx,
+                sizePx = sizePx,
                 bodyRot = bodyRot,
                 headRot = headRot,
                 headPitch = headPitch,
@@ -131,8 +144,9 @@ class PlayerPreviewHud : Hud(
                 partialTick = partialTick,
                 verticalAnchor = verticalAnchor,
                 nametag = nametag,
-            ),
-        )
+            ).also { lastRequest = it }
+        }
+        PlayerPreviewOffscreen.submit(this, request)
         return false
     }
 
