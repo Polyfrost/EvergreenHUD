@@ -87,7 +87,7 @@ class PlayerHeadHud : Hud(
             NodeCanvas(PolyModifier.size(staticW, staticH)) { x, y, w, h ->
                 val layers = head.value ?: return@NodeCanvas
                 val style = headStyle.value
-                val side = min(w, h) * if (style == McHeadStyle.LAYERED) 8f / 9f else 1f
+                val side = min(w, h) * if (style == McHeadStyle.LAYERED && layers.hasHat) 8f / 9f else 1f
                 McPlayerFaces.drawHead(this, layers, x + (w - side) / 2f, y + (h - side) / 2f, side, style)
             }
         }
