@@ -117,10 +117,17 @@ class DirectionHud : Hud(
     override fun canMergeBackground(): Boolean = true
 
     override fun update(): Boolean {
-        val exact = (if (isReal) cameraYaw else null)?.let { Facing.bearingOf(it) }
-        val next = viewOf(exact?.let { snapBearing(it) } ?: view.value.bearing, exact ?: view.value.bearing)
-        if (next == view.value) return false
-        view.value = next
+        val current = view.value
+        val yaw = if (isReal) cameraYaw else null
+        val exact = if (yaw != null) Facing.bearingOf(yaw) else current.bearing
+        val bearing = if (yaw != null) snapBearing(exact) else current.bearing
+        val heading = if (showHeading) exact.roundToInt() % 360 else 0
+        if (
+            bearing.compareTo(current.bearing) == 0 && heading == current.heading && span.compareTo(current.span) == 0 &&
+            showIntercardinals == current.showIntercardinals && showTicks == current.showTicks &&
+            showHeading == current.showHeading && fadeEdges == current.fadeEdges
+        ) return false
+        view.value = View(bearing, heading, span, showIntercardinals, showTicks, showHeading, fadeEdges)
         return true
     }
 

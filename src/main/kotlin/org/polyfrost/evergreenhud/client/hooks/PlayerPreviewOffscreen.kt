@@ -110,16 +110,34 @@ object PlayerPreviewOffscreen {
         pending[owner] = request
     }
 
+    private val drainOwners = ArrayList<Any>()
+    private val drainRequests = ArrayList<Request>()
+
     @JvmStatic
     fun render() {
-        val requests = if (pending.isEmpty()) emptyList() else pending.entries.map { it.key to it.value }
-        pending.clear()
+        if (pending.isNotEmpty()) {
+            for (entry in pending.entries) {
+                drainOwners.add(entry.key)
+                drainRequests.add(entry.value)
+            }
+            pending.clear()
+        }
+        try {
+            renderDrained()
+        } finally {
+            drainOwners.clear()
+            drainRequests.clear()
+        }
+    }
+
+    private fun renderDrained() {
         if (failed) return
 
         val player = client.player ?: return
         val now = System.nanoTime()
-        for ((owner, request) in requests) {
-            val slot = slots.getOrPut(owner) { Slot() }
+        for (i in drainOwners.indices) {
+            val request = drainRequests[i]
+            val slot = slots.getOrPut(drainOwners[i]) { Slot() }
             slot.lastUsedNanos = now
             if (!renderDue(slot, request, now)) continue
             slot.lastRequest = request

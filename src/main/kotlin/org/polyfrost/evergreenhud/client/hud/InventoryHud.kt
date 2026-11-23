@@ -241,9 +241,15 @@ class InventoryHud : Hud(
     //~ if = 1.8.9 'List<ItemStack>' -> 'List<ItemStack?>'
     private fun sync(live: List<ItemStack>): Boolean {
         val old = items
-        if (old.size == live.size && live.indices.all { ItemStack.matches(live[it], old[it]) }) return false
+        if (old.size == live.size && sameStacks(live, old)) return false
         //~ if = 1.8.9 'live[i].copy()' -> 'live[i]?.copy()'
         items = List(live.size) { i -> old.getOrNull(i)?.takeIf { ItemStack.matches(live[i], it) } ?: live[i].copy() }
+        return true
+    }
+
+    //~ if = 1.8.9 'List<ItemStack>' -> 'List<ItemStack?>'
+    private fun sameStacks(live: List<ItemStack>, old: List<ItemStack>): Boolean {
+        for (i in live.indices) if (!ItemStack.matches(live[i], old[i])) return false
         return true
     }
 
