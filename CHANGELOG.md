@@ -1,3 +1,7 @@
+## 3.10.1
+- Performance improvements: the media and lyrics HUDs do much less work while idle, and several HUDs allocate less each frame
+- Fixed sprites not loading from protected server resource packs
+
 ## 3.10.0
 - Updated to OneConfig 1.9.0, which needs PolyCompose installed
 
