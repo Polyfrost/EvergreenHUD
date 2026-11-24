@@ -1,3 +1,7 @@
+## Unreleased
+- Added a Style option to the Player Head HUD: Face, Flat (the default, same as before) or 3D
+- Needs PolyCompose 3.0.7
+
 ## 3.10.1
 - Performance improvements: the media and lyrics HUDs do much less work while idle, and several HUDs allocate less each frame
 - Fixed sprites not loading from protected server resource packs
