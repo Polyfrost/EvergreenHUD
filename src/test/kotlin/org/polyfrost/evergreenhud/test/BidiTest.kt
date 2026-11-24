@@ -1,9 +1,11 @@
 package org.polyfrost.evergreenhud.test
 
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
+import org.polyfrost.evergreenhud.client.hud.media.visualOffsets
 import org.polyfrost.evergreenhud.client.hud.media.visualOrder
 import org.polyfrost.evergreenhud.client.hud.media.visualWords
 
@@ -31,5 +33,11 @@ class BidiTest {
         assertNull(visualWords(listOf("word ", "by ", "word")))
         assertEquals(listOf(2 to true, 1 to true, 0 to true), visualWords(listOf("אני ", "אוהב ", "אותך")))
         assertEquals(listOf(2 to true, 1 to false, 0 to true), visualWords(listOf("שיר ", "Song ", "שני")))
+    }
+
+    @Test
+    fun reversedWordsKeepSpacesBetweenThem() {
+        val xs = visualOffsets(listOf(2, 1, 0), floatArrayOf(3f, 4f, 4f), floatArrayOf(1f, 1f, 0f))
+        assertArrayEquals(floatArrayOf(0f, 5f, 10f), xs)
     }
 }

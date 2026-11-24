@@ -667,10 +667,10 @@ class LyricsHud : Hud(
 
     private fun visualRow(row: List<Placed>, label: Label): List<Placed> {
         val order = visualWords(row.map { it.text }) ?: return row
-        var x = 0f
-        return order.map { (i, rtl) ->
+        val xs = visualOffsets(order.map { it.first }, FloatArray(row.size) { row[it].ink }, FloatArray(row.size) { label.width(row[it].text) - row[it].ink })
+        return order.mapIndexed { k, (i, rtl) ->
             val p = row[i]
-            Placed(p.startMs, p.endMs, p.text, p.trimmed, x, p.ink, rtl).also { x += label.width(p.text) }
+            Placed(p.startMs, p.endMs, p.text, p.trimmed, xs[k], p.ink, rtl)
         }
     }
 
@@ -877,6 +877,15 @@ internal fun visualWords(words: List<String>): List<Pair<Int, Boolean>>? {
     val order = Array<Any>(words.size) { it }
     Bidi.reorderVisually(levels, 0, order, 0, order.size)
     return order.map { val i = it as Int; i to (levels[i].toInt() and 1 == 1) }
+}
+
+internal fun visualOffsets(order: List<Int>, ink: FloatArray, gap: FloatArray): FloatArray {
+    val xs = FloatArray(order.size)
+    for (k in 1 until order.size) {
+        val prev = order[k - 1]
+        xs[k] = xs[k - 1] + ink[prev] + gap[minOf(prev, order[k])]
+    }
+    return xs
 }
 
 private fun spring(ms: Float): Float {

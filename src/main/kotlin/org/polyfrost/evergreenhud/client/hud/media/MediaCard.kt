@@ -5,6 +5,9 @@ import org.polyfrost.compose.composables.NodeCanvas
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.mc.McFontQueue
+//? if >= 1.21.11 {
+import org.polyfrost.compose.minecraft.render.blaze.BlazeRenderer
+//?}
 import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.PolyFont
@@ -436,12 +439,12 @@ internal class Label(val size: Float, val fontName: String?, val shadow: Boolean
     }
 }
 
-private fun mcOrder(text: String): String =
-    //? if = 1.8.9 {
+private fun RenderContext.mcOrder(text: String): String =
+    //? if >= 1.21.11 {
+    if (renderer is BlazeRenderer) text else visualOrder(text)
+    //?} else {
     /*visualOrder(text)
-    *///?} else {
-    text
-    //?}
+    *///?}
 
 fun visualOrder(text: String): String {
     if (text.all { it < '\u0590' } || !Bidi.requiresBidi(text.toCharArray(), 0, text.length)) return text
