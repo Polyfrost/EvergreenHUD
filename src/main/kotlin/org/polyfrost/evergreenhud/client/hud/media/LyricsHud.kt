@@ -14,6 +14,7 @@ import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.RenderContext
+import org.polyfrost.evergreenhud.client.hooks.KeyframeSync
 import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.evergreenhud.client.utils.media.KUGOU
@@ -428,7 +429,7 @@ class LyricsHud : Hud(
     override fun update(): Boolean {
         if (isReal) rearmIfCardGone()
         if (isReal && !mediaAnchorChecked && !HudManager.isEditing && MediaHud.shownWidth > 0f && frame.value != null) anchorToMediaCard()
-        val now = System.currentTimeMillis()
+        val now = KeyframeSync.wallMillis()
         val wasOffscreen = offscreen
         offscreen = onlyInGuis && !screenOpen()
         if (!offscreen && wasOffscreen) popStart = maxOf(popStart, now - FRAME_MS)

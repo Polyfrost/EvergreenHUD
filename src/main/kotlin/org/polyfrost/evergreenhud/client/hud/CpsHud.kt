@@ -128,5 +128,5 @@ class CpsHud : CachedTextHud(
 
     override fun updateFrequency() = 100.milliseconds.inWholeNanoseconds
 
-    override fun shouldShow(): Boolean = hideAfterNanos <= 0L || System.nanoTime() - lastClick <= hideAfterNanos
+    override fun showsLive(): Boolean = hideAfterNanos <= 0L || System.nanoTime() - lastClick <= hideAfterNanos
 }

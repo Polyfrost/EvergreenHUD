@@ -79,7 +79,7 @@ class ComboHud : CachedTextHud(
         }
     }
 
-    override fun shouldShow(): Boolean = minCombo <= 0F || currentCombo >= minCombo.toInt()
+    override fun showsLive(): Boolean = minCombo <= 0F || currentCombo >= minCombo.toInt()
 
     override fun remove() {
         super.remove()

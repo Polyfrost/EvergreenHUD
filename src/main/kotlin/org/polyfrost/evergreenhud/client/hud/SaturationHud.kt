@@ -41,5 +41,5 @@ class SaturationHud : GenericNumberHud(
         return format(if (isReal) SaturationTracker.saturation else value)
     }
 
-    override fun shouldShow(): Boolean = SaturationTracker.saturation in showRange[0]..showRange[1]
+    override fun showsLive(): Boolean = SaturationTracker.saturation in showRange[0]..showRange[1]
 }

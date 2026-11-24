@@ -1,7 +1,13 @@
 package org.polyfrost.evergreenhud.client.utils.media
 
 import org.polyfrost.compose.render.PolyBitmap
+import org.polyfrost.evergreenhud.client.hooks.KeyframeSync
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.net.URI
+import java.util.Base64
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -40,6 +46,8 @@ object MediaService {
     private const val SAMPLE = 24
     private const val MIN_VIVID = 2.0
     private const val MIN_BRIGHTNESS = 170.0
+    private const val INFO_CHANNEL = "evergreenhud:media"
+    private const val ART_CHANNEL = "evergreenhud:media_art"
     private val ART_SCHEMES = setOf("http", "https", "file")
 
     private val backend: MediaBackend? by lazy { MediaBackend.get() }
@@ -55,24 +63,24 @@ object MediaService {
     private var artKey: String? = null
 
     @Volatile
-    var current: MediaInfo? = null
-        private set
+    private var liveCurrent: MediaInfo? = null
 
     @Volatile
-    var art: PolyBitmap? = null
-        private set
+    private var liveArt: Artwork? = null
 
-    @Volatile
-    var artAccent: Int? = null
-        private set
+    val current: MediaInfo? get() = if (KeyframeSync.replaying) Replayed.info() else liveCurrent
 
-    @Volatile
-    var artAverage: Int? = null
-        private set
+    val art: PolyBitmap? get() = artwork()?.image
 
-    @Volatile
-    var artBlurSource: BlurSource? = null
-        private set
+    val artAccent: Int? get() = artwork()?.accent
+
+    val artAverage: Int? get() = artwork()?.average
+
+    private fun artwork(): Artwork? = if (KeyframeSync.replaying) Replayed.art() else liveArt
+
+    private class Artwork(val image: PolyBitmap, val accent: Int, val average: Int?, val blurSource: BlurSource, val base64: String)
+
+    val artBlurSource: BlurSource? get() = artwork()?.blurSource
 
     @Volatile
     var sources: List<String> = emptyList()
@@ -83,6 +91,8 @@ object MediaService {
     fun acquire() {
         val backend = backend ?: return
         if (users++ > 0) return
+        KeyframeSync.register(INFO_CHANNEL) { liveCurrent?.let(::encodeInfo) }
+        KeyframeSync.register(ART_CHANNEL) { liveArt?.base64 }
         task = executor.scheduleWithFixedDelay({ refresh(backend) }, 0L, POLL_MS, TimeUnit.MILLISECONDS)
     }
 
@@ -92,17 +102,15 @@ object MediaService {
         task?.cancel(false)
         executor.execute { backend?.close() }
         task = null
-        current = null
-        art = null
-        artAccent = null
-        artAverage = null
-        artBlurSource = null
+        liveCurrent = null
+        liveArt = null
         artKey = null
     }
 
     fun send(command: MediaCommand) {
         val backend = backend ?: return
-        val player = current?.player ?: return
+        if (KeyframeSync.replaying) return
+        val player = liveCurrent?.player ?: return
         executor.execute {
             runCatching { backend.send(player, command) }
             refresh(backend)
@@ -111,7 +119,7 @@ object MediaService {
 
     private fun refresh(backend: MediaBackend) {
         val info = runCatching { backend.poll() }.getOrNull()?.takeIf { it.matchesSource() }
-        current = info
+        liveCurrent = info
         loadArt(info)
     }
 
@@ -119,19 +127,72 @@ object MediaService {
         val key = info?.artUrl ?: info?.artBytes?.let { "${info.player}|${info.title}|${info.artist}" }
         if (key == artKey) return
         artKey = key
-        art = null
-        artAccent = null
-        artAverage = null
-        artBlurSource = null
+        liveArt = null
         if (info == null || key == null) return
-        val image = runCatching {
-            val bytes = info.artBytes ?: fetch(info.artUrl!!)
-            PolyBitmap.decode(bytes)
-        }.getOrNull()
-        artAccent = image?.let(::vividColor)
-        artAverage = image?.let(::averageColor)
-        artBlurSource = image?.let(::blurSource)
-        art = image
+        liveArt = runCatching { artwork(info.artBytes ?: fetch(info.artUrl!!)) }.getOrNull()
+    }
+
+    private fun artwork(bytes: ByteArray): Artwork? {
+        val image = PolyBitmap.decode(bytes) ?: return null
+        return Artwork(image, vividColor(image), averageColor(image), blurSource(image), Base64.getEncoder().encodeToString(bytes))
+    }
+
+    private object Replayed {
+        private var infoValue: String? = null
+        private var info: MediaInfo? = null
+        private var artValue: String? = null
+        private var art: Artwork? = null
+
+        fun info(): MediaInfo? {
+            val value = KeyframeSync.replayed(INFO_CHANNEL)
+            if (value != infoValue) {
+                infoValue = value
+                info = value?.let { runCatching { decodeInfo(it) }.getOrNull() }
+            }
+            return info
+        }
+
+        fun art(): Artwork? {
+            val value = KeyframeSync.replayed(ART_CHANNEL)
+            if (value != artValue) {
+                artValue = value
+                art = value?.let { runCatching { artwork(Base64.getDecoder().decode(it)) }.getOrNull() }
+            }
+            return art
+        }
+    }
+
+    private fun encodeInfo(info: MediaInfo): String {
+        val bytes = ByteArrayOutputStream()
+        DataOutputStream(bytes).use {
+            it.writeUTF(info.player)
+            it.writeUTF(info.title)
+            it.writeUTF(info.artist)
+            it.writeBoolean(info.playing)
+            it.writeLong(info.positionMs)
+            it.writeLong(info.lengthMs)
+            it.writeBoolean(info.canPrevious)
+            it.writeBoolean(info.canNext)
+            it.writeBoolean(info.canToggle)
+            it.writeLong(info.sampledAtMs)
+        }
+        return Base64.getEncoder().encodeToString(bytes.toByteArray())
+    }
+
+    private fun decodeInfo(value: String): MediaInfo = DataInputStream(ByteArrayInputStream(Base64.getDecoder().decode(value))).use {
+        MediaInfo(
+            player = it.readUTF(),
+            title = it.readUTF(),
+            artist = it.readUTF(),
+            artUrl = null,
+            playing = it.readBoolean(),
+            positionMs = it.readLong(),
+            lengthMs = it.readLong(),
+            canPrevious = it.readBoolean(),
+            canNext = it.readBoolean(),
+            canToggle = it.readBoolean(),
+            sampledAtMs = it.readLong(),
+        )
     }
 
     private fun fetch(url: String): ByteArray {

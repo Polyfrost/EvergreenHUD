@@ -66,7 +66,7 @@ class SocialStatsHud : SpacedTextHud(
 
     override fun updateFrequency(): Long = 1.seconds.inWholeNanoseconds
 
-    override fun shouldShow(): Boolean = !hideWhenUnavailable || available
+    override fun showsLive(): Boolean = !hideWhenUnavailable || available
 
     override fun getText(): String {
         if (!isReal) {

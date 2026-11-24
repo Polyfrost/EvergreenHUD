@@ -3,6 +3,7 @@
 package org.polyfrost.evergreenhud.client.hud.keystrokes
 
 import androidx.compose.runtime.Composable
+import org.polyfrost.evergreenhud.client.hooks.KeyframeSync
 import com.mojang.blaze3d.platform.InputConstants
 //? if = 1.8.9
 //import org.polyfrost.oneconfig.internal.legacy.KeyCodes
@@ -66,6 +67,7 @@ private const val DEFAULT_SPACE_LINE_H = 1f
 private const val FONT = 8f
 
 private const val CPS_NONE = 0
+private const val CUSTOM_BIT = 9
 private const val CPS_SMALL = 1
 private const val CPS_LARGE = 2
 private const val CPS_ONLY = 3
@@ -214,6 +216,7 @@ class KeystrokesHud : Hud(
     override fun setup() {
         super.setup()
         if (isReal) {
+            KeyframeSync.channel(this, "keys")?.let { id -> KeyframeSync.register(keys, id, KeyState::playbackSample) }
             tree?.getProp("customBind")?.addMetadata(KeybindMetadata.NO_MIRROR, true)
             KeybindManager.unregister(customBind)
             addDependency("arrows", null) {
@@ -301,8 +304,16 @@ class KeystrokesHud : Hud(
     override fun update(): Boolean {
         val o = mc.options ?: return false
         val now = System.nanoTime()
-        val dtMs = (now - keys.lastNanos).coerceAtLeast(0L) / 1_000_000f
-        keys.lastNanos = now
+        val frameNow = KeyframeSync.nanoTime()
+        val dtMs = (frameNow - keys.lastNanos).coerceAtLeast(0L) / 1_000_000f
+        keys.lastNanos = frameNow
+        val replayed = KeyframeSync.replayed(KeyframeSync.channel(this, "keys"))?.split(',')
+        val replayedMask = replayed?.getOrNull(0)?.toIntOrNull()
+        var liveMask = 0
+        fun pressed(bit: Int, live: Boolean): Float {
+            if (live) liveMask = liveMask or (1 shl bit)
+            return if (replayedMask?.let { it shr bit and 1 == 1 } ?: live) 1f else 0f
+        }
         var changed = pullTextFromDesigner() || keys.dirty
         keys.dirty = false
         fun step(cur: Float, target: Float, inMs: Float, outMs: Float): Float = when {
@@ -325,11 +336,13 @@ class KeystrokesHud : Hud(
                 keys.downKeys.clear()
                 keys.downMouse.clear()
             }
-            pollTo(keys.custom, if (customBind.test(keys.downKeys, keys.downMouse, heldMods())) 1f else 0f)
+            pollTo(keys.custom, pressed(CUSTOM_BIT, customBind.test(keys.downKeys, keys.downMouse, heldMods())))
+            keys.liveMask = liveMask
             return changed
         }
 
-        fun poll(state: KeyFade, key: KeyMapping) = pollTo(state, if (isReal && if (perTick) key.isDown else key.isHeld()) 1f else 0f)
+        var bit = 0
+        fun poll(state: KeyFade, key: KeyMapping) = pollTo(state, pressed(bit++, isReal && if (perTick) key.isDown else key.isHeld()))
         poll(keys.forward, o.keyUp)
         poll(keys.left, o.keyLeft)
         poll(keys.back, o.keyDown)
@@ -339,16 +352,19 @@ class KeystrokesHud : Hud(
         poll(keys.use, o.keyUse)
         poll(keys.sprint, o.keySprint)
         poll(keys.sneak, o.keyShift)
+        keys.liveMask = liveMask
         if (showClicks && cpsMode != CPS_NONE) {
-            fun pollCps(clicks: ArrayList<Long>, cps: MutableState<Int>) {
+            fun pollCps(clicks: ArrayList<Long>, cps: MutableState<Int>, replayedCps: Int?): Int {
                 clicks.fastRemoveIfReversed { now - it > 1_000_000_000 }
-                if (cps.value != clicks.size) {
-                    cps.value = clicks.size
+                val shown = replayedCps ?: clicks.size
+                if (cps.value != shown) {
+                    cps.value = shown
                     changed = true
                 }
+                return clicks.size
             }
-            pollCps(keys.attackClicks, keys.attackCps)
-            pollCps(keys.useClicks, keys.useCps)
+            keys.liveAttackCps = pollCps(keys.attackClicks, keys.attackCps, replayed?.getOrNull(1)?.toIntOrNull())
+            keys.liveUseCps = pollCps(keys.useClicks, keys.useCps, replayed?.getOrNull(2)?.toIntOrNull())
         }
         return changed
     }
@@ -615,7 +631,15 @@ private class KeyState {
 
     var dirty = false
 
-    var lastNanos = System.nanoTime()
+    var lastNanos = KeyframeSync.nanoTime()
+
+    var liveMask = 0
+
+    var liveAttackCps = 0
+
+    var liveUseCps = 0
+
+    fun playbackSample(): String = "$liveMask,$liveAttackCps,$liveUseCps"
 }
 
 object LocalJump {

@@ -11,6 +11,7 @@ import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.hooks.KeyframeSync
 import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.evergreenhud.client.utils.media.MediaCommand
@@ -399,7 +400,7 @@ class MediaHud : Hud(
     }
 
     override fun update(): Boolean {
-        val now = System.currentTimeMillis()
+        val now = KeyframeSync.wallMillis()
         val wasOffscreen = offscreen
         offscreen = onlyInGuis && !screenOpen()
         if (offscreen) popStart = now else if (wasOffscreen) popStart = maxOf(popStart, now - SCROLL_STEP_MS)
@@ -582,7 +583,7 @@ class MediaHud : Hud(
     }
 
     private fun smoothPosition(info: MediaInfo): Long {
-        val now = System.currentTimeMillis()
+        val now = KeyframeSync.wallMillis()
         val target = info.positionAt(now).toDouble()
         val dt = (now - shownAt).coerceIn(0L, 1_000L).toDouble()
         shownAt = now

@@ -103,7 +103,7 @@ class LoreHud : SpacedTextHud(
 
     override fun getText(): String = currentLines.joinToString("\n") { it.plainText() }
 
-    override fun shouldShow(): Boolean = hasLore
+    override fun showsLive(): Boolean = hasLore
 
     private fun loreLines(): List<List<TextRun>> {
         val item = theItem ?: return emptyList()

@@ -40,7 +40,7 @@ abstract class CachedTextHud(
     protected open fun valueColor(): PolyColor? = null
 
     override fun concat(prefix: String, value: String?, suffix: String): String {
-        lastValue = value.orEmpty()
+        lastValue = shownValue(value).orEmpty()
         return super.concat(prefix, value, suffix)
     }
 

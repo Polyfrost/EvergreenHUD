@@ -60,5 +60,5 @@ class ShaderHud : CachedTextHud(
 
     override fun updateFrequency(): Long = 1.seconds.inWholeNanoseconds
 
-    override fun shouldShow(): Boolean = !hideWhenDisabled || hasPack
+    override fun showsLive(): Boolean = !hideWhenDisabled || hasPack
 }

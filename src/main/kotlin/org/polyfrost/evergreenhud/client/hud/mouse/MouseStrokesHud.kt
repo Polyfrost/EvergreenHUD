@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import org.polyfrost.compose.composables.NodeBox
 import org.polyfrost.compose.composables.NodeCanvas
+import org.polyfrost.evergreenhud.client.hooks.KeyframeSync
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.clip
 import org.polyfrost.compose.composables.size
@@ -222,7 +223,8 @@ class MouseStrokesHud : Hud(
         if (isReal) {
             LaunchedEffect(Unit) {
                 while (true) {
-                    withFrameNanos { nowNs ->
+                    withFrameNanos {
+                        val nowNs = KeyframeSync.nanoTime()
                         trackYaw()
                         if (isSampleDue(nextSampleNs, nowNs)) {
                             nextSampleNs = nextSampleAfter(nextSampleNs, nowNs)
@@ -247,7 +249,7 @@ class MouseStrokesHud : Hud(
     private fun repaintWindow(): Float = if (dotType == SNAKE) snakeMs else 0f
 
     private fun trackYaw() {
-        if (rawInput) return
+        if (rawInput && !KeyframeSync.replaying) return
         val player = mc.player
         val yaw = player?.yRot ?: 0f
         if (player == null || lastYaw.isNaN()) {
@@ -264,7 +266,7 @@ class MouseStrokesHud : Hud(
 
         val deltaYaw: Float
         val deltaPitch: Float
-        if (rawInput) {
+        if (rawInput && !KeyframeSync.replaying) {
             val yaw = MouseTurnTracker.yaw
             val pitch = MouseTurnTracker.pitch
             if (lastRawYaw.isNaN()) {

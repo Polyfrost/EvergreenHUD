@@ -11,6 +11,7 @@ import net.minecraft.network.protocol.game.ClientboundHurtAnimationPacket
 //import net.minecraft.network.packet.s2c.play.EntityEventS2CPacket
 import net.minecraft.world.entity.Entity
 import org.polyfrost.evergreenhud.client.config.GlobalConfig
+import org.polyfrost.evergreenhud.client.hooks.KeyframeSync
 import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
 import org.polyfrost.evergreenhud.client.hooks.PlayerPreviewOffscreen
 import org.polyfrost.evergreenhud.client.hud.*
@@ -52,6 +53,7 @@ object EvergreenHudClient : ClientModInitializer {
         EnderChestTracker.initialize()
         SaturationTracker.initialize()
         MouseTurnTracker.initialize()
+        KeyframeSync.initialize()
         GlobalConfig.preload()
 
         val huds = listOf<() -> Hud>(

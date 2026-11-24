@@ -78,7 +78,7 @@ class WeatherHud : SpacedTextHud(
 
     override fun updateFrequency(): Long = 5.seconds.inWholeNanoseconds
 
-    override fun shouldShow(): Boolean = !hideWhenUnavailable || available
+    override fun showsLive(): Boolean = !hideWhenUnavailable || available
 
     override fun getText(): String {
         val conditions = if (isReal) RealWeather.conditions else PREVIEW

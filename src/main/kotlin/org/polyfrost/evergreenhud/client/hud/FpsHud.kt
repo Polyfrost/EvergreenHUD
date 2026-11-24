@@ -86,7 +86,7 @@ class FpsHud : GenericNumberHud(
     override fun updateFrequency(): Long =
         if (updateRate <= 0F) -1L else (updateRate * 1_000_000_000.0).toLong()
 
-    override fun shouldShow(): Boolean = inRange
+    override fun showsLive(): Boolean = inRange
 
     override fun valueColor(): PolyColor? {
         val baseline = baseline
