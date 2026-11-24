@@ -26,6 +26,7 @@ import java.awt.geom.Area
 import java.awt.geom.Ellipse2D
 import java.awt.geom.Path2D
 import java.awt.geom.RoundRectangle2D
+import java.text.Bidi
 import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.cos
@@ -422,17 +423,63 @@ internal class Label(val size: Float, val fontName: String?, val shadow: Boolean
     fun width(text: String): Float = poly?.measureTextWidth(text) ?: McFontQueue.measureTextWidth(text, mcScale)
 
     fun RenderContext.draw(text: String, x: Float, baseline: Float, color: PolyColor) {
-        if (poly != null) return text(text, x, baseline, color, poly)
-        mcText(text, x, baseline - MC_CAP_HEIGHT * mcScale, color.argb, shadow, mcScale)
+        if (poly != null) return text(visualOrder(text), x, baseline, color, poly)
+        mcText(mcOrder(text), x, baseline - MC_CAP_HEIGHT * mcScale, color.argb, shadow, mcScale)
     }
 
     fun RenderContext.draw(text: String, x: Float, baseline: Float, argb: Int) {
         if (poly != null) {
-            if (argb ushr 24 != 0 && text.isNotEmpty()) renderer.text(text, x, baseline, argb, poly)
+            if (argb ushr 24 != 0 && text.isNotEmpty()) renderer.text(visualOrder(text), x, baseline, argb, poly)
             return
         }
-        mcText(text, x, baseline - MC_CAP_HEIGHT * mcScale, argb, shadow, mcScale)
+        mcText(mcOrder(text), x, baseline - MC_CAP_HEIGHT * mcScale, argb, shadow, mcScale)
     }
+}
+
+private fun mcOrder(text: String): String =
+    //? if = 1.8.9 {
+    /*visualOrder(text)
+    *///?} else {
+    text
+    //?}
+
+fun visualOrder(text: String): String {
+    if (text.all { it < '\u0590' } || !Bidi.requiresBidi(text.toCharArray(), 0, text.length)) return text
+    val bidi = Bidi(text, Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT)
+    val count = bidi.runCount
+    val levels = ByteArray(count) { bidi.getRunLevel(it).toByte() }
+    val runs = Array<Any>(count) { it }
+    Bidi.reorderVisually(levels, 0, runs, 0, count)
+    return buildString(text.length) {
+        for (run in runs) {
+            val i = run as Int
+            val start = bidi.getRunStart(i)
+            var end = bidi.getRunLimit(i)
+            if (bidi.getRunLevel(i) % 2 == 0) {
+                append(text, start, end)
+                continue
+            }
+            while (end > start) {
+                val cp = text.codePointBefore(end)
+                end -= Character.charCount(cp)
+                appendCodePoint(mirror(cp))
+            }
+        }
+    }
+}
+
+private fun mirror(cp: Int): Int = when (cp) {
+    '('.code -> ')'.code
+    ')'.code -> '('.code
+    '['.code -> ']'.code
+    ']'.code -> '['.code
+    '{'.code -> '}'.code
+    '}'.code -> '{'.code
+    '<'.code -> '>'.code
+    '>'.code -> '<'.code
+    '«'.code -> '»'.code
+    '»'.code -> '«'.code
+    else -> cp
 }
 
 private const val MC_LINE_HEIGHT = 9f
