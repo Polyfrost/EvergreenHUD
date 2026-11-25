@@ -114,7 +114,10 @@ object PlayerPreviewOffscreen {
     private val drainRequests = ArrayList<Request>()
 
     @JvmStatic
-    fun render() {
+    fun render() = render(Float.NaN)
+
+    @JvmStatic
+    fun render(partialTick: Float) {
         if (pending.isNotEmpty()) {
             for (entry in pending.entries) {
                 drainOwners.add(entry.key)
@@ -123,14 +126,14 @@ object PlayerPreviewOffscreen {
             pending.clear()
         }
         try {
-            renderDrained()
+            renderDrained(partialTick)
         } finally {
             drainOwners.clear()
             drainRequests.clear()
         }
     }
 
-    private fun renderDrained() {
+    private fun renderDrained(partialTick: Float) {
         if (failed) return
 
         val player = client.player ?: return
@@ -143,7 +146,7 @@ object PlayerPreviewOffscreen {
             slot.lastRequest = request
             val behind = now - slot.lastRenderNanos
             slot.lastRenderNanos = if (behind in MIN_RENDER_NANOS until 2 * MIN_RENDER_NANOS) slot.lastRenderNanos + MIN_RENDER_NANOS else now
-            renderSlot(slot, request, player)
+            renderSlot(slot, if (partialTick.isNaN() || partialTick == request.partialTick) request else request.copy(partialTick = partialTick), player)
             if (failed) break
         }
         evictStale(now)
