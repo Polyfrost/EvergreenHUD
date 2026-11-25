@@ -23,7 +23,9 @@ internal fun EffectComponentSettings.migrateRanges(fromVersion: Int) {
 
 internal fun fallbackDurations(ranges: FloatArray, default: Int): List<Int> =
     if (ranges.isEmpty()) listOf(default)
-    else (0 until ranges.size / 2).map { ((ranges[it * 2] + ranges[it * 2 + 1]) * 10f).toInt() }
+    else (0 until ranges.size / 2).map {
+        ((ranges[it * 2] + ranges[it * 2 + 1]) * 10f).toInt().coerceAtLeast(ceil(ranges[it * 2] * 20f).toInt())
+    }
 
 internal fun fallbackAmplifiers(ranges: FloatArray): List<Int> =
     if (ranges.isEmpty()) listOf(0, 1)

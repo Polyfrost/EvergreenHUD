@@ -65,6 +65,7 @@ class EffectRangeMigrationTest {
     @Test
     fun fallbackExamplesTryEveryAllowedDurationRange() {
         assertEquals(listOf(0, 3000), fallbackDurations(floatArrayOf(0f, 0f, 120f, 180f), 600))
+        assertEquals(listOf(21), fallbackDurations(floatArrayOf(1.04f, 1.05f), 600))
     }
 
     @Test
