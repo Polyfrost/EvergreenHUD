@@ -369,7 +369,7 @@ class PotionEffectsHud : Hud(
     override fun setup() {
         super.setup()
         if (isReal) {
-            hideIf("hideVanillaEffects") { !VanillaHudCompat.isPresent }
+            hideIf("hideVanillaEffects") { !VanillaHudCompat.canHideStatusEffects }
             tickHandler = eventHandler { _: TickEvent.End ->
                 if (VanillaHudCompat.isPresent) VanillaHudCompat.hideStatusEffects(hideVanillaEffects && !hidden)
                 if (!hidden || HudManager.isEditing) updateAndRecalculate()
