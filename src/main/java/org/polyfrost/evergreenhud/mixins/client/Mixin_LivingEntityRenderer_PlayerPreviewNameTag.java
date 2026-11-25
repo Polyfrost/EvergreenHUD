@@ -6,7 +6,7 @@ import org.polyfrost.evergreenhud.client.hooks.PlayerPreviewOffscreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Mixin(LivingEntityRenderer.class)
+@Mixin(value = LivingEntityRenderer.class, priority = 1100)
 public class Mixin_LivingEntityRenderer_PlayerPreviewNameTag {
 
     @ModifyReturnValue(
