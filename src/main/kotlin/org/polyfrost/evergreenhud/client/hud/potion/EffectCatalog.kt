@@ -42,13 +42,13 @@ object EffectCatalog {
         get() = cached ?: buildEntries().also { cached = it }
 
     //? if <= 1.8.9 {
-    /*private val pathById: Map<Int, String> by lazy {
-        StatusEffect.getKeys().mapNotNull { key -> StatusEffect.get(key.toString())?.let { it.id to key.path } }.toMap()
+    /*private val keyById by lazy {
+        StatusEffect.getKeys().mapNotNull { key -> StatusEffect.get(key.toString())?.let { it.id to key } }.toMap()
     }
 
-    fun pathOf(id: Int): String = pathById[id] ?: id.toString()
+    fun pathOf(id: Int): String = keyById[id]?.path ?: id.toString()
 
-    fun idOf(id: Int): String = "minecraft:${pathOf(id)}"
+    fun idOf(id: Int): String = keyById[id]?.toString() ?: "minecraft:$id"
     *///?}
 
     private fun buildEntries(): List<Entry> {

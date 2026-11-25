@@ -129,9 +129,14 @@ class OverrideRule(conditions: List<OverrideCondition> = emptyList(), anyOf: Lis
     fun matches(facts: EffectFacts): Boolean =
         conditions.filter { it.isActive }.all { it.test(facts) } && anyOf.filter { it.isActive }.all { it.matches(facts) }
 
-    fun canAdd(type: Type, alongside: List<OverrideCondition> = emptyList()): Boolean {
-        val all = conditions + anyOf.flatMap { it.conditions } + alongside
-        return when {
+    fun branches(alongside: List<List<OverrideCondition>> = emptyList(), skip: AnyOf? = null): List<List<OverrideCondition>> =
+        anyOf.filter { it !== skip && it.alternatives.isNotEmpty() }
+            .fold(alongside.ifEmpty { listOf(emptyList()) }.map { it + conditions }) { acc, block ->
+                acc.flatMap { branch -> block.alternatives.flatMap { it.branches(listOf(branch)) } }
+            }
+
+    fun canAdd(type: Type, alongside: List<List<OverrideCondition>> = emptyList()): Boolean = branches(alongside).any { all ->
+        when {
             all.any { it.type == type } -> false
             type.isTimed -> all.none { it.type == Type.DURATION && PERMANENT in it.values }
             type == Type.CATEGORY -> all.none { it.type == Type.EFFECT && !it.negated }
@@ -139,12 +144,15 @@ class OverrideRule(conditions: List<OverrideCondition> = emptyList(), anyOf: Lis
         }
     }
 
-    fun locksEffectNegation(alongside: List<OverrideCondition> = emptyList()): Boolean =
-        (conditions + anyOf.flatMap { it.conditions } + alongside).any { it.type == Type.CATEGORY }
+    fun locksEffectNegation(alongside: List<List<OverrideCondition>> = emptyList()): Boolean =
+        branches(alongside).all { all -> all.any { it.type == Type.CATEGORY } }
 
-    fun add(type: Type, alongside: List<OverrideCondition> = emptyList()) {
+    fun locksPermanent(alongside: List<List<OverrideCondition>> = emptyList()): Boolean =
+        branches(alongside).all { all -> all.any { it.type.isTimed } }
+
+    fun add(type: Type, alongside: List<List<OverrideCondition>> = emptyList()) {
         if (!canAdd(type, alongside)) return
-        val finite = type == Type.DURATION && (conditions + anyOf.flatMap { it.conditions } + alongside).any { it.type.isTimed }
+        val finite = type == Type.DURATION && locksPermanent(alongside)
         conditions += OverrideCondition(
             type,
             values = if (finite) listOf(FINITE) else emptyList(),
@@ -152,7 +160,7 @@ class OverrideRule(conditions: List<OverrideCondition> = emptyList(), anyOf: Lis
         )
     }
 
-    fun alongside(block: AnyOf): List<OverrideCondition> = conditions + anyOf.filter { it !== block }.flatMap { it.conditions }
+    fun alongside(block: AnyOf): List<List<OverrideCondition>> = branches(skip = block)
 
     fun copy(): OverrideRule = OverrideRule(conditions.map { it.copy() }, anyOf.map { it.copy() })
 }
@@ -163,8 +171,6 @@ class AnyOf(alternatives: List<OverrideRule> = emptyList()) {
     val uid: Int = nextUid++
 
     val isActive: Boolean get() = alternatives.any { it.isActive }
-
-    val conditions: List<OverrideCondition> get() = alternatives.flatMap { it.conditions }
 
     fun matches(facts: EffectFacts): Boolean = alternatives.filter { it.isActive }.any { it.matches(facts) }
 

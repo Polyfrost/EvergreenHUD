@@ -273,6 +273,7 @@ private fun OnlyFor(rule: SortRule, model: SortRulesModel, shape: Shape) {
                 condition = condition,
                 shape = shape,
                 negationLocked = condition.type == OverrideCondition.Type.EFFECT && only.locksEffectNegation(),
+                permanentLocked = condition.type == OverrideCondition.Type.DURATION && only.locksPermanent(),
                 onChange = model::changed,
                 onRemove = {
                     only.conditions.remove(condition)

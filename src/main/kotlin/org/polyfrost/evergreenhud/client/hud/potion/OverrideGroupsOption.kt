@@ -599,7 +599,7 @@ private fun NameField(value: String, shape: Shape, onChange: (String) -> Unit) {
 }
 
 @Composable
-internal fun <T> Segmented(options: List<Pair<T, String>>, selected: T, shape: Shape, onSelect: (T) -> Unit) {
+internal fun <T> Segmented(options: List<Pair<T, String>>, selected: T, shape: Shape, disabled: Set<T> = emptySet(), onSelect: (T) -> Unit) {
     val segmentShape = shape.concentric(3.dp)
     val theme = OneConfigTheme.current
     Row(
@@ -614,12 +614,13 @@ internal fun <T> Segmented(options: List<Pair<T, String>>, selected: T, shape: S
     ) {
         for ((value, label) in options) {
             val active = value == selected
+            val enabled = value !in disabled
             val interaction = rememberInteractionSource()
             val hovered by interaction.collectIsHoveredAsState()
             val background by animateColorAsState(
                 when {
                     active -> OneConfigTheme.accent
-                    hovered -> theme.modCardBackground
+                    hovered && enabled -> theme.modCardBackground
                     else -> theme.modCardBackground.copy(alpha = 0f)
                 }
             )
@@ -627,11 +628,11 @@ internal fun <T> Segmented(options: List<Pair<T, String>>, selected: T, shape: S
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxSize()
+                    .alpha(if (enabled) 1f else 0.5f)
                     .clip(segmentShape)
                     .background(background, segmentShape)
                     .hoverable(interaction)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .onClick(interaction) { onSelect(value) },
+                    .then(if (enabled) Modifier.pointerHoverIcon(PointerIcon.Hand).onClick(interaction) { onSelect(value) } else Modifier),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -677,7 +678,7 @@ private fun RuleCard(index: Int, rule: OverrideRule, shape: Shape, onChange: () 
 
         AddCondition(rule, emptyList(), shape, onChange)
 
-        val blockAlongside = rule.conditions + rule.anyOf.flatMap { it.conditions }
+        val blockAlongside = rule.branches()
         val blockTypes = CONDITION_TYPES.filter { OverrideRule().canAdd(it.first, blockAlongside) }
         if (blockTypes.isNotEmpty()) {
             MenuButton("plus", "+ Any of", shape, listOf(null to blockTypes), compact = true) { type ->
@@ -746,7 +747,7 @@ private fun ConditionsCard(shape: Shape, active: Boolean = true, content: @Compo
 @Composable
 internal fun RuleConditions(
     rule: OverrideRule,
-    alongside: List<OverrideCondition>,
+    alongside: List<List<OverrideCondition>>,
     shape: Shape,
     onChange: () -> Unit,
     onEmpty: () -> Unit,
@@ -758,6 +759,7 @@ internal fun RuleConditions(
                 condition = condition,
                 shape = shape,
                 negationLocked = condition.type == OverrideCondition.Type.EFFECT && rule.locksEffectNegation(alongside),
+                permanentLocked = condition.type == OverrideCondition.Type.DURATION && rule.locksPermanent(alongside),
                 onChange = onChange,
                 onRemove = {
                     rule.conditions.remove(condition)
@@ -772,7 +774,7 @@ internal fun RuleConditions(
 @Composable
 internal fun AddCondition(
     rule: OverrideRule,
-    alongside: List<OverrideCondition>,
+    alongside: List<List<OverrideCondition>>,
     shape: Shape,
     onChange: () -> Unit,
     compactLabel: String? = null,
@@ -800,6 +802,7 @@ internal fun ConditionSection(
     condition: OverrideCondition,
     shape: Shape,
     negationLocked: Boolean,
+    permanentLocked: Boolean,
     onChange: () -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -825,7 +828,7 @@ internal fun ConditionSection(
                 onChange()
             }
             OverrideCondition.Type.DURATION -> {
-                Segmented(DURATION_CHOICES, condition.values.firstOrNull() ?: PERMANENT, shape) {
+                Segmented(DURATION_CHOICES, condition.values.firstOrNull() ?: PERMANENT, shape, if (permanentLocked) setOf(PERMANENT) else emptySet()) {
                     condition.values = listOf(it)
                     if (it == PERMANENT) {
                         condition.ranges = floatArrayOf()

@@ -37,12 +37,15 @@ import org.polyfrost.evergreenhud.client.hud.item.hasPotionContents
 import org.polyfrost.evergreenhud.client.hud.item.potionStack
 import org.polyfrost.evergreenhud.client.hud.item.potionVariants
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
-import org.polyfrost.oneconfig.api.ui.v1.item.ItemStackIcon
+import org.polyfrost.compose.minecraft.mc.McItemIconHandle
+import org.polyfrost.compose.minecraft.mc.McItemIcons
+import org.polyfrost.compose.render.RenderContext
 import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.api.ui.v1.components.DropdownMenu
 import org.polyfrost.oneconfig.internal.ui.components.item.ItemIcon
 import org.polyfrost.oneconfig.internal.ui.components.item.ItemIconHandle
 import org.polyfrost.oneconfig.internal.ui.components.item.rememberItemCatalog
+import org.polyfrost.oneconfig.internal.ui.components.item.rememberItemIconHandle
 import org.polyfrost.oneconfig.internal.ui.components.picker.PickerEntry
 import org.polyfrost.oneconfig.internal.ui.components.picker.TilePicker
 import org.polyfrost.oneconfig.api.ui.v1.theme.OneConfigTheme
@@ -94,10 +97,15 @@ private fun rememberItemOptions(): List<ItemOption> {
 @Composable
 internal fun ItemKeyIcon(key: String, modifier: Modifier = Modifier, alpha: Float = 1f) {
     val stack = remember(key) { whenItemsReady(null) { stackOf(key) } }
-    key(key) {
-        if (stack != null) ItemStackIcon(stack, modifier, framed = false, alpha = alpha)
-        else ItemIcon(null as ItemIconHandle?, modifier, framed = false, alpha = alpha)
-    }
+    val icon = rememberItemIconHandle(stack) { stack?.let { StackIconHandle(McItemIcons.open(it)) } }
+    ItemIcon(icon, modifier, framed = false, alpha = alpha)
+}
+
+private class StackIconHandle(private val handle: McItemIconHandle) : ItemIconHandle {
+    override fun draw(ctx: RenderContext, x: Float, y: Float, w: Float, h: Float, alpha: Float): Boolean =
+        handle.draw(ctx, x, y, w, h, alpha)
+
+    override fun close() = handle.close()
 }
 
 @OptIn(ExperimentalLayoutApi::class)

@@ -37,7 +37,7 @@ enum class ItemLocation(val key: String, val title: String, val slots: Int) {
 class ItemEntry(val key: String, counts: FloatArray = floatArrayOf()) {
     var counts by mutableStateOf(counts)
 
-    fun satisfiedBy(count: Int): Boolean = if (counts.isEmpty()) count > 0 else counts.allowsInRanges(count.toFloat())
+    fun satisfiedBy(count: Int): Boolean = count > 0 && counts.allowsInRanges(count.toFloat())
 
     fun copy(): ItemEntry = ItemEntry(key, counts.copyOf())
 }
@@ -51,7 +51,8 @@ class ItemQuery(location: ItemLocation = ItemLocation.MAIN_HAND, required: Int =
 
     val effectiveRequired: Int get() = required.coerceIn(1, maxRequired)
 
-    fun matches(items: ItemSnapshot): Boolean = entries.count { it.satisfiedBy(items.count(location, it.key)) } >= effectiveRequired
+    fun matches(items: ItemSnapshot): Boolean =
+        items.distinctStacks(location, entries.filter { it.satisfiedBy(items.count(location, it.key)) }.map { it.key }) >= effectiveRequired
 
     fun copy(): ItemQuery = ItemQuery(location, required, entries.map { it.copy() })
 
@@ -84,23 +85,42 @@ class ItemQuery(location: ItemLocation = ItemLocation.MAIN_HAND, required: Int =
     }
 }
 
-class ItemSnapshot(private val counts: Map<ItemLocation, Map<String, Int>>) {
+class ItemSnapshot(private val counts: Map<ItemLocation, Map<String, Int>>, private val stacks: Map<ItemLocation, List<List<String>>>) {
     fun count(location: ItemLocation, key: String): Int = counts[location]?.get(key) ?: 0
+
+    fun distinctStacks(location: ItemLocation, keys: List<String>): Int {
+        val stacks = stacks[location] ?: return 0
+        val owner = IntArray(stacks.size) { -1 }
+        fun assign(entry: Int, seen: BooleanArray): Boolean {
+            for (stack in stacks.indices) {
+                if (seen[stack] || keys[entry] !in stacks[stack]) continue
+                seen[stack] = true
+                if (owner[stack] == -1 || assign(owner[stack], seen)) {
+                    owner[stack] = entry
+                    return true
+                }
+            }
+            return false
+        }
+        return keys.indices.count { assign(it, BooleanArray(stacks.size)) }
+    }
 
     class Builder {
         private val counts = EnumMap<ItemLocation, HashMap<String, Int>>(ItemLocation::class.java)
+        private val stacks = EnumMap<ItemLocation, MutableList<List<String>>>(ItemLocation::class.java)
 
         fun add(keys: List<String>, count: Int, vararg locations: ItemLocation) {
             for (location in locations) {
                 val map = counts.getOrPut(location) { HashMap() }
                 for (key in keys) map.merge(key, count, Int::plus)
+                stacks.getOrPut(location) { mutableListOf() }.add(keys)
             }
         }
 
-        fun build(): ItemSnapshot = ItemSnapshot(counts)
+        fun build(): ItemSnapshot = ItemSnapshot(counts, stacks)
     }
 
     companion object {
-        val EMPTY = ItemSnapshot(emptyMap())
+        val EMPTY = ItemSnapshot(emptyMap(), emptyMap())
     }
 }

@@ -142,6 +142,7 @@ class EffectComponentSettings : EffectComponentValues {
                 }
                 is Boolean -> JsonPrimitive(value)
                 is Number -> JsonPrimitive(value)
+                is String -> JsonPrimitive(value)
                 else -> continue
             })
         }
@@ -171,6 +172,7 @@ class EffectComponentSettings : EffectComponentValues {
         Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> element.asJsonPrimitive.takeIf { it.isBoolean }?.asBoolean
         Int::class.javaPrimitiveType, Int::class.javaObjectType -> element.asJsonPrimitive.takeIf { it.isNumber }?.asInt
         Float::class.javaPrimitiveType, Float::class.javaObjectType -> element.asJsonPrimitive.takeIf { it.isNumber }?.asFloat
+        String::class.java -> element.asJsonPrimitive.takeIf { it.isString }?.asString
         else -> null
     }
 

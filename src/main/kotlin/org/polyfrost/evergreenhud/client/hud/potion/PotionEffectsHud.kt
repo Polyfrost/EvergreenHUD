@@ -349,6 +349,7 @@ class PotionEffectsHud : Hud(
                 reversed = false
                 sortingVersion = 1
             }
+            getProperty("sortingVersion").removeMetadata("default")
             val sortProp = Property.recast<String>(getProperty("sortRulesData"))
             sortProp.addMetadata(SORT_RULES_MODEL, sortRules)
             sortRules.persist = { sortProp.set(it) }
