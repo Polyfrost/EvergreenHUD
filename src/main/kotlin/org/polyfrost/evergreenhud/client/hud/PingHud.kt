@@ -89,7 +89,7 @@ class PingHud : CachedTextHud(
     @Volatile private var generation = 0L
     *///?}
 
-    override fun shouldShow(): Boolean = !mc.hasSingleplayerServer()
+    override fun showsLive(): Boolean = !mc.hasSingleplayerServer()
 
     override fun setup() {
         super.setup()

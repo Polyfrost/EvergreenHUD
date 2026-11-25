@@ -17,6 +17,7 @@ import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.hooks.KeyframeSync
 import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.utils.capHeight
 import org.polyfrost.evergreenhud.client.utils.battery.Battery
@@ -88,6 +89,7 @@ class BatteryHud : Hud(
     override fun setup() {
         super.setup()
         if (!isReal) return
+        KeyframeSync.channel(this, "battery")?.let { id -> KeyframeSync.register(this, id) { encodeBattery(Battery.latest ?: Battery.UnknownBattery) } }
         for (option in listOf("showPercentage", "showTimeRemaining", "hideWhileCharging", "lowThreshold", "chargingColor", "saverColor", "lowColor")) {
             updateWhenChanged(option)
         }
@@ -114,7 +116,12 @@ class BatteryHud : Hud(
     override fun shouldShow(): Boolean = display.value != null
 
     private fun read(): Display? {
-        val live = if (isReal) Battery.latest ?: Battery.UnknownBattery else EXAMPLE
+        val replayed = KeyframeSync.replayed(KeyframeSync.channel(this, "battery"))
+        val live = when {
+            !isReal -> EXAMPLE
+            replayed != null -> decodeBattery(replayed)
+            else -> Battery.latest ?: Battery.UnknownBattery
+        }
         val battery = when {
             live !is Battery.UnknownBattery -> live
             HudManager.isEditing -> EXAMPLE
@@ -210,4 +217,13 @@ class BatteryHud : Hud(
         display = mutableStateOf(null)
         acquired = false
     }
+}
+
+private fun encodeBattery(battery: Battery): String =
+    if (battery is Battery.UnknownBattery) "" else "${battery.percentage},${battery.isCharging},${battery.lifetimeRemaining},${battery.isBatterySaverEnabled}"
+
+private fun decodeBattery(value: String): Battery {
+    val parts = value.split(',')
+    if (parts.size != 4) return Battery.UnknownBattery
+    return Battery.ManualBattery(parts[0].toIntOrNull() ?: return Battery.UnknownBattery, parts[1].toBoolean(), parts[2].toIntOrNull() ?: -1, parts[3].toBoolean())
 }

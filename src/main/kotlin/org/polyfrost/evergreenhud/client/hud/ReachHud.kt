@@ -88,6 +88,6 @@ class ReachHud : GenericNumberHud(
 
     override fun updateFrequency() = 1.seconds.inWholeNanoseconds
 
-    override fun shouldShow(): Boolean =
+    override fun showsLive(): Boolean =
         hideAfterMillis <= 0L || System.currentTimeMillis() - lastTime <= hideAfterMillis
 }

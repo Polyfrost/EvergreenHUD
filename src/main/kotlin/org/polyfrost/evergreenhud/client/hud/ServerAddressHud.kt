@@ -51,7 +51,7 @@ class ServerAddressHud : CachedTextHud(
         updateWithText(ip)
     }
 
-    override fun shouldShow(): Boolean = showInSinglePlayer || !mc.hasSingleplayerServer()
+    override fun showsLive(): Boolean = showInSinglePlayer || !mc.hasSingleplayerServer()
 
     override fun getText(): String? = if (isReal) super.getText() else EXAMPLE_ADDRESS
 

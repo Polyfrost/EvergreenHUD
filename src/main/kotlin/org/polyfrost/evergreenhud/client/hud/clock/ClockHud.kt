@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameMillis
 import org.polyfrost.compose.composables.NodeBox
+import org.polyfrost.evergreenhud.client.hooks.KeyframeSync
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
@@ -19,6 +20,7 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
+import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 
@@ -32,7 +34,10 @@ private const val DETAIL_NUMBERS = 2
 
 private const val PREVIEW_MILLIS = (10L * 3600L + 9L * 60L + 30L) * 1000L
 
-private fun millisOfDay(zone: ZoneId): Long = LocalTime.now(zone).toNanoOfDay() / 1_000_000L
+private fun millisOfDay(zone: ZoneId): Long {
+    val time = if (KeyframeSync.replaying) Instant.ofEpochMilli(KeyframeSync.wallMillis()).atZone(zone).toLocalTime() else LocalTime.now(zone)
+    return time.toNanoOfDay() / 1_000_000L
+}
 
 class ClockHud : Hud(
     id = "clock.json",
