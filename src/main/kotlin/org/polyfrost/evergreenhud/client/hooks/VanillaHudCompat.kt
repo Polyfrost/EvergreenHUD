@@ -35,7 +35,17 @@ object VanillaHudCompat {
             val huds = Class.forName("org.polyfrost.vanillahud.hud.Huds")
             val instance = huds.getField("INSTANCE").get(null)
             val method = huds.getMethod(getter)
-            val read: () -> Hud? = { method.invoke(instance) as? Hud }
+            var failed = false
+            val read: () -> Hud? = read@{
+                if (failed) return@read null
+                try {
+                    method.invoke(instance) as? Hud
+                } catch (e: Throwable) {
+                    failed = true
+                    LOGGER.warn("Failed to read VanillaHUD's hud through {}, its compat option will do nothing", getter, e)
+                    null
+                }
+            }
             read
         } catch (_: NoSuchMethodException) {
             null
