@@ -173,7 +173,14 @@ class BatteryHud : Hud(
             padBottom + BASE_PADDING,
         )
         val color = textPolyColor
-        val rowModifier = PolyModifier.height(CELL_HEIGHT).align(if (isStatic) alignment else PolyAlign.Center)
+        val poppins = if (font == Font.Minecraft) null else PolyFont(getPoppinsFontName(), FONT_SIZE * textScale)
+        val inkHeight = when {
+            !hasText -> 0f
+            poppins == null -> MC_INK_HEIGHT * textScale
+            else -> poppins.capHeight
+        }
+        val rowHeight = maxOf(CELL_HEIGHT, inkHeight)
+        val rowModifier = PolyModifier.height(rowHeight).align(if (isStatic) alignment else PolyAlign.Center)
 
         NodeBox(modifier = modifier) {
             NodeRow(gap = if (hasText) TEXT_GAP else 0f, modifier = rowModifier) {
@@ -182,23 +189,22 @@ class BatteryHud : Hud(
                     fill = current.fill ?: color,
                     outline = color.multiplyAlpha(OUTLINE_ALPHA),
                     bolt = if (current.charging) color else null,
+                    modifier = topAlign((rowHeight - CELL_HEIGHT) / 2f).size(CELL_WIDTH, CELL_HEIGHT),
                 )
-                if (hasText) Label(current.text, color)
+                if (hasText) Label(current.text, color, poppins, rowHeight)
             }
         }
     }
 
     @Composable
-    private fun Label(raw: String, color: PolyColor) {
+    private fun Label(raw: String, color: PolyColor, poppins: PolyFont?, rowHeight: Float) {
         val text = applyCase(raw)
-        val rowHeight = CELL_HEIGHT
-        if (font == Font.Minecraft) {
+        if (poppins == null) {
             val modifier = topAlign(inkOffset(rowHeight, 0f, MC_INK_HEIGHT * textScale))
             NodeMcText(text, color = color, shadow = showShadow, scale = textScale, modifier = modifier)
         } else {
-            val polyFont = PolyFont(getPoppinsFontName(), FONT_SIZE * textScale)
-            val inkTop = -polyFont.metrics.ascent - polyFont.capHeight
-            val modifier = topAlign(inkOffset(rowHeight, inkTop, polyFont.capHeight))
+            val inkTop = -poppins.metrics.ascent - poppins.capHeight
+            val modifier = topAlign(inkOffset(rowHeight, inkTop, poppins.capHeight))
             NodeText(
                 text,
                 color = color,
@@ -216,7 +222,7 @@ class BatteryHud : Hud(
         PolyModifier.align(PolyAlign.Top).margin(top = offset)
 
     private fun inkOffset(rowHeight: Float, inkTop: Float, inkHeight: Float): Float =
-        ((rowHeight - inkHeight) / 2f - inkTop).coerceAtLeast(0f)
+        ((rowHeight - inkHeight) / 2f - inkTop).coerceAtLeast(minOf(0f, rowHeight - inkTop - inkHeight))
 
     override fun onCloned() {
         display = mutableStateOf(null)
