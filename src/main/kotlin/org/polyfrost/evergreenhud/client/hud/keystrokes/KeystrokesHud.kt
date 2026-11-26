@@ -18,6 +18,7 @@ import org.polyfrost.compose.composables.NodeRow
 import org.polyfrost.compose.composables.NodeText
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.align
+import org.polyfrost.compose.composables.clip
 import org.polyfrost.compose.composables.margin
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
@@ -502,7 +503,7 @@ class KeystrokesHud : Hud(
     private fun Key(label: String, progress: KeyFade, w: Float, h: Float, align: PolyAlign? = null, sub: String? = null) {
         keys.rev.value
         val fg = keyFg(progress.text.floatValue)
-        NodeBox(modifier = keyModifier(w, h, align)) {
+        NodeBox(modifier = keyModifier(w, h, align).clip(keyRadius.coerceAtLeast(0f))) {
             KeyBackground(progress.bg.floatValue, w, h)
             val subScale = textScale * CPS_SCALE
             if (font == Font.Minecraft) {
