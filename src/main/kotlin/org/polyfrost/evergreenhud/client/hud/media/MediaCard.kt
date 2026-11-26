@@ -12,6 +12,7 @@ import org.polyfrost.compose.render.PolyPath
 import org.polyfrost.compose.render.PolyRenderer
 import org.polyfrost.compose.render.RenderContext
 import org.polyfrost.compose.render.addShape
+import org.polyfrost.compose.render.visualOrder
 import org.polyfrost.evergreenhud.client.hud.shape.oval
 import org.polyfrost.evergreenhud.client.utils.capHeight
 import org.polyfrost.evergreenhud.client.utils.media.BlurSource
@@ -419,21 +420,28 @@ internal class Label(val size: Float, val fontName: String?, val shadow: Boolean
 
     val capHeight: Float get() = poly?.capHeight ?: (MC_CAP_HEIGHT * mcScale)
 
-    fun width(text: String): Float = poly?.measureTextWidth(text) ?: McFontQueue.measureTextWidth(text, mcScale)
+    fun width(text: String): Float = poly?.measureTextWidth(visualOrder(text)) ?: McFontQueue.measureTextWidth(mcOrder(text), mcScale)
 
     fun RenderContext.draw(text: String, x: Float, baseline: Float, color: PolyColor) {
-        if (poly != null) return text(text, x, baseline, color, poly)
-        mcText(text, x, baseline - MC_CAP_HEIGHT * mcScale, color.argb, shadow, mcScale)
+        if (poly != null) return text(visualOrder(text), x, baseline, color, poly)
+        mcText(mcOrder(text), x, baseline - MC_CAP_HEIGHT * mcScale, color.argb, shadow, mcScale)
     }
 
     fun RenderContext.draw(text: String, x: Float, baseline: Float, argb: Int) {
         if (poly != null) {
-            if (argb ushr 24 != 0 && text.isNotEmpty()) renderer.text(text, x, baseline, argb, poly)
+            if (argb ushr 24 != 0 && text.isNotEmpty()) renderer.text(visualOrder(text), x, baseline, argb, poly)
             return
         }
-        mcText(text, x, baseline - MC_CAP_HEIGHT * mcScale, argb, shadow, mcScale)
+        mcText(mcOrder(text), x, baseline - MC_CAP_HEIGHT * mcScale, argb, shadow, mcScale)
     }
 }
+
+private fun mcOrder(text: String): String =
+    //? if >= 1.21.11 {
+    text
+    //?} else {
+    /*visualOrder(text)
+    *///?}
 
 private const val MC_LINE_HEIGHT = 9f
 private const val MC_CAP_HEIGHT = 7f

@@ -41,6 +41,7 @@ import org.polyfrost.oneconfig.api.hud.v1.HudAnchor
 import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.platform.v1.Platform
+import java.text.Bidi
 import java.util.IdentityHashMap
 import java.util.function.Supplier
 import kotlin.math.abs
@@ -133,7 +134,7 @@ private class Placed(val startMs: Long, val endMs: Long, val text: String, val t
     }
 }
 
-private class LineLayout(val rows: List<List<Placed>>) {
+private class LineLayout(val rows: List<List<Placed>>, val bidi: Boolean) {
     val height: Float get() = rows.size.coerceAtLeast(1) * ROW_HEIGHT
     fun rowWidth(row: List<Placed>): Float = row.lastOrNull()?.let { it.x + it.ink } ?: 0f
 }
@@ -545,6 +546,9 @@ class LyricsHud : Hud(
 
             val layout = layout(line, label, width)
             val rows = layout.rows
+            val words = wordLevel && !layout.bidi
+            val bouncing = motion && words
+            val wordGlowing = glowing && words
             for (r in rows.indices) {
                 val row = rows[r]
                 val rowOffset = (width - layout.rowWidth(row)) * align
@@ -553,18 +557,18 @@ class LyricsHud : Hud(
                     val word = row[w]
                     val progress = when {
                         emphasis <= 0f -> 0f
-                        !wordLevel -> if (position >= line.startMs) 1f else 0f
+                        !words -> if (position >= line.startMs) 1f else 0f
                         else -> ((position - word.startMs).toFloat() / (word.endMs - word.startMs)).coerceIn(0f, 1f)
                     }
-                    val settle = if (emphasis <= 0f || !wordLevel) progress else {
+                    val settle = if (emphasis <= 0f || !words) progress else {
                         ((position - word.startMs).toFloat() / maxOf(word.endMs - word.startMs, MIN_MOTION_MS)).coerceIn(0f, 1f)
                     }
-                    val scale = lineScale * (if (motion) lerp(1f, wordScale(settle), emphasis) else 1f)
-                    val lift = if (motion) LIFT * wordLift(settle) * emphasis else 0f
-                    val glow = if (glowing) wordGlow(settle) * emphasis else 0f
+                    val scale = lineScale * (if (bouncing) lerp(1f, wordScale(settle), emphasis) else 1f)
+                    val lift = if (bouncing) LIFT * wordLift(settle) * emphasis else 0f
+                    val glow = if (wordGlowing) wordGlow(settle) * emphasis else 0f
                     val cx = place(rowOffset + word.x + word.ink / 2f)
                     val trimmed = word.trimmed
-                    val held = motion && progress > 0f && progress < 1f && word.endMs - word.startMs >= LETTER_MIN_MS && trimmed.length in 2..LETTER_MAX
+                    val held = bouncing && progress > 0f && progress < 1f && word.endMs - word.startMs >= LETTER_MIN_MS && trimmed.length in 2..LETTER_MAX
                     if (!held) {
                         marks.add(GlyphMark(trimmed, cx, baseline - lift, word.ink, scale, base, sung, progress, glow))
                         continue
@@ -580,7 +584,7 @@ class LyricsHud : Hud(
                         val falloff = envelope / (1f + abs(k + 0.5f - active).pow(2.8f))
                         val letterScale = scale * (1f + LETTER_SCALE * falloff)
                         val letterCx = cx + (x + letterWidth / 2f - word.ink / 2f) * scale
-                        val letterGlow = if (glowing) maxOf(glow, falloff) else 0f
+                        val letterGlow = if (wordGlowing) maxOf(glow, falloff) else 0f
                         marks.add(GlyphMark(letter, letterCx, baseline - lift - LETTER_LIFT * falloff, letterWidth, letterScale, base, sung, (active - k).coerceIn(0f, 1f), letterGlow))
                         x += letterWidth
                     }
@@ -594,7 +598,7 @@ class LyricsHud : Hud(
             colors.sung.chroma || colors.unsung.chroma || colors.other.chroma -> FRAME_NS
             !moving -> IDLE_NS
             transitioning -> FRAME_NS
-            else -> nextEventStep(lines, current, position, wordLevel)
+            else -> nextEventStep(lines, current, position, wordLevel && !layout(lines[current], label, width).bidi)
         }
 
         return LyricsFrame(
@@ -660,7 +664,13 @@ class LyricsHud : Hud(
             x += label.width(text)
         }
         if (row.isNotEmpty()) rows.add(row)
-        LineLayout(rows)
+        val joined = rows.joinToString("") { words -> words.joinToString("") { it.text } }
+        if (!Bidi.requiresBidi(joined.toCharArray(), 0, joined.length)) return@getOrPut LineLayout(rows, false)
+        LineLayout(rows.map { words ->
+            val text = words.joinToString("") { it.text }
+            val trimmed = text.trimEnd()
+            listOf(Placed(line.startMs, line.endMs, text, trimmed, 0f, label.width(trimmed)))
+        }, true)
     }
 
     private fun contentWidth(lyrics: Lyrics, label: Label): Float {
