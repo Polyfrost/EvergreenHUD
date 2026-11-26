@@ -29,12 +29,12 @@ public class Mixin_InGameHud_SmuggleDrawContext {
     //? if > 1.8.9 && < 1.21.10 {
     /*@Inject(method = "render", at = @At("HEAD"))
     private void evergreenhud$renderPlayerPreview(GuiGraphics graphics, DeltaTracker deltaTracker, CallbackInfo ci) {
-        PlayerPreviewOffscreen.render();
+        PlayerPreviewOffscreen.render(deltaTracker.getGameTimeDeltaPartialTick(false));
     }
     *///?} else if = 1.8.9 {
     /*@Inject(method = "render", at = @At("HEAD"))
     private void evergreenhud$renderPlayerPreview(float partialTick, CallbackInfo ci) {
-        PlayerPreviewOffscreen.render();
+        PlayerPreviewOffscreen.render(partialTick);
     }
     *///?}
 
