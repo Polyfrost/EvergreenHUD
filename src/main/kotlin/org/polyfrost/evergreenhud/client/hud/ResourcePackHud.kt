@@ -37,7 +37,12 @@ import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.utils.SCHEMA_CONTENT_SCALE
+import org.polyfrost.evergreenhud.client.utils.addHudSchema
 import org.polyfrost.evergreenhud.client.utils.applyCase
+import org.polyfrost.evergreenhud.client.utils.migrateContentScale
+import org.polyfrost.evergreenhud.client.utils.migrateHudSchema
+import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
@@ -233,6 +238,15 @@ class ResourcePackHud : Hud(
 
     override fun updateFrequency(): Long = 1.seconds.inWholeNanoseconds
 
+    override fun addToSerialized(tree: Tree) {
+        super.addToSerialized(tree)
+        tree.addHudSchema()
+    }
+
+    override fun migrateLoaded(saved: Tree): Boolean = migrateHudSchema(saved) { from ->
+        if (from < SCHEMA_CONTENT_SCALE) migrateContentScale()
+    }
+
     override fun setup() {
         super.setup()
         if (isReal) updateWhenChanged("ignoreOverlay")
@@ -275,22 +289,21 @@ class ResourcePackHud : Hud(
 
     @Composable
     override fun Content() {
-        val scale = textScale.coerceAtLeast(0.01f)
-        val polyFont = if (font == Font.Poppins) PolyFont(getPoppinsFontName(), FONT_SIZE * scale) else null
+        val polyFont = if (font == Font.Poppins) PolyFont(getPoppinsFontName(), FONT_SIZE * textScale) else null
         val measure: (String) -> Float =
             if (polyFont != null) polyFont::measureTextWidth
-            else { text -> McFontQueue.measureTextWidth(text, scale) }
+            else { text -> McFontQueue.measureTextWidth(text, textScale) }
 
-        val lines = wrap(applyCase(packDescription.value), DESCRIPTION_WIDTH * scale, measure)
+        val lines = wrap(applyCase(packDescription.value), DESCRIPTION_WIDTH * textScale, measure)
 
         val modifier = hudBackground().padding(padLeft, padTop, padRight, padBottom)
 
         NodeBox(modifier = modifier) {
-            NodeRow(gap = GAP * scale) {
-                Icon(ICON * scale, if (showBackground) bgRadius else 0f)
-                NodeColumn(gap = TITLE_GAP * scale) {
-                    Line(applyCase(packTitle.value), scale)
-                    for (line in lines) Line(line, scale)
+            NodeRow(gap = GAP) {
+                Icon(ICON, if (showBackground) bgRadius else 0f)
+                NodeColumn(gap = TITLE_GAP * textScale) {
+                    Line(applyCase(packTitle.value))
+                    for (line in lines) Line(line)
                 }
             }
         }
@@ -313,15 +326,15 @@ class ResourcePackHud : Hud(
     }
 
     @Composable
-    private fun Line(text: String, scale: Float) {
+    private fun Line(text: String) {
         val color = textPolyColor
         if (font == Font.Minecraft) {
-            NodeMcText(text, color = color, shadow = showShadow, scale = scale)
+            NodeMcText(text, color = color, shadow = showShadow, scale = textScale)
         } else {
             NodeText(
                 text,
                 color = color,
-                fontSize = FONT_SIZE * scale,
+                fontSize = FONT_SIZE * textScale,
                 shadow = showShadow,
                 shadowColor = shadowPolyColor,
                 shadowOffset = shadowOffsetX,

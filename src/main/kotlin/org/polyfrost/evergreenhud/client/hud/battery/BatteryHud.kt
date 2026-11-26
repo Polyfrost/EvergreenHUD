@@ -17,9 +17,14 @@ import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.utils.SCHEMA_CONTENT_SCALE
+import org.polyfrost.evergreenhud.client.utils.addHudSchema
 import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.utils.capHeight
 import org.polyfrost.evergreenhud.client.utils.battery.Battery
+import org.polyfrost.evergreenhud.client.utils.migrateContentScale
+import org.polyfrost.evergreenhud.client.utils.migrateHudSchema
+import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
@@ -85,6 +90,15 @@ class BatteryHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
+    override fun addToSerialized(tree: Tree) {
+        super.addToSerialized(tree)
+        tree.addHudSchema()
+    }
+
+    override fun migrateLoaded(saved: Tree): Boolean = migrateHudSchema(saved) { from ->
+        if (from < SCHEMA_CONTENT_SCALE) migrateContentScale()
+    }
+
     override fun setup() {
         super.setup()
         if (!isReal) return
@@ -149,48 +163,46 @@ class BatteryHud : Hud(
     @Composable
     override fun Content() {
         val current = display.value ?: return
-        val scale = textScale.coerceAtLeast(0.01f)
         val hasText = current.text.isNotEmpty()
         val isStatic = staticWidth && staticW > 0f && staticH > 0f
         val background = if (isStatic) hudBackground().size(staticW, staticH) else hudBackground()
         val modifier = background.padding(
-            padLeft + BASE_PADDING * scale,
-            padTop + BASE_PADDING * scale,
-            padRight + (if (hasText && font == Font.Minecraft) BASE_PADDING - MC_TRAILING_SPACE else BASE_PADDING) * scale,
-            padBottom + BASE_PADDING * scale,
+            padLeft + BASE_PADDING,
+            padTop + BASE_PADDING,
+            padRight + (if (hasText && font == Font.Minecraft) BASE_PADDING - MC_TRAILING_SPACE * textScale else BASE_PADDING),
+            padBottom + BASE_PADDING,
         )
         val color = textPolyColor
-        val rowModifier = PolyModifier.height(CELL_HEIGHT * scale).align(if (isStatic) alignment else PolyAlign.Center)
+        val rowModifier = PolyModifier.height(CELL_HEIGHT).align(if (isStatic) alignment else PolyAlign.Center)
 
         NodeBox(modifier = modifier) {
-            NodeRow(gap = if (hasText) TEXT_GAP * scale else 0f, modifier = rowModifier) {
+            NodeRow(gap = if (hasText) TEXT_GAP else 0f, modifier = rowModifier) {
                 BatteryCell(
                     percent = current.percent,
                     fill = current.fill ?: color,
                     outline = color.multiplyAlpha(OUTLINE_ALPHA),
                     bolt = if (current.charging) color else null,
-                    scale = scale,
                 )
-                if (hasText) Label(current.text, color, scale)
+                if (hasText) Label(current.text, color)
             }
         }
     }
 
     @Composable
-    private fun Label(raw: String, color: PolyColor, scale: Float) {
+    private fun Label(raw: String, color: PolyColor) {
         val text = applyCase(raw)
-        val rowHeight = CELL_HEIGHT * scale
+        val rowHeight = CELL_HEIGHT
         if (font == Font.Minecraft) {
-            val modifier = topAlign(inkOffset(rowHeight, 0f, MC_INK_HEIGHT * scale))
-            NodeMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
+            val modifier = topAlign(inkOffset(rowHeight, 0f, MC_INK_HEIGHT * textScale))
+            NodeMcText(text, color = color, shadow = showShadow, scale = textScale, modifier = modifier)
         } else {
-            val polyFont = PolyFont(getPoppinsFontName(), FONT_SIZE * scale)
+            val polyFont = PolyFont(getPoppinsFontName(), FONT_SIZE * textScale)
             val inkTop = -polyFont.metrics.ascent - polyFont.capHeight
             val modifier = topAlign(inkOffset(rowHeight, inkTop, polyFont.capHeight))
             NodeText(
                 text,
                 color = color,
-                fontSize = FONT_SIZE * scale,
+                fontSize = FONT_SIZE * textScale,
                 shadow = showShadow,
                 shadowColor = shadowPolyColor,
                 shadowOffset = shadowOffsetX,

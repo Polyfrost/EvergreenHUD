@@ -24,7 +24,12 @@ import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.mc.McFontQueue
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.snappedRect
+import org.polyfrost.evergreenhud.client.utils.SCHEMA_CONTENT_SCALE
+import org.polyfrost.evergreenhud.client.utils.addHudSchema
 import org.polyfrost.evergreenhud.client.utils.applyCase
+import org.polyfrost.evergreenhud.client.utils.migrateContentScale
+import org.polyfrost.evergreenhud.client.utils.migrateHudSchema
+import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.evergreenhud.client.utils.fastRemoveIfReversed
 import org.polyfrost.evergreenhud.client.utils.isHeld
@@ -209,6 +214,15 @@ class KeystrokesHud : Hud(
         customBind = customBind.copyWith(customBind.keyCodes?.copyOf(), customBind.mouseBtns?.copyOf(), customBind.mods)
         keys = KeyState()
         handlers = ArrayList(2)
+    }
+
+    override fun addToSerialized(tree: Tree) {
+        super.addToSerialized(tree)
+        tree.addHudSchema()
+    }
+
+    override fun migrateLoaded(saved: Tree): Boolean = migrateHudSchema(saved) { from ->
+        if (from < SCHEMA_CONTENT_SCALE) migrateContentScale { keyRadius /= it }
     }
 
     override fun setup() {
@@ -396,24 +410,23 @@ class KeystrokesHud : Hud(
     override fun Content() {
         keys.rev.value
         val o = mc.options ?: return
-        val s = textScale.coerceAtLeast(0.01f)
         val px = keys.px.value
         fun q(v: Float) = if (px > 0f) (v * px).roundToInt() / px else v
-        val keyW = q(KEY * s + padLeft + padRight)
-        val keyH = q(KEY * s + padTop + padBottom)
-        val gap = q(keyGap * s)
+        val keyW = q(KEY + padLeft + padRight)
+        val keyH = q(KEY + padTop + padBottom)
+        val gap = q(keyGap)
         val rowW = keyW * 3 + gap * 2
         val clickW = q((rowW - gap) / 2f)
         val clickW2 = rowW - gap - clickW
-        val spaceKeyH = q(spaceH * s + padTop + padBottom)
+        val spaceKeyH = q(spaceH + padTop + padBottom)
         val useArrows = arrows && font == Font.Minecraft
 
         if (isCustom) {
             Key(
                 customLabel.ifBlank { customBindLabel() },
                 keys.custom,
-                q(customWidth * s + padLeft + padRight),
-                q(customHeight * s + padTop + padBottom),
+                q(customWidth + padLeft + padRight),
+                q(customHeight + padTop + padBottom),
             )
             return
         }
@@ -543,15 +556,13 @@ class KeystrokesHud : Hud(
         NodeBox(modifier = keyModifier(w, h)) {
             KeyBackground(progress.bg.floatValue, w, h)
             NodeCanvas(PolyModifier.size(w, h)) { x, y, cw, ch ->
-                val s = textScale
-                val half = spaceLineW * s / 2f
-                val thickness = spaceLineH * s
+                val half = spaceLineW / 2f
                 val cx = x + cw / 2f
-                val cy = y + ch / 2f - 0.5f * s
+                val cy = y + ch / 2f - 0.5f
                 if (showShadow && font == Font.Minecraft) {
-                    line(cx - half + s, cy + s, cx + half + s, cy + s, fg.darken(0.75f), thickness)
+                    line(cx - half + 1f, cy + 1f, cx + half + 1f, cy + 1f, fg.darken(0.75f), spaceLineH)
                 }
-                line(cx - half, cy, cx + half, cy, fg, thickness)
+                line(cx - half, cy, cx + half, cy, fg, spaceLineH)
             }
         }
     }

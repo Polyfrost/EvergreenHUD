@@ -23,8 +23,13 @@ import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hud.item.ITEM_SIZE
 import org.polyfrost.evergreenhud.client.hud.item.ItemIcon
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
+import org.polyfrost.evergreenhud.client.utils.SCHEMA_CONTENT_SCALE
+import org.polyfrost.evergreenhud.client.utils.addHudSchema
 import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.utils.fastRemoveIfReversed
+import org.polyfrost.evergreenhud.client.utils.migrateContentScale
+import org.polyfrost.evergreenhud.client.utils.migrateHudSchema
+import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
@@ -119,6 +124,15 @@ class ItemTrackerHud : Hud(
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
 
     override fun canMergeBackground(): Boolean = true
+
+    override fun addToSerialized(tree: Tree) {
+        super.addToSerialized(tree)
+        tree.addHudSchema()
+    }
+
+    override fun migrateLoaded(saved: Tree): Boolean = migrateHudSchema(saved) { from ->
+        if (from < SCHEMA_CONTENT_SCALE) migrateContentScale()
+    }
 
     override fun setup() {
         if (!isReal) return
@@ -247,65 +261,64 @@ class ItemTrackerHud : Hud(
         rev.value
         val list = entries.value
         if (list.isEmpty()) return
-        val scale = textScale.coerceAtLeast(0.01f)
         val textSidePadding = if (showIcon) TEXT_GAP else BASE_PADDING
         val leftPadding = if (showIcon && textPosition == RIGHT) BASE_PADDING else textSidePadding
         val rightPadding = if (showIcon && textPosition != RIGHT) BASE_PADDING else textSidePadding
         val modifier = hudBackground().padding(
-            padLeft + leftPadding * scale,
-            padTop + BASE_PADDING * scale,
-            padRight + rightPadding * scale,
-            padBottom + BASE_PADDING * scale,
+            padLeft + leftPadding,
+            padTop + BASE_PADDING,
+            padRight + rightPadding,
+            padBottom + BASE_PADDING,
         )
         val rowAlign = if (textPosition == RIGHT) PolyAlign.Left else PolyAlign.Right
 
         NodeBox(modifier = modifier) {
-            NodeColumn(gap = spacing * scale) {
-                for (entry in list) Entry(entry, scale, rowAlign)
+            NodeColumn(gap = spacing) {
+                for (entry in list) Entry(entry, rowAlign)
             }
         }
     }
 
     @Composable
-    private fun Entry(entry: Entry, scale: Float, align: PolyAlign) {
+    private fun Entry(entry: Entry, align: PolyAlign) {
         rev.value
-        NodeRow(gap = if (showIcon) TEXT_GAP * scale else 0f, modifier = PolyModifier.align(align)) {
-            if (textPosition != RIGHT) Text(entry, scale)
+        NodeRow(gap = if (showIcon) TEXT_GAP else 0f, modifier = PolyModifier.align(align)) {
+            if (textPosition != RIGHT) Text(entry)
             if (showIcon) {
                 ItemIcon(
                     entry.stack,
-                    size = ITEM_SIZE * scale,
+                    size = ITEM_SIZE,
                     decorations = false,
                     modifier = PolyModifier.align(PolyAlign.Center),
                 )
             }
-            if (textPosition == RIGHT) Text(entry, scale)
+            if (textPosition == RIGHT) Text(entry)
         }
     }
 
     @Composable
-    private fun Text(entry: Entry, scale: Float) {
+    private fun Text(entry: Entry) {
         NodeRow(
-            gap = if (entry.name.isEmpty()) 0f else TEXT_GAP * scale,
+            gap = if (entry.name.isEmpty()) 0f else TEXT_GAP * textScale,
             modifier = PolyModifier.align(PolyAlign.Center),
         ) {
-            Label(entry.amount, entry.color, scale)
-            if (entry.name.isNotEmpty()) Label(entry.name, textColor, scale)
+            Label(entry.amount, entry.color)
+            if (entry.name.isNotEmpty()) Label(entry.name, textColor)
         }
     }
 
     @Composable
-    private fun Label(raw: String, argb: Int, scale: Float) {
+    private fun Label(raw: String, argb: Int) {
         val text = applyCase(raw)
         val color = PolyColor(argb, textChroma, textChromaSpeed)
         val modifier = PolyModifier.align(PolyAlign.Center)
         if (font == Font.Minecraft) {
-            NodeMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
+            NodeMcText(text, color = color, shadow = showShadow, scale = textScale, modifier = modifier)
         } else {
             NodeText(
                 text,
                 color = color,
-                fontSize = FONT_SIZE * scale,
+                fontSize = FONT_SIZE * textScale,
                 shadow = showShadow,
                 shadowColor = shadowPolyColor,
                 shadowOffset = shadowOffsetX,
