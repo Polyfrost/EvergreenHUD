@@ -316,7 +316,8 @@ object PlayerPreviewOffscreen {
         val entityScale = player.scale.coerceAtLeast(0.0001f)
         val liveBodyRot = Mth.rotLerp(partialTick, player.yBodyRotO, player.yBodyRot)
         val liveHeadRot = Mth.rotLerp(partialTick, player.yHeadRotO, player.yHeadRot)
-        val headRot = request.bodyRot + (request.headRot ?: Mth.wrapDegrees(liveHeadRot - liveBodyRot))
+        val bodyRot = if (request.headRot == null) 180f + Mth.wrapDegrees(liveBodyRot - player.yRot) else request.bodyRot
+        val headRot = bodyRot + (request.headRot ?: Mth.wrapDegrees(liveHeadRot - liveBodyRot))
         val headPitch = request.headPitch ?: Mth.lerp(partialTick, player.xRotO, player.xRot)
 
         val anchor = smoothAnchorHeight(slot, player.bbHeight / entityScale)
@@ -345,8 +346,8 @@ object PlayerPreviewOffscreen {
 
         rendering = true
         nameTag = request.nametag
-        player.yBodyRot = request.bodyRot
-        player.yBodyRotO = request.bodyRot
+        player.yBodyRot = bodyRot
+        player.yBodyRotO = bodyRot
         player.yHeadRot = headRot
         player.yHeadRotO = headRot
         player.yRot = headRot
@@ -393,7 +394,7 @@ object PlayerPreviewOffscreen {
         val liveBodyRot = player.lastBodyYaw + partialTick * MathHelper.wrapDegrees(player.bodyYaw - player.lastBodyYaw)
         val liveHeadRot = player.lastHeadYaw + partialTick * MathHelper.wrapDegrees(player.headYaw - player.lastHeadYaw)
         // requests use modern's yaw (180 faces the viewer), 1.8.9 faces the viewer at 0
-        val bodyRot = request.bodyRot - 180f
+        val bodyRot = if (request.headRot == null) MathHelper.wrapDegrees(liveBodyRot - player.yRot) else request.bodyRot - 180f
         val headRot = bodyRot + (request.headRot ?: MathHelper.wrapDegrees(liveHeadRot - liveBodyRot))
         val headPitch = request.headPitch ?: (player.lastPitch + partialTick * (player.xRot - player.lastPitch))
 
