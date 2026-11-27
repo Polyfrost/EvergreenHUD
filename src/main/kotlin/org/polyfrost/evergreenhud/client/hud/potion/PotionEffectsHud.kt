@@ -359,6 +359,9 @@ class PotionEffectsHud : Hud(
     private var holdingSection = false
     private var heldAtX = 0f
     private var heldAtY = 0f
+    private var writtenSection: Section? = null
+    private var writtenRelativeX = Float.NaN
+    private var writtenRelativeY = Float.NaN
 
     private var fontRevision = mutableIntStateOf(FontManager.revision)
 
@@ -590,18 +593,30 @@ class PotionEffectsHud : Hud(
     override fun updateRelativeX(absX: Float) {
         super.updateRelativeX(absX)
         dragX = absX
+        notePositionWritten()
     }
 
     override fun updateRelativeY(absY: Float) {
         super.updateRelativeY(absY)
         dragY = absY
+        notePositionWritten()
     }
+
+    private fun notePositionWritten() {
+        writtenSection = section
+        writtenRelativeX = relativeX
+        writtenRelativeY = relativeY
+    }
+
+    private val positionWrittenExternally: Boolean
+        get() = section != writtenSection || relativeX != writtenRelativeX || relativeY != writtenRelativeY
 
     private fun settleLayoutSection(): Boolean {
         val target = section
         val held = layoutSection.value
 
-        if (held == target || held == null || !HudManager.isEditing || selfAnchorPoint != HudAnchor.Auto) {
+        if (held == target || held == null || !HudManager.isEditing || selfAnchorPoint != HudAnchor.Auto || (!dragging && positionWrittenExternally)) {
+            notePositionWritten()
             if (!dragging) {
                 dragX = x
                 dragY = y
