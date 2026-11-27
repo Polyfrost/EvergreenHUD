@@ -496,7 +496,7 @@ class KeystrokesHud : Hud(
                 val lineH = McFontQueue.measureTextHeight(textScale)
                 val lineGap = LINE_GAP * textScale
                 val totalH = if (sub == null) lineH else lineH + lineGap + McFontQueue.measureTextHeight(subScale)
-                val topPad = ((h - totalH) / 2f).coerceAtLeast(0f)
+                val topPad = ((h - totalH) / 2f + textScale).coerceIn(0f, (h - totalH).coerceAtLeast(0f))
                 McLine(label, fg, w, topPad, textScale)
                 if (sub != null) McLine(sub, fg, w, topPad + lineH + lineGap, subScale)
             } else if (sub == null) {
