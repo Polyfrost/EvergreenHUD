@@ -50,7 +50,11 @@ import org.polyfrost.compose.render.ImageLoader
 import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.evergreenhud.client.hooks.VanillaHudCompat
+import org.polyfrost.evergreenhud.client.utils.SCHEMA_CONTENT_SCALE
+import org.polyfrost.evergreenhud.client.utils.addHudSchema
 import org.polyfrost.evergreenhud.client.utils.applyCase
+import org.polyfrost.evergreenhud.client.utils.migrateContentScale
+import org.polyfrost.evergreenhud.client.utils.migrateHudSchema
 import org.polyfrost.oneconfig.api.config.v1.Node
 import org.polyfrost.oneconfig.api.config.v1.Property
 import org.polyfrost.oneconfig.api.config.v1.Tree
@@ -365,6 +369,10 @@ class PotionEffectsHud : Hud(
     private var tickHandler: EventHandler<*>? = null
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
+
+    override fun migrateLoaded(saved: Tree): Boolean = migrateHudSchema(saved) { from ->
+        if (from < SCHEMA_CONTENT_SCALE) migrateContentScale()
+    }
 
     override fun setup() {
         super.setup()
@@ -925,13 +933,13 @@ class PotionEffectsHud : Hud(
         val maxRowWidth = remember(list, scale, font, textWeight, layout.mode, fonts) {
             val mode = layout.mode
             val hasAnyIcon = list.any { it.icon != null }
-            val iconWidth = ICON * scale
+            val iconWidth = ICON
 
             list.maxOf { row ->
                 val nameWidth = row.name?.let { textWidth(it, row.nameStyle, scale) } ?: 0f
                 val durationWidth = row.duration?.let { textWidth(it, row.durationStyle, scale) } ?: 0f
                 val hasText = row.name != null || row.duration != null
-                val iconGap = if (row.icon != null && hasText) row.iconGap * scale else 0f
+                val iconGap = if (row.icon != null && hasText) row.iconGap else 0f
                 when (mode) {
                     MODE_STACKED -> maxOf(if (row.icon != null) iconWidth else 0f, nameWidth, durationWidth)
                     MODE_SINGLE_LINE -> {
@@ -950,11 +958,11 @@ class PotionEffectsHud : Hud(
 
         NodeBox(modifier = modifier) {
             if (horizontal) {
-                NodeRow(gap = layout.spacing * scale) {
+                NodeRow(gap = layout.spacing) {
                     for (row in list) Effect(row, scale, maxRowWidth, layout)
                 }
             } else {
-                NodeColumn(gap = layout.spacing * scale) {
+                NodeColumn(gap = layout.spacing) {
                     for (row in list) Effect(row, scale, maxRowWidth, layout)
                 }
             }
@@ -965,7 +973,7 @@ class PotionEffectsHud : Hud(
 
     /** mirrors the layout of Effect and StackedEffect, placing the text block within its row **/
     private fun rowBounds(row: Row, scale: Float, rowWidth: Float, layout: Layout, poppins: PolyFont?): RowBounds {
-        val iconSize = if (row.icon != null) ICON * scale else 0f
+        val iconSize = if (row.icon != null) ICON else 0f
         if (row.name == null && row.duration == null) return RowBounds(false, 0f, 0f, 0f, 0f)
 
         val nameWidth = row.name?.let { textWidth(it, row.nameStyle, scale) } ?: 0f
@@ -977,7 +985,7 @@ class PotionEffectsHud : Hud(
 
         if (layout.mode == MODE_STACKED) {
             val textWidth = maxOf(nameWidth, durationWidth)
-            val iconHeight = if (row.icon != null) iconSize + row.iconGap * scale else 0f
+            val iconHeight = if (row.icon != null) iconSize + row.iconGap else 0f
             val left = (rowWidth - textWidth) / 2f
             val bottomAligned = isBottomAligned()
             return RowBounds(true, left, if (bottomAligned) 0f else iconHeight, left, if (bottomAligned) iconHeight else 0f)
@@ -986,7 +994,7 @@ class PotionEffectsHud : Hud(
         val singleLine = layout.mode == MODE_SINGLE_LINE
         val textWidth = if (singleLine) nameWidth + durationWidth + (if (lines > 1) charWidth(scale) else 0f) else maxOf(nameWidth, durationWidth)
         val textHeight = if (singleLine) lineHeight else columnHeight
-        val iconWidth = if (row.icon != null) iconSize + row.iconGap * scale else 0f
+        val iconWidth = if (row.icon != null) iconSize + row.iconGap else 0f
         val height = maxOf(iconSize, textHeight)
         val contentWidth = iconWidth + textWidth
         val rowLeft = when (layout.align) {
@@ -1043,11 +1051,11 @@ class PotionEffectsHud : Hud(
         val rowModifier = remember(align) { PolyModifier.align(align) }
 
         val iconBlock: @Composable () -> Unit = {
-            if (row.icon != null) Icon(row.icon, ICON * scale, style.alpha, style.iconBlink)
+            if (row.icon != null) Icon(row.icon, ICON, style.alpha, style.iconBlink)
         }
 
         NodeBox(modifier = boxModifier) {
-            NodeRow(gap = row.iconGap * scale, modifier = rowModifier) {
+            NodeRow(gap = row.iconGap, modifier = rowModifier) {
                 if (align != PolyAlign.Right) iconBlock()
 
                 if (row.name != null || row.duration != null) {
@@ -1088,7 +1096,7 @@ class PotionEffectsHud : Hud(
         val reversed = isBottomAligned()
 
         val iconBlock: @Composable () -> Unit = {
-            if (row.icon != null) Icon(row.icon, ICON * scale, style.alpha, style.iconBlink, modifier = CENTERED)
+            if (row.icon != null) Icon(row.icon, ICON, style.alpha, style.iconBlink, modifier = CENTERED)
         }
         val nameBlock: @Composable () -> Unit = {
             if (row.name != null) Line(row.name, scale, style.alpha, style.nameColor, row.nameStyle, style.nameBlink, modifier = CENTERED)
@@ -1115,7 +1123,7 @@ class PotionEffectsHud : Hud(
         }
 
         NodeBox(modifier = boxModifier) {
-            NodeColumn(gap = row.iconGap * scale, modifier = CENTERED) {
+            NodeColumn(gap = row.iconGap, modifier = CENTERED) {
                 if (reversed) {
                     if (hasText) textBlock()
                     iconBlock()
@@ -1308,6 +1316,7 @@ class PotionEffectsHud : Hud(
 
     override fun addToSerialized(tree: Tree) {
         super.addToSerialized(tree)
+        tree.addHudSchema()
         val collector = OneConfigCollector()
 
         val liveSortOptions = buildList {

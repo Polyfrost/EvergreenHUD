@@ -41,8 +41,13 @@ import org.polyfrost.evergreenhud.client.hud.item.potionStack
 import org.polyfrost.evergreenhud.client.hud.item.potionVariant
 import org.polyfrost.evergreenhud.client.hud.item.potionVariants
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
+import org.polyfrost.evergreenhud.client.utils.SCHEMA_CONTENT_SCALE
+import org.polyfrost.evergreenhud.client.utils.addHudSchema
 import org.polyfrost.evergreenhud.client.utils.applyCase
 import org.polyfrost.evergreenhud.client.utils.capHeight
+import org.polyfrost.evergreenhud.client.utils.migrateContentScale
+import org.polyfrost.evergreenhud.client.utils.migrateHudSchema
+import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.annotations.Button
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
 import org.polyfrost.oneconfig.api.config.v1.annotations.ItemList
@@ -130,6 +135,15 @@ class ItemCounterHud : Hud(
         //~ if = 1.8.9 'BuiltInRegistries.ITEM' -> 'Item.REGISTRY'
         item = arrayOf(BuiltInRegistries.ITEM.getKey(held.item).toString())
         potion = potionIdOf(held)?.takeIf { potionVariant(it) != null } ?: ANY_POTION
+    }
+
+    override fun addToSerialized(tree: Tree) {
+        super.addToSerialized(tree)
+        tree.addHudSchema()
+    }
+
+    override fun migrateLoaded(saved: Tree): Boolean = migrateHudSchema(saved) { from ->
+        if (from < SCHEMA_CONTENT_SCALE) migrateContentScale()
     }
 
     override fun setup() {
@@ -276,19 +290,18 @@ class ItemCounterHud : Hud(
     @Composable
     override fun Content() {
         val current = display.value ?: return
-        val scale = textScale.coerceAtLeast(0.01f)
         val basePaddingRight = if (current.showIcon) TEXT_GAP else BASE_PADDING
         val modifier = hudBackground().padding(
-            padLeft + BASE_PADDING * scale,
-            padTop + BASE_PADDING * scale,
-            padRight + basePaddingRight * scale,
-            padBottom + BASE_PADDING * scale,
+            padLeft + BASE_PADDING,
+            padTop + BASE_PADDING,
+            padRight + basePaddingRight,
+            padBottom + BASE_PADDING,
         )
 
-        val iconSize = if (current.showIcon) ITEM_SIZE * scale else 0f
+        val iconSize = if (current.showIcon) ITEM_SIZE else 0f
 
         NodeBox(modifier = modifier) {
-            NodeRow(gap = if (current.showIcon) TEXT_GAP * scale else 0f) {
+            NodeRow(gap = if (current.showIcon) TEXT_GAP else 0f) {
                 if (current.showIcon) {
                     ItemIcon(
                         current.stack,
@@ -296,26 +309,26 @@ class ItemCounterHud : Hud(
                         modifier = PolyModifier.align(PolyAlign.Center),
                     )
                 }
-                Label(current.text, scale, iconSize)
+                Label(current.text, iconSize)
             }
         }
     }
 
     @Composable
-    private fun Label(raw: String, scale: Float, iconSize: Float) {
+    private fun Label(raw: String, iconSize: Float) {
         val text = applyCase(raw)
         val color = textPolyColor
         if (font == Font.Minecraft) {
-            val modifier = topAlign(inkOffset(iconSize, 0f, MC_INK_HEIGHT * scale))
-            NodeMcText(text, color = color, shadow = showShadow, scale = scale, modifier = modifier)
+            val modifier = topAlign(inkOffset(iconSize, 0f, MC_INK_HEIGHT * textScale))
+            NodeMcText(text, color = color, shadow = showShadow, scale = textScale, modifier = modifier)
         } else {
-            val polyFont = PolyFont(getPoppinsFontName(), FONT_SIZE * scale)
+            val polyFont = PolyFont(getPoppinsFontName(), FONT_SIZE * textScale)
             val inkTop = -polyFont.metrics.ascent - polyFont.capHeight
             val modifier = topAlign(inkOffset(iconSize, inkTop, polyFont.capHeight))
             NodeText(
                 text,
                 color = color,
-                fontSize = FONT_SIZE * scale,
+                fontSize = FONT_SIZE * textScale,
                 shadow = showShadow,
                 shadowColor = shadowPolyColor,
                 shadowOffset = shadowOffsetX,

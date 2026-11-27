@@ -14,7 +14,11 @@ import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.RenderContext
+import org.polyfrost.evergreenhud.client.utils.SCHEMA_CONTENT_SCALE
+import org.polyfrost.evergreenhud.client.utils.addHudSchema
 import org.polyfrost.evergreenhud.client.utils.applyCase
+import org.polyfrost.evergreenhud.client.utils.migrateContentScale
+import org.polyfrost.evergreenhud.client.utils.migrateHudSchema
 import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.evergreenhud.client.utils.media.KUGOU
 import org.polyfrost.evergreenhud.client.utils.media.LRCLIB
@@ -338,6 +342,10 @@ class LyricsHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
+    override fun migrateLoaded(saved: Tree): Boolean = migrateHudSchema(saved) { from ->
+        if (from < SCHEMA_CONTENT_SCALE) migrateContentScale()
+    }
+
     override fun setup() {
         super.setup()
         tree?.getProp("staticW")?.addMetadata("default", naturalWidth())
@@ -364,6 +372,7 @@ class LyricsHud : Hud(
 
     override fun addToSerialized(tree: Tree) {
         super.addToSerialized(tree)
+        tree.addHudSchema()
         tree.set("mediaAnchorChecked", ktProperty(this::mediaAnchorChecked).addDisplayCondition(Supplier { Property.Display.HIDDEN }))
         tree.set("mediaAnchorId", ktProperty(this::mediaAnchorId).addDisplayCondition(Supplier { Property.Display.HIDDEN }))
     }
@@ -478,7 +487,7 @@ class LyricsHud : Hud(
         fun height(i: Int): Float = layout(lines[i], label, width).height
 
         val targetHeight = if (isStatic) {
-            ((staticH - padTop - padBottom) / baseScale - 2f * INSET).coerceAtLeast(ROW_HEIGHT)
+            (staticH - padTop - padBottom - 2f * INSET).coerceAtLeast(ROW_HEIGHT)
         } else {
             var sum = 0.0
             for (i in first..last) sum += height(i).toDouble()
@@ -664,9 +673,9 @@ class LyricsHud : Hud(
     }
 
     private fun contentWidth(lyrics: Lyrics, label: Label): Float {
-        if (isStatic) return ((staticW - padLeft - padRight) / baseScale - 2f * INSET).coerceAtLeast(1f)
+        if (isStatic) return (staticW - padLeft - padRight - 2f * INSET).coerceAtLeast(1f)
         val media = MediaHud.shownWidth
-        if (matchMediaWidth && media > 0f) return ((media / effectiveScale.coerceAtLeast(0.01f) - padLeft - padRight) / baseScale - 2f * INSET).coerceAtLeast(MIN_WIDTH)
+        if (matchMediaWidth && media > 0f) return (media / effectiveScale.coerceAtLeast(0.01f) - padLeft - padRight - 2f * INSET).coerceAtLeast(MIN_WIDTH)
         val m = label.width("M")
         val case = caseType
         if (lyrics !== songLyrics || m != songM || case != songCase) {
@@ -721,12 +730,10 @@ class LyricsHud : Hud(
 
     private val isStatic: Boolean get() = staticWidth && staticW > 0f && staticH > 0f
 
-    private val baseScale: Float get() = textScale.coerceAtLeast(0.01f)
-
-    private fun naturalWidth(): Float = padLeft + padRight + ((frame.value?.width ?: MAX_WIDTH) + 2f * INSET) * baseScale
+    private fun naturalWidth(): Float = padLeft + padRight + (frame.value?.width ?: MAX_WIDTH) + 2f * INSET
 
     private fun naturalHeight(): Float =
-        padTop + padBottom + ((frame.value?.height ?: ((linesBefore + linesAfter + 1) * (ROW_HEIGHT + LINE_GAP) - LINE_GAP)) + 2f * INSET) * baseScale
+        padTop + padBottom + (frame.value?.height ?: ((linesBefore + linesAfter + 1) * (ROW_HEIGHT + LINE_GAP) - LINE_GAP)) + 2f * INSET
 
     private fun cardFont(): String? = if (font == Font.Minecraft) null else getPoppinsFontName()
 
@@ -735,14 +742,12 @@ class LyricsHud : Hud(
     @Composable
     override fun Content() {
         val current = frame.value ?: return
-        val scale = baseScale
-        val backdrop = backdrop(current, scale)
+        val backdrop = backdrop(current)
         val box = if (backdrop != null) PolyModifier else hudBackground()
         val sized = if (isStatic) box.size(staticW, staticH) else box
-        val bounds = boxBounds(current, scale)
-        val inset = INSET * scale
-        NodeBox(modifier = sized.padding(padLeft + inset, padTop + inset, padRight + inset, padBottom + inset)) {
-            NodeCanvas(PolyModifier.size(current.width * scale, current.height * scale)) { x, y, _, h ->
+        val bounds = boxBounds(current)
+        NodeBox(modifier = sized.padding(padLeft + INSET, padTop + INSET, padRight + INSET, padBottom + INSET)) {
+            NodeCanvas(PolyModifier.size(current.width, current.height)) { x, y, _, h ->
                 val unit = h / current.height.coerceAtLeast(0.01f)
                 save()
                 translate(x, y)
@@ -760,21 +765,21 @@ class LyricsHud : Hud(
         }
     }
 
-    private fun boxBounds(current: LyricsFrame, scale: Float): Rect {
-        val boxW = if (isStatic) staticW else padLeft + padRight + (current.width + 2f * INSET) * scale
-        val boxH = if (isStatic) staticH else padTop + padBottom + (current.height + 2f * INSET) * scale
-        return Rect.makeXYWH(-padLeft / scale - INSET, -padTop / scale - INSET, boxW / scale, boxH / scale)
+    private fun boxBounds(current: LyricsFrame): Rect {
+        val boxW = if (isStatic) staticW else padLeft + padRight + current.width + 2f * INSET
+        val boxH = if (isStatic) staticH else padTop + padBottom + current.height + 2f * INSET
+        return Rect.makeXYWH(-padLeft - INSET, -padTop - INSET, boxW, boxH)
     }
 
-    private fun backdrop(current: LyricsFrame, scale: Float): MediaCardBackdrop? {
+    private fun backdrop(current: LyricsFrame): MediaCardBackdrop? {
         if (!artBackground && !(onlyInGuis && popIn)) return null
-        val merged = if (bgMerged) mediaMergePiece(padLeft + INSET * scale, padTop + INSET * scale, scale) ?: return null else null
+        val merged = if (bgMerged) mediaMergePiece(padLeft + INSET, padTop + INSET, 1f) ?: return null else null
         if (merged != null && (!artBackground || current.art == null)) return null
         val showColor = merged == null && showBackground && hasBackground()
-        val bounds = boxBounds(current, scale)
+        val bounds = boxBounds(current)
         return MediaCardBackdrop(
             bounds = bounds,
-            radius = if (showColor || artBackground) bgRadius / scale else 0f,
+            radius = if (showColor || artBackground) bgRadius else 0f,
             color = if (showColor) bgPolyColor else null,
             art = current.art,
             artBlur = artBackgroundBlur,

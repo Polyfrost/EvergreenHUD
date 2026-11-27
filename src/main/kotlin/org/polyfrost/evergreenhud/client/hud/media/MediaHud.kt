@@ -11,7 +11,12 @@ import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.utils.SCHEMA_CONTENT_SCALE
+import org.polyfrost.evergreenhud.client.utils.addHudSchema
 import org.polyfrost.evergreenhud.client.utils.applyCase
+import org.polyfrost.evergreenhud.client.utils.migrateContentScale
+import org.polyfrost.evergreenhud.client.utils.migrateHudSchema
+import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.evergreenhud.client.utils.media.MediaCommand
 import org.polyfrost.evergreenhud.client.utils.media.MediaInfo
@@ -351,6 +356,15 @@ class MediaHud : Hud(
 
     override fun canMergeBackground(): Boolean = true
 
+    override fun addToSerialized(tree: Tree) {
+        super.addToSerialized(tree)
+        tree.addHudSchema()
+    }
+
+    override fun migrateLoaded(saved: Tree): Boolean = migrateHudSchema(saved) { from ->
+        if (from < SCHEMA_CONTENT_SCALE) migrateContentScale()
+    }
+
     override fun setup() {
         super.setup()
         tree?.getProp("staticW")?.addMetadata("default", naturalWidth())
@@ -601,22 +615,20 @@ class MediaHud : Hud(
 
     private val isStatic: Boolean get() = staticWidth && staticW > 0f && staticH > 0f
 
-    private val baseScale: Float get() = textScale.coerceAtLeast(0.01f)
-
     private val cardScale: Float
         get() = if (isStatic) {
             ((staticH - padTop - padBottom) / (MediaCardLayout.height(seekPosition) + 2f * MediaCardLayout.INSET)).coerceAtLeast(0.01f)
         } else {
-            baseScale
+            1f
         }
 
     private fun naturalWidth(): Float {
         val state = card.value ?: read() ?: return 0f
         val text = textWidth(state, cardFont())
-        return padLeft + padRight + (MediaCardLayout.width(showAlbumArt, text) + 2f * MediaCardLayout.INSET) * baseScale
+        return padLeft + padRight + MediaCardLayout.width(showAlbumArt, text) + 2f * MediaCardLayout.INSET
     }
 
-    private fun naturalHeight(): Float = padTop + padBottom + (MediaCardLayout.height(seekPosition) + 2f * MediaCardLayout.INSET) * baseScale
+    private fun naturalHeight(): Float = padTop + padBottom + MediaCardLayout.height(seekPosition) + 2f * MediaCardLayout.INSET
 
     private fun cardTextWidth(state: MediaCardState): Float {
         if (!isStatic) {
