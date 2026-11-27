@@ -23,6 +23,41 @@ import java.util.concurrent.ConcurrentHashMap
 const val HOTBAR_SLOT = 20f
 const val HOTBAR_BORDER = 1f
 const val HOTBAR_ITEM_INSET = 3f
+data class HotbarSeams(
+    val top: Int,
+    val bottom: Int,
+    val left: Int,
+    val right: Int,
+    val cutTop: Boolean = false,
+    val cutBottom: Boolean = false,
+    val cutLeft: Boolean = false,
+    val cutRight: Boolean = false,
+) {
+    companion object {
+        val NONE = HotbarSeams(0, 0, 0, 0)
+    }
+}
+
+private const val HOTBAR_LAST_PIXEL = 21
+private const val HOTBAR_SOURCE_SEAM = 11
+private const val HOTBAR_SOURCE_GAP = 160
+
+private val HOTBAR_COLUMN_SEGMENTS = listOf(0 to 1, 1 to 11, 11 to 21, 21 to 22)
+
+private fun hotbarColumn(pieceColumn: Int): Int =
+    if (pieceColumn < HOTBAR_SOURCE_SEAM) pieceColumn else pieceColumn + HOTBAR_SOURCE_GAP
+
+private inline fun forEachRun(mask: Int, from: Int, to: Int, run: (start: Int, end: Int, open: Boolean) -> Unit) {
+    var start = from
+    while (start < to) {
+        val open = mask shr start and 1 == 1
+        var end = start + 1
+        while (end < to && (mask shr end and 1 == 1) == open) end++
+        run(start, end, open)
+        start = end
+    }
+}
+
 const val HOTBAR_THICKNESS = HOTBAR_BORDER * 2f + HOTBAR_SLOT
 
 fun hotbarStripLength(slots: Int): Float = HOTBAR_BORDER * 2f + slots * HOTBAR_SLOT
@@ -73,43 +108,39 @@ class VanillaTexture internal constructor(
         )
     }
 
-    private fun blitRotated(
-        ctx: RenderContext,
-        srcX: Float,
-        srcY: Float,
-        srcW: Float,
-        srcH: Float,
-        x: Float,
-        y: Float,
-        scale: Float,
-    ) {
-        val dst = ctx.snappedRect(x, y, srcH * scale, srcW * scale)
-        ctx.save()
-        ctx.translate(dst[0] + dst[2], dst[1])
-        ctx.renderer.rotate(90f)
-        ctx.image(
-            image,
-            0f, 0f, dst[3], dst[2],
-            srcX / baseWidth, srcY / baseHeight, (srcX + srcW) / baseWidth, (srcY + srcH) / baseHeight,
-            PolyColor.WHITE,
-            FilterQuality.None,
-        )
-        ctx.restore()
-    }
-
-    fun drawHotbar(ctx: RenderContext, x: Float, y: Float, slots: Int, vertical: Boolean, scale: Float) {
-        if (slots <= 0) return
-        val length = hotbarStripLength(slots)
-        val near = if (slots == 1) length / 2f else HOTBAR_BORDER + (slots + 1) / 2 * HOTBAR_SLOT
-        val far = length - near
-        val farSrc = HOTBAR_TEXTURE_WIDTH - far
-
-        if (vertical) {
-            blitRotated(ctx, 0f, 0f, near, HOTBAR_THICKNESS, x, y, scale)
-            blitRotated(ctx, farSrc, 0f, far, HOTBAR_THICKNESS, x, y + near * scale, scale)
-        } else {
-            blit(ctx, 0f, 0f, near, HOTBAR_THICKNESS, x, y, scale)
-            blit(ctx, farSrc, 0f, far, HOTBAR_THICKNESS, x + near * scale, y, scale)
+    fun drawHotbarSlot(ctx: RenderContext, x: Float, y: Float, scale: Float, seams: HotbarSeams) {
+        blit(ctx, 1f, 1f, 10f, 20f, x + scale, y + scale, scale)
+        blit(ctx, 171f, 1f, 10f, 20f, x + 11f * scale, y + scale, scale)
+        val firstColumn = if (seams.cutLeft) 1 else 0
+        val endColumn = if (seams.cutRight) HOTBAR_LAST_PIXEL else HOTBAR_LAST_PIXEL + 1
+        for ((segmentFrom, segmentTo) in HOTBAR_COLUMN_SEGMENTS) {
+            val from = maxOf(segmentFrom, firstColumn)
+            val to = minOf(segmentTo, endColumn)
+            if (from >= to) continue
+            if (!seams.cutTop) {
+                forEachRun(seams.top, from, to) { start, end, open ->
+                    val srcX = hotbarColumn(start).let { if (open) it.coerceIn(1, 180) else it }
+                    blit(ctx, srcX.toFloat(), if (open) 1f else 0f, (end - start).toFloat(), 1f, x + start * scale, y, scale)
+                }
+            }
+            if (!seams.cutBottom) {
+                forEachRun(seams.bottom, from, to) { start, end, open ->
+                    val srcX = hotbarColumn(start).let { if (open) it.coerceIn(1, 180) else it }
+                    val srcY = if (open) 20f else 21f
+                    blit(ctx, srcX.toFloat(), srcY, (end - start).toFloat(), 1f, x + start * scale, y + HOTBAR_LAST_PIXEL * scale, scale)
+                }
+            }
+        }
+        if (!seams.cutLeft) {
+            forEachRun(seams.left, 1, HOTBAR_LAST_PIXEL) { start, end, open ->
+                blit(ctx, if (open) 1f else 0f, start.toFloat(), 1f, (end - start).toFloat(), x, y + start * scale, scale)
+            }
+        }
+        if (!seams.cutRight) {
+            forEachRun(seams.right, 1, HOTBAR_LAST_PIXEL) { start, end, open ->
+                val srcX = if (open) 180f else 181f
+                blit(ctx, srcX, start.toFloat(), 1f, (end - start).toFloat(), x + HOTBAR_LAST_PIXEL * scale, y + start * scale, scale)
+            }
         }
     }
 

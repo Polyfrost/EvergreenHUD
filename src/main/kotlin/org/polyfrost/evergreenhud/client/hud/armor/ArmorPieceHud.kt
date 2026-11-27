@@ -1,13 +1,11 @@
 @file:OptIn(ExperimentalOneConfigUiApi::class)
 
-package org.polyfrost.evergreenhud.client.hud
+package org.polyfrost.evergreenhud.client.hud.armor
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-//? if > 1.8.9 {
-import net.minecraft.world.entity.EquipmentSlot
+//? if > 1.8.9
 import net.minecraft.world.entity.HumanoidArm
-//?}
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
@@ -15,35 +13,38 @@ import org.polyfrost.compose.composables.NodeBox
 import org.polyfrost.compose.composables.NodeCanvas
 import org.polyfrost.compose.composables.NodeColumn
 import org.polyfrost.compose.composables.NodeMcText
+import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.NodeRow
 import org.polyfrost.compose.composables.NodeText
-import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.absoluteAt
 import org.polyfrost.compose.composables.align
 import org.polyfrost.compose.composables.padding
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.layout.PolyAlign
 import org.polyfrost.compose.mc.McFontQueue
-import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.compose.render.PolyFont
+import org.polyfrost.evergreenhud.client.hud.item.HOTBAR_BORDER
 import org.polyfrost.evergreenhud.client.hud.item.HOTBAR_ITEM_INSET
-import org.polyfrost.evergreenhud.client.hud.item.HOTBAR_SLOT
 import org.polyfrost.evergreenhud.client.hud.item.HOTBAR_THICKNESS
+import org.polyfrost.evergreenhud.client.hud.item.HotbarSeams
 import org.polyfrost.evergreenhud.client.hud.item.ITEM_SIZE
 import org.polyfrost.evergreenhud.client.hud.item.ItemIcon
 import org.polyfrost.evergreenhud.client.hud.item.VanillaTextures
 import org.polyfrost.evergreenhud.client.hud.item.hotbarStripLength
 import org.polyfrost.evergreenhud.client.hud.item.whenItemsReady
 import org.polyfrost.evergreenhud.client.utils.applyCase
+import org.polyfrost.oneconfig.api.config.v1.ConfigManager
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
+import org.polyfrost.oneconfig.api.config.v1.annotations.Include
 import org.polyfrost.oneconfig.api.config.v1.annotations.RadioButton
-import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
 import org.polyfrost.oneconfig.api.hud.v1.Font
 import org.polyfrost.oneconfig.api.hud.v1.Hud
-import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
+import org.polyfrost.oneconfig.api.hud.v1.HudGroups
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
+import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
 import org.polyfrost.oneconfig.utils.v1.dsl.mc
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -51,8 +52,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 private const val TEXT_GAP = 2f
 private const val FONT_SIZE = 8f
-
-private const val HORIZONTAL = 0
 
 private const val CUSTOM = 0
 private const val VANILLA = 1
@@ -64,26 +63,19 @@ private const val DURABILITY_PERCENT = 2
 private const val NAME = 3
 private const val ITEM_COUNT = 4
 
-private const val LEFT = 0
-private const val RIGHT = 1
-private const val ABOVE = 2
-private const val BELOW = 3
+internal const val TEXT_LEFT = 0
+internal const val TEXT_RIGHT = 1
+internal const val TEXT_ABOVE = 2
+internal const val TEXT_BELOW = 3
 
-class ArmorHud : Hud(
-    id = "armor.json",
-    title = "Armor Status",
+private const val VERTICAL_BIT = 1
+private const val REVERSED_BIT = 2
+
+abstract class ArmorPieceHud(val piece: ArmorPiece) : Hud(
+    id = "armor-${piece.key}.json",
+    title = piece.title,
     category = Category.PLAYER,
 ) {
-    private companion object {
-        private val exampleHelmet by lazy { ItemStack(Items.DIAMOND_HELMET) }
-        private val exampleChestplate by lazy { ItemStack(Items.DIAMOND_CHESTPLATE) }
-        private val exampleLeggings by lazy { ItemStack(Items.DIAMOND_LEGGINGS) }
-        private val exampleBoots by lazy { ItemStack(Items.DIAMOND_BOOTS) }
-        private val exampleMainHand by lazy { ItemStack(Items.DIAMOND_SWORD) }
-        //? if > 1.8.9
-        private val exampleOffhand by lazy { ItemStack(Items.SHIELD) }
-    }
-
     @RadioButton(
         title = "Style",
         description = "Vanilla draws the items in a hotbar, taken from your resource pack.",
@@ -91,44 +83,18 @@ class ArmorHud : Hud(
     )
     var style = CUSTOM
 
-    @Switch(title = "Helmet")
-    var showHelmet = true
-
-    @Switch(title = "Chestplate")
-    var showChestplate = true
-
-    @Switch(title = "Leggings")
-    var showLeggings = true
-
-    @Switch(title = "Boots")
-    var showBoots = true
-
-    @Switch(title = "Main Hand")
-    var showMainHand = true
-
-    //? if > 1.8.9 {
-    @Switch(title = "Off Hand")
-    var showOffhand = true
-    //?}
-
-    @Slider(title = "Padding", min = 0F, max = 20F, step = 1F)
-    var padding = 5f
-
-    @RadioButton(title = "Direction", options = ["Horizontal", "Vertical"])
-    var direction = HORIZONTAL
-
-    @Switch(title = "Reversed")
-    var reversed = false
-
     @Switch(title = "Item Decorations", description = "Vanilla durability bar and stack count.")
     var showDecorations = true
 
-    @Switch(title = "Bow Arrow Count", description = "Show the number of arrows you carry on a held bow, where the stack count would be.")
+    @Switch(
+        title = "Bow Arrow Count",
+        description = "Show the number of arrows you carry on a held bow, where the stack count would be. Hand pieces only.",
+    )
     var showArrowCount = true
 
     @Switch(
         title = "Held Item Count",
-        description = "Show how many of the held item you carry, where the stack count would be.",
+        description = "Show how many of the held item you carry, where the stack count would be. Hand pieces only.",
     )
     var countHeld = false
 
@@ -136,7 +102,7 @@ class ArmorHud : Hud(
     var extraInfo = 0
 
     @Dropdown(title = "Text Position", options = ["Left", "Right", "Above", "Below"])
-    var textPosition = RIGHT
+    var textPosition = TEXT_RIGHT
 
     @Switch(title = "Dynamic Durability Color", description = "Fade the durability text between two colors as the item wears down.")
     var dynamicColor = false
@@ -147,60 +113,89 @@ class ArmorHud : Hud(
     @Color(title = "Empty Durability Color")
     var emptyDurabilityColor = PolyColor(0xFFFF5555.toInt())
 
-    private class Slot(val stack: ItemStack, val inHand: Boolean)
+    @Include
+    var pendingLayout = -1
+
+    @Include
+    var pendingGap = ArmorLayout.DEFAULT_GAP
+
+    @Include
+    var migrationBatch = ""
 
     private class Entry(val stack: ItemStack, val text: String, val textColor: Int, val count: String?)
 
-    private var entries = mutableStateOf<List<Entry>>(emptyList())
+    private var entry = mutableStateOf<Entry?>(null)
 
     private var rev = mutableStateOf(0)
+
+    private var updated = false
+
+    private var appliedSeams = HotbarSeams.NONE
 
     //? if > 1.8.9 {
     private var countCache: Map<Item, Int>? = null
     //?} else
     //private var countCache: Map<Pair<Item, Int>, Int>? = null
 
-    override fun defaultPosition(): Pair<Float, Float> {
-        val (width, height) = defaultSize()
+    private fun armorSiblings(): List<ArmorPieceHud> {
+        val current = group ?: return emptyList()
+        val preset = HudGroups.presetOf(current) ?: return current.huds.filterIsInstance<ArmorPieceHud>()
+        return HudGroups.presetMembers(current, preset).filterIsInstance<ArmorPieceHud>()
+    }
+
+    internal fun isVanilla(): Boolean = style == VANILLA
+
+    internal fun nominalSize(): Pair<Float, Float> {
+        val scale = textScale.coerceAtLeast(0.01f)
+        if (style == VANILLA) {
+            return hotbarStripLength(1) * scale * effectiveScale to HOTBAR_THICKNESS * scale * effectiveScale
+        }
+        val label = infoText(piece.example)
+        val labelWidth = if (label.isEmpty()) 0f else textWidth(label, scale)
+        val labelHeight = if (labelWidth > 0f) textHeight(scale) else 0f
+        val gap = if (labelWidth > 0f) TEXT_GAP * scale else 0f
+        val stacked = textPosition == TEXT_ABOVE || textPosition == TEXT_BELOW
+        val width = if (stacked) maxOf(ITEM_SIZE * scale, labelWidth) else ITEM_SIZE * scale + gap + labelWidth
+        val height = if (stacked) ITEM_SIZE * scale + gap + labelHeight else maxOf(ITEM_SIZE * scale, labelHeight)
+        return (width + padLeft + padRight) * effectiveScale to (height + padTop + padBottom) * effectiveScale
+    }
+
+    internal fun rowStart(): Pair<Float, Float> {
+        val (width, height) = nominalSize()
         val hotbarLeft = (HudManager.guiScreenWidth - HOTBAR_WIDTH) / 2f
         val x = if (mainHandOnRight()) hotbarLeft + HOTBAR_WIDTH else hotbarLeft - width
         return x to HudManager.guiScreenHeight - height
     }
 
-    //? if > 1.8.9 {
-    private fun mainHandOnRight(): Boolean = mc.options?.mainHand()?.get() != HumanoidArm.LEFT
-    //?} else
-    //private fun mainHandOnRight(): Boolean = true
-
-    private fun defaultSize(): Pair<Float, Float> {
-        val scale = textScale.coerceAtLeast(0.01f)
-        val slots = enabledSlots()
-        val (along, across) = if (style == VANILLA) {
-            hotbarStripLength(slots) to HOTBAR_THICKNESS
-        } else {
-            (slots * ITEM_SIZE + (slots - 1).coerceAtLeast(0) * padding) to ITEM_SIZE
-        }
-        val (width, height) = if (direction == HORIZONTAL) along to across else across to along
-        return (width * scale + padLeft + padRight) * effectiveScale to
-            (height * scale + padTop + padBottom) * effectiveScale
+    override fun defaultPosition(): Pair<Float, Float> {
+        val (x, y) = rowStart()
+        val offset = nominalSize().first * piece.ordinal
+        return (if (mainHandOnRight()) x + offset else x - offset) to y
     }
 
-    private fun enabledSlots(): Int =
-        //~ if = 1.8.9 'showMainHand, showOffhand)' -> 'showMainHand)'
-        listOf(showHelmet, showChestplate, showLeggings, showBoots, showMainHand, showOffhand).count { it }
+    //? if > 1.8.9 {
+    internal fun mainHandOnRight(): Boolean = mc.options?.mainHand()?.get() != HumanoidArm.LEFT
+    //?} else
+    //internal fun mainHandOnRight(): Boolean = true
 
     override fun hasBackground(): Boolean = style != VANILLA
 
     override fun canMergeBackground(): Boolean = true
 
+    override fun shouldShow(): Boolean = entry.value != null
+
+    override fun collapsesWhenNotShown(): Boolean = true
+
     override fun setup() {
         if (isReal) {
             hideIf("fullDurabilityColor") { !dynamicColor }
             hideIf("emptyDurabilityColor") { !dynamicColor }
-            // the hotbar spaces its own slots
-            hideIf("padding") { style == VANILLA }
-            for (option in listOf("style", "padding", "direction", "textPosition", "showDecorations")) {
+            for (option in listOf("textPosition", "showDecorations")) {
                 addCallback(option) { rev.value++ }
+            }
+            addCallback("style") { groupPieces().forEach { it.rev.value++ } }
+            for (option in listOf("style", "textPosition", "showBackground", "mergeBackground")) {
+                addCallback(option) { ArmorLayout.rechain(armorSiblings()) }
             }
         }
     }
@@ -208,25 +203,64 @@ class ArmorHud : Hud(
     override fun updateFrequency(): Long = if (isReal) 50.milliseconds.inWholeNanoseconds else -1L
 
     override fun update(): Boolean {
+        if (isReal) applyPendingLayout()
+        val changed = refreshEntry()
+        updated = true
+        return changed
+    }
+
+    private fun refreshEntry(): Boolean {
         countCache = null
-        val next = buildEntries()
-        val current = entries.value
-        if (next.size == current.size && sameEntries(next, current)) return false
-        entries.value = next
+        val next = buildEntry()
+        val current = entry.value
+        if (next == null || current == null) {
+            if (next === current) return false
+        } else if (next.sameAs(current)) {
+            return false
+        }
+        entry.value = next
         return true
     }
 
-    private fun sameEntries(next: List<Entry>, current: List<Entry>): Boolean {
-        for (i in next.indices) if (!next[i].sameAs(current[i])) return false
-        return true
+    private fun settled(): Boolean =
+        hidden || (updated && (!shouldShow() || renderedW > 0f && renderedH > 0f))
+
+    private fun applyPendingLayout() {
+        if (pendingLayout < 0) return
+        val batch = HudManager.activeInstances.filterIsInstance<ArmorPieceHud>()
+            .filter { it.groupPath == groupPath && it.migrationBatch == migrationBatch && it.pendingLayout >= 0 }
+            .sortedBy { it.piece.ordinal }
+        val visible = batch.filter { !it.hidden }
+        if (visible.firstOrNull() !== this || !visible.all { it.settled() } || visible.none { it.shouldShow() }) return
+
+        val root = batch.first()
+        val point = if (root.anchorParent != null) root.effectiveSelfAnchorPoint else root.effectiveGrowthAnchor
+        val pinX = root.anchorPointX(point)
+        val pinY = root.anchorPointY(point)
+        ArmorLayout.chain(
+            batch,
+            vertical = pendingLayout and VERTICAL_BIT != 0,
+            reversed = pendingLayout and REVERSED_BIT != 0,
+            gap = ArmorLayout.gap(batch, pendingGap),
+        )
+        val bounds = HudGroups.bounds(batch) ?: return
+        ArmorLayout.shift(
+            root,
+            pinX - (bounds[0] + ArmorLayout.fractionX(point) * bounds[2]),
+            pinY - (bounds[1] + ArmorLayout.fractionY(point) * bounds[3]),
+        )
+        for (hud in batch) {
+            hud.pendingLayout = -1
+            hud.tree?.id?.let { ConfigManager.active().save(it) }
+        }
     }
 
     private fun Entry.sameAs(other: Entry): Boolean =
         text == other.text && textColor == other.textColor && count == other.count &&
             ItemStack.matches(stack, other.stack)
 
-    private fun buildEntries(): List<Entry> = whenItemsReady(emptyList()) { currentItems() }.map { slot ->
-        val stack = slot.stack
+    private fun buildEntry(): Entry? = whenItemsReady(null) {
+        val stack = currentStack() ?: return@whenItemsReady null
         val text = infoText(stack)
         val color = if (dynamicColor && stack.isDamageableItem &&
             (extraInfo == DURABILITY || extraInfo == DURABILITY_PERCENT)
@@ -239,53 +273,14 @@ class ArmorHud : Hud(
             //~ if = 1.8.9 'Items.BOW || stack.item == Items.CROSSBOW)' -> 'Items.BOW)'
             showArrowCount && (stack.item == Items.BOW || stack.item == Items.CROSSBOW) -> arrowCount().toString()
             //~ if = 1.8.9 'carried(stack.item)' -> 'carried(stack)'
-            countHeld && slot.inHand -> carried(stack.item).takeIf { it > 1 }?.toString()
+            countHeld && piece.inHand -> carried(stack.item).takeIf { it > 1 }?.toString()
             else -> null
         }
         Entry(stack, text, color, count)
     }
 
-    private fun currentItems(): List<Slot> {
-        var list = if (isReal) equippedItems() else exampleItems()
-        if (list.isEmpty() && HudManager.isEditing) list = exampleItems()
-        if (reversed) list.reverse()
-        return list
-    }
-
-    private fun exampleItems(): ArrayList<Slot> {
-        val list = ArrayList<Slot>(6)
-        if (showHelmet) list.add(Slot(exampleHelmet, false))
-        if (showChestplate) list.add(Slot(exampleChestplate, false))
-        if (showLeggings) list.add(Slot(exampleLeggings, false))
-        if (showBoots) list.add(Slot(exampleBoots, false))
-        if (showMainHand) list.add(Slot(exampleMainHand, true))
-        //? if > 1.8.9
-        if (showOffhand) list.add(Slot(exampleOffhand, true))
-        return list
-    }
-
-    private fun equippedItems(): ArrayList<Slot> {
-        val list = ArrayList<Slot>(6)
-        val player = mc.player ?: return list
-        //? if > 1.8.9 {
-        fun add(slot: EquipmentSlot, inHand: Boolean = false) =
-            player.getItemBySlot(slot).let { if (!it.isEmpty) list.add(Slot(it, inHand)) }
-        if (showHelmet) add(EquipmentSlot.HEAD)
-        if (showChestplate) add(EquipmentSlot.CHEST)
-        if (showLeggings) add(EquipmentSlot.LEGS)
-        if (showBoots) add(EquipmentSlot.FEET)
-        if (showMainHand) add(EquipmentSlot.MAINHAND, inHand = true)
-        if (showOffhand) add(EquipmentSlot.OFFHAND, inHand = true)
-        //?} else {
-        /*fun add(stack: ItemStack?, inHand: Boolean = false) = stack?.let { list.add(Slot(it, inHand)) }
-        if (showHelmet) add(player.getArmor(3))
-        if (showChestplate) add(player.getArmor(2))
-        if (showLeggings) add(player.getArmor(1))
-        if (showBoots) add(player.getArmor(0))
-        if (showMainHand) add(player.mainHandItem, inHand = true)
-        *///?}
-        return list
-    }
+    private fun currentStack(): ItemStack? =
+        (if (isReal) piece.equipped() else null) ?: piece.example.takeIf { !isReal || HudManager.isEditing }
 
     private fun infoText(stack: ItemStack): String = when (extraInfo) {
         DURABILITY -> if (stack.isDamageableItem) (stack.maxDamage - stack.damageValue).toString() else ""
@@ -349,110 +344,76 @@ class ArmorHud : Hud(
         return lerp(24) or lerp(16) or lerp(8) or lerp(0)
     }
 
+
     @Composable
     override fun Content() {
         rev.value
-        val list = entries.value
-        if (list.isEmpty()) return
+        val current = entry.value ?: return
         val scale = textScale.coerceAtLeast(0.01f)
         if (style == VANILLA) {
-            VanillaContent(list, scale)
+            VanillaContent(current, scale)
             return
         }
-        val modifier = hudBackground().padding(padLeft, padTop, padRight, padBottom)
-
-        NodeBox(modifier = modifier) {
-            if (direction == HORIZONTAL) {
-                NodeRow(gap = padding * scale) {
-                    for (entry in list) Entry(entry, scale, PolyAlign.Center)
-                }
-            } else {
-                val rowAlign = when (textPosition) {
-                    RIGHT -> PolyAlign.Left
-                    LEFT -> PolyAlign.Right
-                    else -> PolyAlign.Center
-                }
-                NodeColumn(gap = padding * scale) {
-                    for (entry in list) Entry(entry, scale, rowAlign)
-                }
-            }
+        NodeBox(modifier = hudBackground().padding(padLeft, padTop, padRight, padBottom)) {
+            Entry(current, scale, PolyAlign.Center)
         }
     }
 
-    /**
-     * The items laid out as a vanilla hotbar. Extra info would break the strip in half if it sat
-     * between two slots, so it goes outside it instead: above or below a hotbar running across, and
-     * beside one running down.
-     */
+    private fun drawnStripRect(): FloatArray? {
+        if (style != VANILLA || entry.value == null) return null
+        val (width, height) = nominalSize()
+        val applied = if (isDrawn()) appliedSeams else HotbarSeams.NONE
+        return drawnRect(floatArrayOf(x, y, width, height), applied, HOTBAR_BORDER * textScale.coerceAtLeast(0.01f) * effectiveScale)
+    }
+
+    private fun isDrawn(): Boolean = HudManager.isEditing || (!hidden && !isCollapsed)
+
+    private fun groupPieces(): List<ArmorPieceHud> = group?.directHuds.orEmpty().filterIsInstance<ArmorPieceHud>() + this
+
+    private fun vanillaNeighbours(): List<ArmorPieceHud> =
+        anchoredNeighbours(this, groupPieces(), { it.anchorParent as? ArmorPieceHud }, { it.isDrawn() })
+            .filter { it.style == VANILLA }
+
+    private fun labelOffset(boxWidth: Float, boxHeight: Float, labelWidth: Float, labelHeight: Float, gap: Float) =
+        when (textPosition) {
+            TEXT_LEFT -> -(labelWidth + gap) to (boxHeight - labelHeight) / 2f
+            TEXT_ABOVE -> (boxWidth - labelWidth) / 2f to -(labelHeight + gap)
+            TEXT_BELOW -> (boxWidth - labelWidth) / 2f to boxHeight + gap
+            else -> boxWidth + gap to (boxHeight - labelHeight) / 2f
+        }
+
     @Composable
-    private fun VanillaContent(list: List<Entry>, scale: Float) {
+    private fun VanillaContent(entry: Entry, scale: Float) {
         rev.value
-        val horizontal = direction == HORIZONTAL
-        val length = hotbarStripLength(list.size) * scale
-        val thickness = HOTBAR_THICKNESS * scale
-        val stripWidth = if (horizontal) length else thickness
-        val stripHeight = if (horizontal) thickness else length
+        val strip = drawnStripRect() ?: return
+        val edges = seams(strip, vanillaNeighbours().mapNotNull { it.drawnStripRect() }, scale * effectiveScale)
+        appliedSeams = edges
+        val border = HOTBAR_BORDER * scale
+        val stripWidth = hotbarStripLength(1) * scale
+        val stripHeight = HOTBAR_THICKNESS * scale
+        val stripX = if (edges.cutLeft) -border else 0f
+        val stripY = if (edges.cutTop) -border else 0f
+        val boxWidth = stripWidth - (if (edges.cutLeft) border else 0f) - (if (edges.cutRight) border else 0f)
+        val boxHeight = stripHeight - (if (edges.cutTop) border else 0f) - (if (edges.cutBottom) border else 0f)
+        val labelWidth = if (entry.text.isEmpty()) 0f else textWidth(entry.text, scale)
 
-        val labels = list.map { if (it.text.isEmpty()) 0f else textWidth(it.text, scale) }
-        val labelled = labels.any { it > 0f }
-        val labelWidth = labels.max()
-        val labelHeight = if (labelled) textHeight(scale) else 0f
-        val textFirst = textPosition == LEFT || textPosition == ABOVE
-        val gap = if (labelled) TEXT_GAP * scale else 0f
-
-        fun slotCenter(index: Int) = (HOTBAR_ITEM_INSET + ITEM_SIZE / 2f + index * HOTBAR_SLOT) * scale
-
-        var before = 0f
-        var after = 0f
-        if (horizontal) {
-            for ((index, label) in labels.withIndex()) {
-                if (label <= 0f) continue
-                before = maxOf(before, label / 2f - slotCenter(index))
-                after = maxOf(after, slotCenter(index) + label / 2f - stripWidth)
-            }
-        }
-
-        val stripX = when {
-            horizontal -> before
-            textFirst -> labelWidth + gap
-            else -> 0f
-        }
-        val stripY = if (horizontal && textFirst) labelHeight + gap else 0f
-        val width = if (horizontal) before + stripWidth + after else stripWidth + gap + labelWidth
-        val height = if (horizontal) stripHeight + gap + labelHeight else stripHeight
-
-        NodeBox(modifier = PolyModifier.size(width, height)) {
+        NodeBox(modifier = PolyModifier.size(boxWidth, boxHeight)) {
             NodeCanvas(PolyModifier.absoluteAt(stripX, stripY).size(stripWidth, stripHeight)) { x, y, _, _ ->
-                VanillaTextures.hotbar()?.drawHotbar(this, x, y, list.size, !horizontal, scale)
+                VanillaTextures.hotbar()?.drawHotbarSlot(this, x, y, scale, edges)
             }
-
-            for ((index, entry) in list.withIndex()) {
-                val along = (HOTBAR_ITEM_INSET + index * HOTBAR_SLOT) * scale
-                val across = HOTBAR_ITEM_INSET * scale
-                ItemIcon(
-                    entry.stack,
-                    size = ITEM_SIZE * scale,
-                    decorations = showDecorations,
-                    countOverride = entry.count,
-                    modifier = PolyModifier.absoluteAt(
-                        stripX + if (horizontal) along else across,
-                        stripY + if (horizontal) across else along,
-                    ),
-                )
-
-                val label = labels[index]
-                if (label <= 0f) continue
-                val infoX = when {
-                    horizontal -> stripX + slotCenter(index) - label / 2f
-                    textFirst -> labelWidth - label
-                    else -> stripX + stripWidth + gap
-                }
-                val infoY = when {
-                    !horizontal -> stripY + slotCenter(index) - labelHeight / 2f
-                    textFirst -> 0f
-                    else -> stripY + stripHeight + gap
-                }
-                Info(entry, scale, PolyModifier.absoluteAt(infoX, infoY))
+            ItemIcon(
+                entry.stack,
+                size = ITEM_SIZE * scale,
+                decorations = showDecorations,
+                countOverride = entry.count,
+                modifier = PolyModifier.absoluteAt(
+                    stripX + HOTBAR_ITEM_INSET * scale,
+                    stripY + HOTBAR_ITEM_INSET * scale,
+                ),
+            )
+            if (labelWidth > 0f) {
+                val (labelX, labelY) = labelOffset(boxWidth, boxHeight, labelWidth, textHeight(scale), TEXT_GAP * scale)
+                Info(entry, scale, PolyModifier.absoluteAt(labelX, labelY))
             }
         }
     }
@@ -474,8 +435,8 @@ class ArmorHud : Hud(
         rev.value
         val gap = if (entry.text.isEmpty()) 0f else TEXT_GAP * scale
         val modifier = PolyModifier.align(align)
-        val textFirst = textPosition == LEFT || textPosition == ABOVE
-        val stacked = textPosition == ABOVE || textPosition == BELOW
+        val textFirst = textPosition == TEXT_LEFT || textPosition == TEXT_ABOVE
+        val stacked = textPosition == TEXT_ABOVE || textPosition == TEXT_BELOW
 
         val body: @Composable () -> Unit = {
             if (textFirst && entry.text.isNotEmpty()) Info(entry, scale)
@@ -516,8 +477,22 @@ class ArmorHud : Hud(
         }
     }
 
+
     override fun onCloned() {
-        entries = mutableStateOf(emptyList())
+        entry = mutableStateOf(null)
         rev = mutableStateOf(0)
     }
 }
+
+class ArmorHelmetHud : ArmorPieceHud(ArmorPiece.HELMET)
+
+class ArmorChestplateHud : ArmorPieceHud(ArmorPiece.CHESTPLATE)
+
+class ArmorLeggingsHud : ArmorPieceHud(ArmorPiece.LEGGINGS)
+
+class ArmorBootsHud : ArmorPieceHud(ArmorPiece.BOOTS)
+
+class ArmorMainHandHud : ArmorPieceHud(ArmorPiece.MAIN_HAND)
+
+//? if > 1.8.9
+class ArmorOffHandHud : ArmorPieceHud(ArmorPiece.OFF_HAND)

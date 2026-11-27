@@ -14,6 +14,7 @@ import org.polyfrost.evergreenhud.client.config.GlobalConfig
 import org.polyfrost.evergreenhud.client.hooks.EnderChestTracker
 import org.polyfrost.evergreenhud.client.hooks.PlayerPreviewOffscreen
 import org.polyfrost.evergreenhud.client.hud.*
+import org.polyfrost.evergreenhud.client.hud.armor.*
 import org.polyfrost.evergreenhud.client.hud.item.VanillaTextures
 import org.polyfrost.evergreenhud.client.hud.battery.BatteryHud
 import org.polyfrost.evergreenhud.client.utils.battery.Battery
@@ -39,6 +40,7 @@ import org.polyfrost.oneconfig.api.event.v1.events.AttackEntityEvent
 import org.polyfrost.oneconfig.api.event.v1.events.PacketEvent
 import org.polyfrost.oneconfig.api.event.v1.events.TickEvent
 import org.polyfrost.oneconfig.api.hud.v1.Hud
+import org.polyfrost.oneconfig.api.hud.v1.HudGroups
 import org.polyfrost.oneconfig.api.hud.v1.HudManager
 import org.polyfrost.oneconfig.api.hud.v1.TextHud
 import org.polyfrost.oneconfig.api.ui.v1.ExperimentalOneConfigUiApi
@@ -46,6 +48,7 @@ import org.polyfrost.oneconfig.utils.v1.dsl.mc
 
 object EvergreenHudClient : ClientModInitializer {
     override fun onInitializeClient() {
+        ArmorMigration.register()
         FrameTimeHelper.initialize()
         PlayerPreviewOffscreen.initialize()
         VanillaTextures.initialize()
@@ -55,7 +58,9 @@ object EvergreenHudClient : ClientModInitializer {
         GlobalConfig.preload()
 
         val huds = listOf<() -> Hud>(
-            ::ArmorHud,
+            ::ArmorHelmetHud, ::ArmorChestplateHud, ::ArmorLeggingsHud, ::ArmorBootsHud, ::ArmorMainHandHud,
+            //? if > 1.8.9
+            ::ArmorOffHandHud,
             ::BiomeHud, ::BlockAboveHud, ::CCounterHud,
             ::ClockHud, ::DigitalClockHud, ::ComboHud, ::CpsHud,
             ::CustomImageHud, ::CustomTextHud,
@@ -70,6 +75,21 @@ object EvergreenHudClient : ClientModInitializer {
         )
 
         huds.forEach { register(it) }
+
+        val armorHuds = listOf<Class<out Hud>>(
+            ArmorHelmetHud::class.java, ArmorChestplateHud::class.java, ArmorLeggingsHud::class.java,
+            ArmorBootsHud::class.java, ArmorMainHandHud::class.java,
+            //? if > 1.8.9
+            ArmorOffHandHud::class.java,
+        )
+        HudGroups.registerDefault("evergreenhud-armor", "Armor Status", *armorHuds.toTypedArray())
+        HudGroups.registerPreset(
+            "evergreenhud-armor",
+            "Armor Status",
+            armorHuds,
+            actions = ArmorLayout.actions,
+            defaultAction = "horizontal",
+        )
 
         register(::BatteryHud) { Battery.isSupported() }
         register(::MediaHud) { MediaService.isSupported() }
