@@ -8,7 +8,7 @@ import net.minecraft.entity.living.effect.StatusEffect
 *///?}
 
 object EffectCatalog {
-    data class Entry(val path: String, val title: String, val category: String)
+    data class Entry(val id: String, val path: String, val title: String, val category: String)
 
     val LEGACY_IDS: Map<String, String> = mapOf(
         "1" to "speed",
@@ -42,11 +42,13 @@ object EffectCatalog {
         get() = cached ?: buildEntries().also { cached = it }
 
     //? if <= 1.8.9 {
-    /*private val pathById: Map<Int, String> by lazy {
-        StatusEffect.getKeys().mapNotNull { key -> StatusEffect.get(key.toString())?.let { it.id to key.path } }.toMap()
+    /*private val keyById by lazy {
+        StatusEffect.getKeys().mapNotNull { key -> StatusEffect.get(key.toString())?.let { it.id to key } }.toMap()
     }
 
-    fun pathOf(id: Int): String = pathById[id] ?: id.toString()
+    fun pathOf(id: Int): String = keyById[id]?.path ?: id.toString()
+
+    fun idOf(id: Int): String = keyById[id]?.toString() ?: "minecraft:$id"
     *///?}
 
     private fun buildEntries(): List<Entry> {
@@ -54,15 +56,19 @@ object EffectCatalog {
         //? if > 1.8.9 {
         for (effect in BuiltInRegistries.MOB_EFFECT) {
             val id = BuiltInRegistries.MOB_EFFECT.getKey(effect) ?: continue
-            entries += Entry(id.path, effect.displayName.string, effect.category.name.lowercase())
+            entries += Entry(id.toString(), id.path, effect.displayName.string, effect.category.name.lowercase())
         }
         //?} else {
         /*for (effect in StatusEffect.BY_ID.filterNotNull()) {
-            entries += Entry(pathOf(effect.id), I18n.translate(effect.translationKey), if (effect.isHarmful) "harmful" else "beneficial")
+            entries += Entry(idOf(effect.id), pathOf(effect.id), I18n.translate(effect.translationKey), if (effect.isHarmful) "harmful" else "beneficial")
         }
         *///?}
         return entries
     }
 
     val titleToPath: Map<String, String> by lazy { ENTRIES.associate { it.title to it.path } }
+
+    val byPath: Map<String, Entry> by lazy { ENTRIES.associateBy { it.path } }
+
+    val byId: Map<String, Entry> by lazy { ENTRIES.associateBy { it.id } }
 }
