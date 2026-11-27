@@ -6,7 +6,8 @@ import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.hud.v1.Hud
 
 const val SCHEMA_CONTENT_SCALE = 1
-const val HUD_SCHEMA = SCHEMA_CONTENT_SCALE
+const val SCHEMA_STATIC_CONTENT_SIZE = 2
+const val HUD_SCHEMA = SCHEMA_STATIC_CONTENT_SIZE
 
 private const val KEY = "evergreenSchema"
 

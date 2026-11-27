@@ -18,6 +18,11 @@ import org.polyfrost.compose.render.PolyRenderer
 import org.polyfrost.compose.render.RenderContext
 import org.polyfrost.evergreenhud.client.hud.shape.oval
 import org.polyfrost.evergreenhud.client.utils.Facing
+import org.polyfrost.evergreenhud.client.utils.SCHEMA_STATIC_CONTENT_SIZE
+import org.polyfrost.evergreenhud.client.utils.addHudSchema
+import org.polyfrost.evergreenhud.client.utils.migrateHudSchema
+import org.polyfrost.evergreenhud.client.utils.migrateStaticContentSize
+import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.Dropdown
@@ -196,6 +201,15 @@ class MouseStrokesHud : Hud(
         }
     }
 
+    override fun addToSerialized(tree: Tree) {
+        super.addToSerialized(tree)
+        tree.addHudSchema()
+    }
+
+    override fun migrateLoaded(saved: Tree): Boolean = migrateHudSchema(saved) { from ->
+        if (from < SCHEMA_STATIC_CONTENT_SIZE) migrateStaticContentSize()
+    }
+
     override fun minimumSize(): Pair<Float, Float> = 16f to 16f
 
     override fun defaultPosition(): Pair<Float, Float> = 0f to 0f
@@ -235,9 +249,9 @@ class MouseStrokesHud : Hud(
             }
         }
 
-        val modifier = hudBackground(PolyModifier.size(scaledWidth, scaledHeight))
+        val modifier = hudBackground(PolyModifier.size(staticW, staticH))
         NodeBox(modifier = modifier.clip(bgRadius)) {
-            NodeCanvas(PolyModifier.size(scaledWidth, scaledHeight)) { x, y, w, h ->
+            NodeCanvas(PolyModifier.size(staticW, staticH)) { x, y, w, h ->
                 frame.longValue
                 draw(x, y, w, h)
             }

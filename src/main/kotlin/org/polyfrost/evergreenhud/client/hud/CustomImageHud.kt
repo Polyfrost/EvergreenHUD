@@ -11,6 +11,11 @@ import org.polyfrost.compose.render.FilterQuality
 import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.RenderContext
+import org.polyfrost.evergreenhud.client.utils.SCHEMA_STATIC_CONTENT_SIZE
+import org.polyfrost.evergreenhud.client.utils.addHudSchema
+import org.polyfrost.evergreenhud.client.utils.migrateHudSchema
+import org.polyfrost.evergreenhud.client.utils.migrateStaticContentSize
+import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.annotations.File
 import org.polyfrost.oneconfig.api.config.v1.annotations.Slider
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch
@@ -84,6 +89,15 @@ class CustomImageHud : Hud(
         tree?.getProp("staticH")?.addMetadata("default", DEFAULT_SIDE)
     }
 
+    override fun addToSerialized(tree: Tree) {
+        super.addToSerialized(tree)
+        tree.addHudSchema()
+    }
+
+    override fun migrateLoaded(saved: Tree): Boolean = migrateHudSchema(saved) { from ->
+        if (from < SCHEMA_STATIC_CONTENT_SIZE) migrateStaticContentSize()
+    }
+
     override fun minimumSize(): Pair<Float, Float> = 2f to 2f
 
     override fun hasBackground(): Boolean = false
@@ -104,7 +118,7 @@ class CustomImageHud : Hud(
 
     @Composable
     override fun Content() {
-        val sizeModifier = PolyModifier.size(scaledWidth, scaledHeight)
+        val sizeModifier = PolyModifier.size(staticW, staticH)
         NodeCanvas(sizeModifier) { x, y, w, h -> draw(x, y, w, h) }
     }
 

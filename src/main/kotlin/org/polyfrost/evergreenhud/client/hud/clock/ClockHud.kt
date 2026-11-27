@@ -12,6 +12,11 @@ import org.polyfrost.compose.composables.NodeBox
 import org.polyfrost.compose.composables.PolyModifier
 import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.render.PolyColor
+import org.polyfrost.evergreenhud.client.utils.SCHEMA_STATIC_CONTENT_SIZE
+import org.polyfrost.evergreenhud.client.utils.addHudSchema
+import org.polyfrost.evergreenhud.client.utils.migrateHudSchema
+import org.polyfrost.evergreenhud.client.utils.migrateStaticContentSize
+import org.polyfrost.oneconfig.api.config.v1.Tree
 import org.polyfrost.oneconfig.api.config.v1.copy
 import org.polyfrost.oneconfig.api.config.v1.annotations.Color
 import org.polyfrost.oneconfig.api.config.v1.annotations.MultiSelectDropdown
@@ -91,6 +96,15 @@ class ClockHud : Hud(
         tree?.getProp("staticH")?.addMetadata("default", DEFAULT_SIDE)
     }
 
+    override fun addToSerialized(tree: Tree) {
+        super.addToSerialized(tree)
+        tree.addHudSchema()
+    }
+
+    override fun migrateLoaded(saved: Tree): Boolean = migrateHudSchema(saved) { from ->
+        if (from < SCHEMA_STATIC_CONTENT_SIZE) migrateStaticContentSize()
+    }
+
     override fun minimumSize(): Pair<Float, Float> = 16f to 16f
 
     override fun canMergeBackground(): Boolean = true
@@ -98,7 +112,7 @@ class ClockHud : Hud(
     @Composable
     override fun Content() {
         rev.value
-        val sizeModifier = PolyModifier.size(scaledWidth, scaledHeight)
+        val sizeModifier = PolyModifier.size(staticW, staticH)
         val zone = remember { ZoneId.systemDefault() }
         val timeState = remember { mutableLongStateOf(if (isReal) millisOfDay(zone) else PREVIEW_MILLIS) }
         LaunchedEffect(zone) {
